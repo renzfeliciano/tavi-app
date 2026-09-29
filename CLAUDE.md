@@ -27,6 +27,6 @@ Quoting and invoicing SaaS for small service businesses: **Customer → Quote �
   - `domain/` stays pure.
 - **Tenant data:** never trust an organization ID from the client. It always comes from the server-side session context.
 - **Money:** integer minor units plus a currency code. Never use floats. All totals come from the one calculation function (§B.2).
-- **UI:** use semantic tokens from `src/app/globals.css`, never raw colours. Primitives live in `src/components/ui` (shadcn on Base UI); check with `npx shadcn@latest docs <component>` rather than writing from memory.
+- **UI:** follow `DESIGN.md` ("Carbon Copy": one stamp-violet accent used only where ink would go, status = icon + label, money tabular and never animated). Use semantic tokens from `src/app/globals.css`, never raw colours. `/dev/design` (development only) shows every token and component rendered. Primitives live in `src/components/ui` (shadcn on Base UI); check with `npx shadcn@latest docs <component>` rather than writing from memory.
 - **Secrets:** never paste or log connection strings or keys. `.env.local` is gitignored, and `.env.example` documents every variable.
 - **Brand:** read product names and taglines from `src/config/brand.ts`. "TAVI" is the wordmark; "Tavi" is used in running text.

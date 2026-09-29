@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   typedRoutes: true,
+  // Dev-only badge; bottom-left would cover Settings and the Home tab.
+  devIndicators: { position: "top-right" },
 };
 
 export default nextConfig;

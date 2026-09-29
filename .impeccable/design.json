@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-29T20:46:58.547945+00:00",
+  "title": "Design System: TAVI",
+  "extensions": {
+    "colorMeta": {
+      "stamp-violet": {
+        "role": "primary",
+        "displayName": "Stamp-pad Violet",
+        "canonical": "oklch(0.45 0.15 285)",
+        "tonalRamp": [
+          "oklch(0.955 0.025 285)",
+          "oklch(0.45 0.15 285)",
+          "oklch(0.39 0.15 285)"
+        ]
+      },
+      "bond-paper": {
+        "role": "neutral",
+        "displayName": "Bond Paper",
+        "canonical": "oklch(0.985 0.003 255)"
+      },
+      "blue-black-ink": {
+        "role": "neutral",
+        "displayName": "Blue-black Ink",
+        "canonical": "oklch(0.24 0.025 268)"
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.9 0.008 260)"
+      },
+      "carbon-blue": {
+        "role": "semantic",
+        "displayName": "Carbon Blue (info)",
+        "canonical": "oklch(0.5 0.11 250)"
+      },
+      "approval-green": {
+        "role": "semantic",
+        "displayName": "Approval Green (success)",
+        "canonical": "oklch(0.52 0.12 155)"
+      },
+      "caution-amber": {
+        "role": "semantic",
+        "displayName": "Caution Amber (warning)",
+        "canonical": "oklch(0.7 0.14 70)"
+      },
+      "overdue-red": {
+        "role": "semantic",
+        "displayName": "Overdue Red (danger)",
+        "canonical": "oklch(0.53 0.19 27)"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page title",
+        "purpose": "One per screen, from PageHeader."
+      },
+      "title": {
+        "displayName": "Section title",
+        "purpose": "Card and section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "App text at 14px; portals and PDFs use 15–16px."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, captions, tab labels."
+      },
+      "serial": {
+        "displayName": "Serial",
+        "purpose": "Document numbers only, in stamp violet."
+      }
+    },
+    "shadows": [
+      {
+        "name": "xs",
+        "value": "0 1px 1px oklch(0.24 0.025 268 / 0.05)",
+        "purpose": "Resting sheets, fields, buttons."
+      },
+      {
+        "name": "sm",
+        "value": "0 1px 2px oklch(0.24 0.025 268 / 0.06), 0 1px 1px oklch(0.24 0.025 268 / 0.04)",
+        "purpose": "Small raised controls."
+      },
+      {
+        "name": "md",
+        "value": "0 4px 12px -2px oklch(0.24 0.025 268 / 0.1), 0 2px 4px -2px oklch(0.24 0.025 268 / 0.06)",
+        "purpose": "Menus, popovers, toasts."
+      },
+      {
+        "name": "lg",
+        "value": "0 18px 40px -12px oklch(0.24 0.025 268 / 0.2), 0 4px 10px -4px oklch(0.24 0.025 268 / 0.08)",
+        "purpose": "Dialogs and sheets."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-fast",
+        "value": "120ms",
+        "purpose": "Press, hover, focus."
+      },
+      {
+        "name": "duration-normal",
+        "value": "200ms",
+        "purpose": "Menus, badges, toasts."
+      },
+      {
+        "name": "duration-slow",
+        "value": "320ms",
+        "purpose": "Sheets and dialogs."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Anything entering."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.65, 0, 0.35, 1)",
+        "purpose": "On-screen movement."
+      },
+      {
+        "name": "ease-drawer",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "Bottom sheets and drawers."
+      },
+      {
+        "name": "stamp-press",
+        "value": "480ms ease-out",
+        "purpose": "The Stamp's press moment; once, on real success moments."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one violet action per view.",
+      "html": "<button class=\"ds-btn\">New quote</button>",
+      "css": ".ds-btn { background: var(--primary, oklch(0.45 0.15 285)); color: #fff; height: 36px; padding: 0 12px; border: 0; border-radius: 6.4px; font: 500 14px/1 Geist, system-ui, sans-serif; box-shadow: 0 1px 1px oklch(0.24 0.025 268 / 0.05); transition: transform 120ms cubic-bezier(0.23,1,0.32,1), background-color 120ms cubic-bezier(0.23,1,0.32,1); } .ds-btn:hover { background: oklch(0.39 0.15 285); } .ds-btn:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Document Serial",
+      "kind": "custom",
+      "refersTo": "document-serial",
+      "description": "Pre-printed-style document number.",
+      "html": "<span class=\"ds-serial\"><span aria-hidden=\"true\">Nº </span>QUO-000124</span>",
+      "css": ".ds-serial { font: 400 14px/1.4 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; color: oklch(0.45 0.15 285); white-space: nowrap; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Carbon Copy",
+    "overview": "Built from the official-receipt booklet: bond paper, blue-black ink, hairline rules and one stamp-pad violet accent used only where real ink would go.",
+    "keyCharacteristics": [
+      "Bond paper, white sheets, blue-black ink, hairline rules",
+      "One accent, used like ink",
+      "Status = icon + label",
+      "Money is tabular and never animates",
+      "Light only for the MVP"
+    ],
+    "rules": [
+      {
+        "name": "The Real Ink Rule",
+        "body": "Violet only where a real stamp or pen would leave ink: serials, the Stamp, the one primary action, current location, focus.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Signals Rule",
+        "body": "Every status is an icon plus a word; colour only reinforces.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Money Rule",
+        "body": "Amounts use tabular figures, never wrap, right-align in columns.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paper Stack Rule",
+        "body": "Flat at rest; lifted only when floating above the page.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Use semantic tokens only",
+      "Pair status colour with icon and label",
+      "One primary action per view",
+      "Answer what/why/next in empty states"
+    ],
+    "donts": [
+      "Violet as a fill, gradient or glow",
+      "Animating money",
+      "Kickers above headings",
+      "Unicode glyphs as icons",
+      "Mascot carrying meaning"
+    ]
+  }
+}

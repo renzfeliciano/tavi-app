@@ -19,6 +19,7 @@ Where this proposal departed from the brief, it was marked **⚑ Pushback**. The
 | D7 | **Sent invoices stay editable until the first payment** | Every edit bumps the revision and writes a full before/after audit entry. The invoice locks once there's an active payment (§B.4). |
 | D8 | **Separate Products and Services** (pushback rejected) | Two entities, two lists, and one shared "line source" interface for the editor (§B.1). |
 | D9 | **Hosting: Vercel + Neon** | — |
+| D10 | **Visual direction: "Carbon Copy"** (chosen 2026-09-30 from four rendered directions) | Based on the official-receipt booklet: cool bond-paper white, blue-black ink, hairline ruled fields, and **one accent, stamp-pad violet**, used only where real ink would go (document numbers, the Stamp, primary actions, focus). Geist for the UI, Geist Mono for serial numbers, both loaded with `latin-ext` for ₱. The Stamp mascot's imprint carries the wordmark's check-mark V. DESIGN.md is the source of truth once written. |
 
 ---
 
@@ -480,7 +481,7 @@ The vendored skills conflict in places, so the order is set here and recorded in
 ### G.1 Navigation (§24)
 
 - **Desktop:** a left sidebar with **Dashboard · Quotes · Invoices · Payments · Customers · Products & Services**, and Settings pinned to the bottom. Quotes and Invoices come before Customers because they're the daily work.
-- **Mobile:** a bottom tab bar (Home · Quotes · Invoices · Customers · More) plus one **"New"** button that opens a bottom sheet with New quote, New invoice, Add customer and Record payment.
+- **Mobile:** a bottom tab bar, **Home · Quotes · New · Invoices · More** (as built in Phase 0.4). "New" opens a bottom sheet with New quote, New invoice, Add customer and Record payment. "More" holds Customers, Payments, Products & Services and Settings.
 
 ### G.2 Dashboard: "what needs my attention?" (§25)
 
