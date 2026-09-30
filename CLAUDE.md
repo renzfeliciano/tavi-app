@@ -39,3 +39,8 @@ Quoting and invoicing SaaS for small service businesses: **Customer → Quote �
 - **Security headers:** the CSP nonce is per request (`src/proxy.ts`), so every page renders dynamically. Never add `dangerouslySetInnerHTML`, inline `<script>`, or third-party scripts without updating `src/shared/security/headers.ts` and its tests.
 - **Secrets:** never paste or log connection strings or keys. `.env.local` is gitignored, and `.env.example` documents every variable.
 - **Brand:** read product names and taglines from `src/config/brand.ts`. "TAVI" is the wordmark; "Tavi" is used in running text.
+
+## Project skills
+
+Load the matching skill before working in its area (`.claude/skills/tavi-*`):
+`tavi-architecture` (where code goes, use-case pattern) · `tavi-database` (schema, migrations, locking, test DB) · `tavi-financial-domain` (money, tax, statuses, numbering, payments) · `tavi-auth-security` (sessions, authz, tenancy, threat model) · `tavi-ui-ux` (screen contract, forms, copy, mobile) · `tavi-design-system` (tokens, components) · `tavi-motion-design` · `tavi-brand-experience` (voice, mascot) · `tavi-accessibility` · `tavi-testing` (TDD, commands, patterns) · `tavi-code-review` (Definition of Done, commits) · `tavi-ops` (env, deploy, crons, logs) · `tavi-product` (MVP gate, funnel, not-yet list).
