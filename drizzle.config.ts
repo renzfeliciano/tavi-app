@@ -1,5 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import { defineConfig } from "drizzle-kit";
+import { withExplicitSslMode } from "./src/db/connection-string";
 
 // drizzle-kit runs outside Next.js, so load .env.local the way Next does.
 loadEnvConfig(process.cwd());
@@ -13,5 +14,5 @@ export default defineConfig({
   out: "./src/db/migrations",
   strict: true,
   verbose: true,
-  ...(url ? { dbCredentials: { url } } : {}),
+  ...(url ? { dbCredentials: { url: withExplicitSslMode(url) } } : {}),
 });
