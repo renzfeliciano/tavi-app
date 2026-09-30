@@ -41,7 +41,17 @@ const envSchema = z
       .string()
       .regex(/^re_[A-Za-z0-9_]+$/, { error: "RESEND_API_KEY must be a Resend API key (starts with re_)" })
       .optional(),
-    /** Sender shown to recipients, on a domain verified in Resend. */
+    /** Free-tier email via Gmail SMTP (D11). SMTP_PASSWORD is a Google App Password. */
+    SMTP_HOST: z.string().min(1).default("smtp.gmail.com"),
+    SMTP_PORT: z.coerce
+      .number({ error: "SMTP_PORT must be a port number (465 or 587)" })
+      .int({ error: "SMTP_PORT must be a port number (465 or 587)" })
+      .min(1, { error: "SMTP_PORT must be a port number (465 or 587)" })
+      .max(65535, { error: "SMTP_PORT must be a port number (465 or 587)" })
+      .default(465),
+    SMTP_USER: z.email({ error: "SMTP_USER must be an email address" }).optional(),
+    SMTP_PASSWORD: z.string().min(1).optional(),
+    /** Sender shown to recipients: the Gmail address itself, or a domain verified in Resend. */
     EMAIL_FROM: z
       .string()
       .regex(/^[^<>]+ <[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>$/, {
@@ -86,7 +96,11 @@ export type Env = z.infer<typeof envSchema>;
  * invalid variable. Values are never included, since they may be secrets.
  */
 export function parseEnv(source: Record<string, string | undefined>): Env {
-  const result = envSchema.safeParse(source);
+  // `VAR=` in an env file means "not set" (dotenv convention), not "empty".
+  const present = Object.fromEntries(
+    Object.entries(source).filter(([, value]) => value !== undefined && value.trim() !== ""),
+  );
+  const result = envSchema.safeParse(present);
   if (result.success) return result.data;
 
   const problems = result.error.issues.map(

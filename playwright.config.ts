@@ -57,6 +57,11 @@ export default defineConfig({
       DATABASE_URL: databaseUrl,
       DATABASE_URL_DIRECT: databaseUrl,
       APP_URL: baseURL,
+      // Never send real email from test runs: test accounts use @example.com,
+      // and bounces would hurt the sending account's reputation.
+      RESEND_API_KEY: "",
+      SMTP_USER: "",
+      SMTP_PASSWORD: "",
     },
   },
 });

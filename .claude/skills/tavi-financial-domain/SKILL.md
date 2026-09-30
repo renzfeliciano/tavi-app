@@ -55,4 +55,4 @@ Recorded inside a transaction that locks the invoice (`FOR UPDATE`); currency mu
 
 ## Compliance caution
 
-TAVI invoices are **not** BIR-registered official invoices until TAVI is accredited (risk N.1). Don't label documents "Official Receipt" or claim BIR compliance in copy.
+TAVI invoices are **not** BIR-registered official invoices until TAVI is accredited (risk N.1). Until the BIR confirms otherwise (D11), PH-facing documents are titled **"Quotation"** and **"Billing Statement"**, never "Official Receipt" or "Sales Invoice", and copy makes no BIR-compliance claims.

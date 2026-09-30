@@ -20,6 +20,7 @@ Where this proposal departed from the brief, it was marked **⚑ Pushback**. The
 | D8 | **Separate Products and Services** (pushback rejected) | Two entities, two lists, and one shared "line source" interface for the editor (§B.1). |
 | D9 | **Hosting: Vercel + Neon** | — |
 | D10 | **Visual direction: "Carbon Copy"** (chosen 2026-09-30 from four rendered directions) | Based on the official-receipt booklet: cool bond-paper white, blue-black ink, hairline ruled fields, and **one accent, stamp-pad violet**, used only where real ink would go (document numbers, the Stamp, primary actions, focus). Geist for the UI, Geist Mono for serial numbers, both loaded with `latin-ext` for ₱. The Stamp mascot's imprint carries the wordmark's check-mark V. DESIGN.md is the source of truth once written. |
+| D11 | **Free tier only for the initial release** (2026-09-30) | No purchases: Vercel Hobby (`*.vercel.app`, no custom domain), Neon Free, Sentry Developer, GitHub Free, and **Gmail SMTP** for email (App Password; about 500 emails a day; Resend stays wired for when a domain exists). BIR question goes to the RDO/BIR contact center instead of a paid accountant; until confirmed, PH documents are labelled **"Quotation"** and **"Billing Statement"**, never "Official Receipt" or "Sales Invoice". Vercel Hobby crons are daily only, so email delivery relies on the immediate after-response send, with the cron as a daily safety net. |
 
 ---
 
@@ -735,6 +736,8 @@ Phase 2+ follows the brief (SaaS billing, invitations, recurring invoices, repor
 | 11 | **Consistency of AI-generated code across sessions** | Medium | Skills written from real code, lint boundaries, code-review DoD, test gates in pre-commit and CI. |
 | 12 | **Brand name availability:** "Tavi" may be registered or taken as a domain or trademark in target markets | Medium | Check IPOPHL, USPTO, EUIPO and domains **before** investing in logo/mascot production. |
 | 13 | **Dependence on Neon for local development** (needs internet; free-tier compute limits) | Low | Dev runs against the Neon `dev` branch; Docker Postgres remains a drop-in fallback because the app only sees a connection string. |
+| 14 | **Vercel Hobby is for non-commercial use** under Vercel's terms | Medium | Fine for a free beta. Before charging any business: move to Vercel Pro, or a host whose free plan allows commercial use (e.g. Cloudflare Workers via OpenNext). |
+| 15 | **Gmail SMTP limits and deliverability** (daily cap; sender is a Gmail address) | Low–Med | Enough for a beta; customer documents mostly travel as copy-link. Switch to Resend with a verified domain before growth. |
 
 ---
 

@@ -5,7 +5,7 @@ description: Running TAVI — environment variables, Neon branches, migrations i
 
 # TAVI operations
 
-Hosting plan: Vercel (app) + Neon Postgres 18 (Singapore) (D1, D9). Proposal §K.
+Hosting plan: Vercel Hobby (app) + Neon Postgres 18 (Singapore) (D1, D9), free tier only for the initial release (D11). ⚠️ Vercel Hobby is non-commercial: move to Pro or another host before charging businesses (risk 14). Proposal §K.
 
 ## Environment variables (all validated in `src/shared/env/parse-env.ts`)
 
@@ -15,7 +15,8 @@ Hosting plan: Vercel (app) + Neon Postgres 18 (Singapore) (D1, D9). Proposal §K
 | `DATABASE_URL` | yes | Pooled (`-pooler`) connection of the environment's branch |
 | `DATABASE_URL_DIRECT` | for migrations | Same branch, pooling off |
 | `BETTER_AUTH_SECRET` | yes | ≥ 32 chars, unique per environment (`openssl rand -base64 32`) |
-| `RESEND_API_KEY`, `EMAIL_FROM` | to send email | Without them production refuses to send (logged), flows continue |
+| `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | to send email (free tier, D11) | Gmail account + App Password; `EMAIL_FROM` = that Gmail address. `SMTP_HOST`/`SMTP_PORT` default to Gmail 465 |
+| `RESEND_API_KEY` | later, with a domain | Takes precedence over SMTP when set. With no transport, production refuses to send (logged) and flows continue |
 | `CRON_SECRET` | for crons | ≥ 32 chars; Vercel Cron sends it as a Bearer token |
 | `TEST_DATABASE_URL` | never in production | Test branch only |
 
@@ -44,9 +45,11 @@ Never paste values into chat or commit them. `.env.local` is gitignored; `.env.e
 - `src/instrumentation.ts` logs unhandled server errors (no headers, no query strings).
 - Error tracking: Sentry is planned but **not yet connected** — needs a Sentry project + DSN, then `@sentry/nextjs` wired into the same `onRequestError` hook with PII scrubbing.
 
-## Email deliverability (before real customers)
+## Email
 
-Verify a sending subdomain in Resend (e.g. `mail.tavi.ph`) with SPF, DKIM and DMARC; set `EMAIL_FROM="Tavi <notify@mail.tavi.ph>"`; customer emails use "Business via Tavi" with Reply-To the business.
+**Now (free tier, D11):** Gmail SMTP via an App Password (2-Step Verification required), roughly 500 emails/day. E2E runs blank the email settings so tests never send real mail. Keep customer documents primarily on copy-link.
+
+**Later (before growth):** verify a sending subdomain in Resend (e.g. `mail.tavi.ph`) with SPF, DKIM and DMARC; set `EMAIL_FROM="Tavi <notify@mail.tavi.ph>"`; customer emails use "Business via Tavi" with Reply-To the business.
 
 ## CI (GitHub Actions)
 

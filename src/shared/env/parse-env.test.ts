@@ -9,6 +9,20 @@ describe("parseEnv", () => {
     expect(env.APP_URL).toBe("http://localhost:3200");
   });
 
+  it("treats empty values (VAR= in an env file) as not set", () => {
+    const env = parseEnv({
+      SMTP_USER: "",
+      SMTP_PASSWORD: "",
+      EMAIL_FROM: "",
+      DATABASE_URL: "",
+      APP_URL: "",
+    });
+    expect(env.SMTP_USER).toBeUndefined();
+    expect(env.EMAIL_FROM).toBeUndefined();
+    expect(env.DATABASE_URL).toBeUndefined();
+    expect(env.APP_URL).toBe("http://localhost:3200");
+  });
+
   it("defaults NODE_ENV to development", () => {
     expect(parseEnv({}).NODE_ENV).toBe("development");
   });
@@ -162,6 +176,33 @@ describe("parseEnv", () => {
       expect(message).toMatch(/EMAIL_FROM must look like/);
       expect(message).toMatch(/CRON_SECRET must be at least 32 characters/);
       expect(message).not.toContain("sk_live_wrong");
+    });
+  });
+
+  describe("Gmail SMTP settings (D11)", () => {
+    it("default to Gmail's TLS endpoint", () => {
+      const env = parseEnv({});
+      expect(env.SMTP_HOST).toBe("smtp.gmail.com");
+      expect(env.SMTP_PORT).toBe(465);
+      expect(env.SMTP_USER).toBeUndefined();
+    });
+
+    it("accept an account, an app password and a custom port", () => {
+      const env = parseEnv({ SMTP_USER: "tavi.notify@gmail.com", SMTP_PASSWORD: "abcd efgh ijkl mnop", SMTP_PORT: "587" });
+      expect(env.SMTP_PORT).toBe(587);
+      expect(env.SMTP_USER).toBe("tavi.notify@gmail.com");
+    });
+
+    it("reject a malformed account and port, without echoing the password", () => {
+      let message = "";
+      try {
+        parseEnv({ SMTP_USER: "not-an-email", SMTP_PORT: "smtp", SMTP_PASSWORD: "abcd efgh ijkl mnop" });
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toMatch(/SMTP_USER must be an email address/);
+      expect(message).toMatch(/SMTP_PORT/);
+      expect(message).not.toContain("abcd efgh");
     });
   });
 });
