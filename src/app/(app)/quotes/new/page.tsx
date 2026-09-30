@@ -3,8 +3,9 @@ import { BackLink } from "@/components/app-shell/back-link";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { requireOrgContext } from "@/modules/identity";
 import { newQuoteDefaults } from "@/modules/quotes";
-import { QuoteEditor } from "../_components/quote-editor";
-import { editorContext } from "../_lib/editor-props";
+import { DocumentEditor } from "../../_documents/document-editor";
+import { editorContext } from "../../_documents/editor-props";
+import { deleteDraftQuoteAction, saveQuoteDraftAction, sendQuoteAction } from "../actions";
 
 export const metadata: Metadata = { title: "New quote" };
 
@@ -13,15 +14,17 @@ export const metadata: Metadata = { title: "New quote" };
 export default async function NewQuotePage() {
   const ctx = await requireOrgContext();
   const defaults = await newQuoteDefaults(ctx);
-  const editor = await editorContext(ctx, defaults.currency);
+  const editor = await editorContext(ctx, "quote", defaults.currency);
 
   return (
     <>
       <BackLink href="/quotes">Quotes</BackLink>
       <PageHeader title="New quote" description="Changes save as you go." />
-      <QuoteEditor
+      <DocumentEditor
         {...editor}
-        quoteId={null}
+        kind="quote"
+        documentId={null}
+        actions={{ saveDraft: saveQuoteDraftAction, deleteDraft: deleteDraftQuoteAction, send: sendQuoteAction }}
         number={null}
         revision={1}
         taxMode={defaults.taxMode}
@@ -30,7 +33,7 @@ export default async function NewQuotePage() {
           customerId: "",
           currency: defaults.currency,
           issueDate: defaults.issueDate,
-          validUntil: defaults.validUntil,
+          endDate: defaults.validUntil,
           notes: defaults.notes,
           terms: defaults.terms,
           lines: [],

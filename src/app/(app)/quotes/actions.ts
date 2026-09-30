@@ -1,9 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { formatAddressLines } from "@/config/markets";
-import { searchLineSources } from "@/modules/catalog";
-import { getCustomer, listCustomers } from "@/modules/customers";
 import { requireOrgContext } from "@/modules/identity";
 import { flushOutboxAfterResponse } from "@/modules/notifications";
 import {
@@ -15,13 +12,8 @@ import {
   sendQuote,
 } from "@/modules/quotes";
 import { env } from "@/shared/env";
-import { normalizeSearch } from "@/shared/text/search";
-import type { CustomerChoice, LineSourceChoice } from "./_lib/editor-types";
+import type { Delivery, SaveDraftResponse, SendDocumentResponse } from "../_documents/editor-types";
 
-export type SaveDraftResponse =
-  | { ok: true; id: string; savedAt: number }
-  | { ok: false; errors: Record<string, string> }
-  | { ok: false; error: string };
 
 /** Autosave: creates the draft on the first save, then updates it. */
 export async function saveQuoteDraftAction(id: string | null, draft: unknown): Promise<SaveDraftResponse> {
@@ -45,55 +37,6 @@ export async function deleteDraftQuoteAction(id: string): Promise<{ ok: true } |
   return { ok: false, error: "notFound" in result ? "This quote no longer exists." : result.error };
 }
 
-/** Active customers for the quote's customer picker. */
-export async function searchCustomersAction(query: string): Promise<CustomerChoice[]> {
-  const ctx = await requireOrgContext();
-  const { customers } = await listCustomers(ctx, { search: normalizeSearch(query) });
-  return customers.slice(0, 8).map((c) => ({ id: c.id, displayName: c.displayName, detail: c.company ?? c.email ?? c.phone }));
-}
-
-/** A customer as the document shows them, plus their preferred currency. */
-export async function customerForDocumentAction(id: string) {
-  const ctx = await requireOrgContext();
-  const customer = await getCustomer(ctx, id);
-  if (!customer) return null;
-  return {
-    id: customer.id,
-    currency: customer.currency,
-    email: customer.email,
-    party: {
-      name: customer.displayName,
-      subtitle: customer.company,
-      addressLines: formatAddressLines(customer, ctx.market),
-      contactLines: [customer.email, customer.phone].filter((line): line is string => Boolean(line)),
-      taxId: customer.taxId ? { label: ctx.market.taxId.label, value: customer.taxId } : null,
-    },
-  };
-}
-
-/** Products and services for the line-item picker. */
-export async function searchLineSourcesAction(query: string): Promise<LineSourceChoice[]> {
-  const ctx = await requireOrgContext();
-  const { products, services } = await searchLineSources(ctx, normalizeSearch(query));
-  return [...services, ...products].map((s) => ({
-    key: `${s.kind}:${s.id}`,
-    kind: s.kind,
-    id: s.id,
-    name: s.name,
-    description: s.description,
-    sku: s.sku,
-    unitLabel: s.unitLabel,
-    unitPriceMinor: s.unitPriceMinor,
-    currency: s.currency,
-    taxRateId: s.taxRateId,
-  }));
-}
-
-export type SendQuoteResponse =
-  | { ok: true; id: string; number: string; url: string; emailedTo: string | null }
-  | { ok: false; errors: Record<string, string> }
-  | { ok: false; error: string };
-
 /**
  * Saves the editor's latest content, then sends it: by email, or by marking it
  * sent and returning the link to paste. Emails go out after the response.
@@ -101,8 +44,8 @@ export type SendQuoteResponse =
 export async function sendQuoteAction(
   id: string | null,
   draft: unknown,
-  delivery: { mode: "email"; to: string; message: string } | { mode: "link" },
-): Promise<SendQuoteResponse> {
+  delivery: Delivery,
+): Promise<SendDocumentResponse> {
   const ctx = await requireOrgContext();
   const saved = await saveQuoteDraft(ctx, id, draft, { locale: ctx.locale });
   if (!saved.ok) {

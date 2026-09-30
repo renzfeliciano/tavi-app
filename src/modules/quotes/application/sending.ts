@@ -223,8 +223,11 @@ export async function cancelQuote(
   return db.transaction(async (tx): Promise<QuoteCommandResult> => {
     const quote = await loadHeader(tx, actor, id, true);
     if (!quote) return { ok: false, notFound: true };
-    // An approved quote can be cancelled only until it's converted to an invoice (checked once invoices exist, 1.7).
     if (!transitionQuote(quote.status, "cancel").ok) return { ok: false, error: "This quote can't be cancelled." };
+    // An approved quote can be cancelled only until it becomes an invoice (§B.3).
+    if (quote.convertedInvoiceId) {
+      return { ok: false, error: "This quote is already an invoice. Void or cancel the invoice instead." };
+    }
     await tx
       .update(quotes)
       .set({ status: "CANCELLED", cancelledAt: sql`now()`, cancelReason: note })

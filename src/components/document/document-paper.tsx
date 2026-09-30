@@ -167,6 +167,13 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
         ))}
       </div>
 
+      {view.paymentInstructions && (
+        <section aria-label="How to pay" className="mt-8 rounded-lg border border-border bg-surface-sunken p-4 text-sm">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">How to pay</p>
+          <p className="mt-1 whitespace-pre-wrap">{view.paymentInstructions}</p>
+        </section>
+      )}
+
       {(view.notes || view.terms) && (
         <footer className="mt-8 grid gap-4 border-t border-border pt-6 text-sm sm:grid-cols-2">
           {view.notes && (

@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { PORTAL_HEADERS, PORTAL_PATH_PATTERN, SECURITY_HEADERS } from "./src/shared/security/headers";
+import { PORTAL_HEADERS, PORTAL_PATH_PATTERNS, SECURITY_HEADERS } from "./src/shared/security/headers";
 
 // The per-request Content-Security-Policy (with its nonce) is set in
 // src/proxy.ts; the static hardening headers apply to every response here.
@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: SECURITY_HEADERS },
       // Later entries win for the same header: portal pages tighten Referrer-Policy.
-      { source: PORTAL_PATH_PATTERN, headers: PORTAL_HEADERS },
+      ...PORTAL_PATH_PATTERNS.map((source) => ({ source, headers: PORTAL_HEADERS })),
     ];
   },
 };

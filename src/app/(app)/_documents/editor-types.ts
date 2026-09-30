@@ -1,0 +1,43 @@
+import type { DocumentParty } from "@/components/document/document-view";
+
+// Shapes passed between the quote and invoice pages, their server actions and the editor.
+
+export type CustomerChoice = { id: string; displayName: string; detail: string | null };
+
+export type LineSourceChoice = {
+  key: string;
+  kind: "product" | "service";
+  id: string;
+  name: string;
+  description: string | null;
+  sku: string | null;
+  unitLabel: string;
+  unitPriceMinor: number;
+  currency: string;
+  taxRateId: string | null;
+};
+
+export type TaxRateChoice = { id: string; name: string; rateBps: number; label: string; archived: boolean };
+
+export type EditorCustomer = { id: string; currency: string | null; email: string | null; party: DocumentParty };
+
+export type DocumentKind = "quote" | "invoice";
+
+export type Delivery = { mode: "email"; to: string; message: string } | { mode: "link" };
+
+export type SaveDraftResponse =
+  | { ok: true; id: string; savedAt: number }
+  | { ok: false; errors: Record<string, string> }
+  | { ok: false; error: string };
+
+export type SendDocumentResponse =
+  | { ok: true; id: string; number: string; url: string; emailedTo: string | null }
+  | { ok: false; errors: Record<string, string> }
+  | { ok: false; error: string };
+
+/** A draft's server actions, passed to the editor by its page. */
+export type DocumentEditorActions = {
+  saveDraft: (id: string | null, draft: unknown) => Promise<SaveDraftResponse>;
+  deleteDraft: (id: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  send: (id: string | null, draft: unknown, delivery: Delivery) => Promise<SendDocumentResponse>;
+};

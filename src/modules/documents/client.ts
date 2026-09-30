@@ -31,3 +31,10 @@ export {
   type RawLine,
   rawLineSchema,
 } from "./domain/line-input";
+export {
+  type DocumentDraft,
+  type DocumentDraftOptions,
+  type DocumentDraftResult,
+  parseDocumentDraft,
+  type RawDocumentDraft,
+} from "./domain/document-draft";

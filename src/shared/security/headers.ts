@@ -47,10 +47,11 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
 ];
 
 /**
- * Customer pages (/q/…) carry the document's token in the URL, so they never
- * leak it in a Referer, are never cached and are never indexed (§I).
+ * Customer pages (/q/… quotes, /i/… invoices) carry the document's token in
+ * the URL, so they never leak it in a Referer, are never cached and are never
+ * indexed (§I).
  */
-export const PORTAL_PATH_PATTERN = "/q/:path*";
+export const PORTAL_PATH_PATTERNS = ["/q/:path*", "/i/:path*"];
 export const PORTAL_HEADERS: { key: string; value: string }[] = [
   { key: "Referrer-Policy", value: "no-referrer" },
   { key: "Cache-Control", value: "private, no-store" },

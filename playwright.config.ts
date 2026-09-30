@@ -14,7 +14,7 @@ const databaseUrl = testDatabaseUrl();
 export const OWNER_STATE = "e2e/.auth/owner.json";
 
 /** Specs that sign up their own fresh business. */
-const ACCOUNT_CREATING_SPECS = [/auth\.spec\.ts/, /settings\.spec\.ts/, /customers\.spec\.ts/, /catalog\.spec\.ts/, /quotes\.spec\.ts/, /quote-sending\.spec\.ts/];
+const ACCOUNT_CREATING_SPECS = [/auth\.spec\.ts/, /settings\.spec\.ts/, /customers\.spec\.ts/, /catalog\.spec\.ts/, /quotes\.spec\.ts/, /quote-sending\.spec\.ts/, /invoices\.spec\.ts/];
 
 export default defineConfig({
   testDir: "./e2e",

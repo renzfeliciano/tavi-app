@@ -143,6 +143,7 @@ async function sendByLink(): Promise<{ url: string; link: string }> {
 }
 
 test("the customer approves with their name, and the business sees who and when", async ({ browser }) => {
+  test.slow(); // two browsers, and a full dev run compiles pages under load
   const { url, link } = await sendByLink();
   const customer = await (await browser.newContext()).newPage();
   await customer.goto(link);
@@ -173,6 +174,7 @@ test("the customer approves with their name, and the business sees who and when"
 });
 
 test("the customer can decline with a reason", async ({ browser }) => {
+  test.slow(); // two browsers, and a full dev run compiles pages under load
   const { url, link } = await sendByLink();
   const customer = await (await browser.newContext()).newPage();
   await customer.goto(link);

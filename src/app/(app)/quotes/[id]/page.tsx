@@ -9,21 +9,22 @@ import { formatRateForInput } from "@/shared/numbers/percent";
 import { formatQuantity } from "@/modules/documents";
 import { requireOrgContext } from "@/modules/identity";
 import { getQuote, type QuoteDetail } from "@/modules/quotes";
-import { customerForDocumentAction } from "../actions";
-import { QuoteEditor, type QuoteEditorState } from "../_components/quote-editor";
+import { customerForDocumentAction } from "../../_documents/actions";
+import { DocumentEditor, type DocumentEditorState } from "../../_documents/document-editor";
+import { documentBusiness, editorContext } from "../../_documents/editor-props";
+import { deleteDraftQuoteAction, saveQuoteDraftAction, sendQuoteAction } from "../actions";
 import { SentQuoteActions } from "../_components/sent-quote-actions";
-import { documentBusiness, editorContext } from "../_lib/editor-props";
 import { quoteDocumentView } from "../_lib/quote-view";
 
 export const metadata: Metadata = { title: "Quote" };
 
 /** A saved draft back into the editor's typed form. */
-function toEditorState(quote: QuoteDetail, locale: string): QuoteEditorState {
+function toEditorState(quote: QuoteDetail, locale: string): DocumentEditorState {
   return {
     customerId: quote.customerId ?? "",
     currency: quote.currency,
     issueDate: quote.issueDate,
-    validUntil: quote.validUntil,
+    endDate: quote.validUntil,
     notes: quote.notes ?? "",
     terms: quote.terms ?? "",
     lines: quote.lines.map((line) => ({
@@ -55,7 +56,7 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
 
   if (quote.status === "DRAFT") {
     const [editor, customer] = await Promise.all([
-      editorContext(ctx, quote.currency),
+      editorContext(ctx, "quote", quote.currency),
       quote.customerId ? customerForDocumentAction(quote.customerId) : Promise.resolve(null),
     ]);
     return (
@@ -66,9 +67,11 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
           description="Changes save as you go."
           actions={<StatusBadge kind="quote" status={quote.status} />}
         />
-        <QuoteEditor
+        <DocumentEditor
           {...editor}
-          quoteId={quote.id}
+          kind="quote"
+          documentId={quote.id}
+          actions={{ saveDraft: saveQuoteDraftAction, deleteDraft: deleteDraftQuoteAction, send: sendQuoteAction }}
           number={quote.number}
           revision={quote.revision}
           taxMode={quote.taxMode}
@@ -112,7 +115,14 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
           </span>
         }
         actions={
-          <SentQuoteActions id={quote.id} status={quote.status} name={name} shareChannels={ctx.market.shareChannels} />
+          <SentQuoteActions
+            id={quote.id}
+            status={quote.status}
+            name={name}
+            shareChannels={ctx.market.shareChannels}
+            convertedInvoiceId={quote.convertedInvoiceId}
+            invoiceTitle={ctx.market.documents.invoice.singular}
+          />
         }
       />
       {decision && (

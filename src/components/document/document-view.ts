@@ -41,6 +41,8 @@ export type DocumentView = {
   taxNotes: string[];
   notes: string | null;
   terms: string | null;
+  /** How to pay (invoices): the business's bank or e-wallet details, as issued. */
+  paymentInstructions: string | null;
   /** Printed in bold at the foot, e.g. "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX." */
   notice: string | null;
 };
@@ -68,6 +70,7 @@ export type DocumentViewInput = {
   amounts: DocumentAmounts;
   notes: string | null;
   terms: string | null;
+  paymentInstructions?: string | null;
   notice: string | null;
 };
 
@@ -115,6 +118,7 @@ export function buildDocumentView(input: DocumentViewInput): DocumentView {
     taxNotes,
     notes: input.notes,
     terms: input.terms,
+    paymentInstructions: input.paymentInstructions ?? null,
     notice: input.notice,
   };
 }

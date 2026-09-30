@@ -27,6 +27,13 @@ export {
   sendQuote,
 } from "./application/sending";
 export {
+  type ApprovedQuote,
+  clearQuoteConversion,
+  lockApprovedQuoteForConversion,
+  markQuoteConverted,
+  type QuoteForConversion,
+} from "./application/conversion";
+export {
   type DecideSharedQuoteOptions,
   type DecideSharedQuoteResult,
   decideSharedQuote,

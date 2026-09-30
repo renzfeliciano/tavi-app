@@ -6,8 +6,8 @@ import { formatRate, listTaxRates } from "@/modules/catalog";
 import { getOrganizationLogo } from "@/modules/files";
 import type { OrgContext } from "@/modules/identity";
 import { getBusinessProfile } from "@/modules/organizations";
-import { customerFormCopy } from "../../customers/_components/customer-copy";
-import type { TaxRateChoice } from "./editor-types";
+import { customerFormCopy } from "../customers/_components/customer-copy";
+import type { DocumentKind, TaxRateChoice } from "./editor-types";
 
 /** The business as it heads its documents: logo, names, address, contact and tax ID. */
 export async function documentBusiness(ctx: OrgContext): Promise<DocumentView["business"]> {
@@ -19,9 +19,9 @@ export async function documentBusiness(ctx: OrgContext): Promise<DocumentView["b
   );
 }
 
-/** Everything the editor needs besides the quote itself. */
-export async function editorContext(ctx: OrgContext, currency: string) {
-  const [business, rates] = await Promise.all([documentBusiness(ctx), listTaxRates(ctx)]);
+/** Everything the editor needs besides the document itself. */
+export async function editorContext(ctx: OrgContext, kind: DocumentKind, currency: string) {
+  const [business, rates, profile] = await Promise.all([documentBusiness(ctx), listTaxRates(ctx), getBusinessProfile(ctx)]);
   const taxRates: TaxRateChoice[] = rates.map((rate) => ({
     id: rate.id,
     name: rate.name,
@@ -35,9 +35,12 @@ export async function editorContext(ctx: OrgContext, currency: string) {
     defaultTaxRateId: rates.find((r) => r.isDefault && r.archivedAt === null)?.id ?? null,
     currencies: currencyOptions({ locale: ctx.locale, first: currency }),
     customerCopy: customerFormCopy(ctx),
-    title: ctx.market.documents.quote.singular,
-    // Quotations are supplementary documents (RR 7-2024 Sec. 6 B.15, D13).
+    title: ctx.market.documents[kind].singular,
+    // Quotations and billing statements are supplementary documents (RR 7-2024
+    // Sec. 6 B.15, D13). Registered invoices (invoice mode, 1.7c) drop it.
     notice: ctx.market.supplementaryDocumentNotice,
+    // Invoices show how to pay; the instructions are snapshotted when sent.
+    paymentInstructions: kind === "invoice" ? profile.paymentInstructions : null,
     defaultUnit: ctx.market.units.service,
     shareChannels: ctx.market.shareChannels,
     emailVerified: ctx.emailVerified,

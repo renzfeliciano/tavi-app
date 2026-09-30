@@ -16,11 +16,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import type { Delivery } from "./editor-types";
 
-export type Delivery = { mode: "email"; to: string; message: string } | { mode: "link" };
 export type DeliveryOutcome = { ok: true } | { ok: false; error?: string; emailError?: string };
 
-type SendQuoteDialogProps = {
+type SendDocumentDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** e.g. "Quotation". */
@@ -35,8 +35,8 @@ type SendQuoteDialogProps = {
   onSend: (delivery: Delivery) => Promise<DeliveryOutcome>;
 };
 
-/** Email and "copy link" are equals: many customers get quotes in a chat (§G.3). */
-export function SendQuoteDialog(props: SendQuoteDialogProps) {
+/** Email and "copy link" are equals: many customers get documents in a chat (§G.3). */
+export function SendDocumentDialog(props: SendDocumentDialogProps) {
   const { title, customerName, customerEmail, businessName } = props;
   const [mode, setMode] = useState<Delivery["mode"]>(customerEmail ? "email" : "link");
   const [to, setTo] = useState(customerEmail ?? "");

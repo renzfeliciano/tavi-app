@@ -1,18 +1,44 @@
 import type { Metadata } from "next";
+import { BackLink } from "@/components/app-shell/back-link";
 import { PageHeader } from "@/components/app-shell/page-header";
-import { SectionEmpty } from "@/components/app-shell/section-empty";
+import { requireOrgContext } from "@/modules/identity";
+import { newInvoiceDefaults } from "@/modules/invoices";
+import { DocumentEditor } from "../../_documents/document-editor";
+import { editorContext } from "../../_documents/editor-props";
+import { deleteDraftInvoiceAction, saveInvoiceDraftAction, sendInvoiceAction } from "../actions";
 
 export const metadata: Metadata = { title: "New invoice" };
 
-export default function NewInvoicePage() {
+// Nothing is saved until the first change, so opening this page never leaves
+// an empty draft behind.
+export default async function NewInvoicePage() {
+  const ctx = await requireOrgContext();
+  const defaults = await newInvoiceDefaults(ctx);
+  const editor = await editorContext(ctx, "invoice", defaults.currency);
+  const { singular, plural } = ctx.market.documents.invoice;
+
   return (
     <>
-      <PageHeader title={"New invoice"} description={"Bill for finished work."} />
-      <SectionEmpty
-        title={"The invoice editor is being built"}
-        description={"You'll create invoices here, or convert an approved quote in one tap. It arrives in Phase 1.7."}
-        action={{ href: "/invoices", label: "Back to invoices" }}
-        expression="waiting"
+      <BackLink href="/invoices">{plural}</BackLink>
+      <PageHeader title={`New ${singular.toLowerCase()}`} description="Changes save as you go." />
+      <DocumentEditor
+        {...editor}
+        kind="invoice"
+        documentId={null}
+        actions={{ saveDraft: saveInvoiceDraftAction, deleteDraft: deleteDraftInvoiceAction, send: sendInvoiceAction }}
+        number={null}
+        revision={1}
+        taxMode={defaults.taxMode}
+        initialCustomer={null}
+        initial={{
+          customerId: "",
+          currency: defaults.currency,
+          issueDate: defaults.issueDate,
+          endDate: defaults.dueDate,
+          notes: defaults.notes,
+          terms: defaults.terms,
+          lines: [],
+        }}
       />
     </>
   );

@@ -40,39 +40,52 @@ import {
   type RawLine,
   type TaxMode,
 } from "@/modules/documents/client";
+import { parseInvoiceDraft } from "@/modules/invoices/client";
 import { parseQuoteDraft } from "@/modules/quotes/client";
 import { formatAmountForInput, formatMoney } from "@/shared/money";
-import { CustomerForm, type CustomerFormCopy, EMPTY_CUSTOMER } from "../../customers/_components/customer-form";
-import {
-  customerForDocumentAction,
-  deleteDraftQuoteAction,
-  saveQuoteDraftAction,
-  searchCustomersAction,
-  searchLineSourcesAction,
-  sendQuoteAction,
-} from "../actions";
-import type { CustomerChoice, EditorCustomer, LineSourceChoice, TaxRateChoice } from "../_lib/editor-types";
-import { type AutosaveStatus, useAutosave } from "../_lib/use-autosave";
+import { CustomerForm, type CustomerFormCopy, EMPTY_CUSTOMER } from "../customers/_components/customer-form";
+import { customerForDocumentAction, searchCustomersAction, searchLineSourcesAction } from "./actions";
+import type {
+  CustomerChoice,
+  Delivery,
+  DocumentEditorActions,
+  DocumentKind,
+  EditorCustomer,
+  LineSourceChoice,
+  TaxRateChoice,
+} from "./editor-types";
 import { type EditorLine, LineItemsEditor } from "./line-items-editor";
-import { type Delivery, type DeliveryOutcome, SendQuoteDialog } from "./send-quote-dialog";
+import { type DeliveryOutcome, SendDocumentDialog } from "./send-document-dialog";
+import { type AutosaveStatus, useAutosave } from "./use-autosave";
 
-export type QuoteEditorState = {
+export type DocumentEditorState = {
   customerId: string;
   currency: string;
   issueDate: string;
-  validUntil: string;
+  /** The second date: valid until (quotes) or due (invoices). */
+  endDate: string;
   notes: string;
   terms: string;
   lines: EditorLine[];
 };
 
-type QuoteEditorProps = {
-  quoteId: string | null;
-  initial: QuoteEditorState;
+/** What differs between the quote and invoice editors. */
+const KINDS = {
+  quote: { noun: "quote", path: "/quotes", endField: "validUntil", endLabel: "Valid until", parse: parseQuoteDraft },
+  invoice: { noun: "invoice", path: "/invoices", endField: "dueDate", endLabel: "Due date", parse: parseInvoiceDraft },
+} as const;
+
+type DocumentEditorProps = {
+  kind: DocumentKind;
+  /** The saved draft, or null for a new one (created on the first change). */
+  documentId: string | null;
+  /** The draft's own server actions (save, delete, send). */
+  actions: DocumentEditorActions;
+  initial: DocumentEditorState;
   initialCustomer: EditorCustomer | null;
   locale: string;
   taxMode: TaxMode;
-  /** The market's name for a quote, e.g. "Quotation". */
+  /** The market's name for the document, e.g. "Quotation" or "Billing statement". */
   title: string;
   number: string | null;
   revision: number;
@@ -80,6 +93,8 @@ type QuoteEditorProps = {
   currencies: CurrencyOption[];
   taxRates: TaxRateChoice[];
   defaultTaxRateId: string | null;
+  /** How to pay (invoices), from the business profile; null for quotes. */
+  paymentInstructions: string | null;
   /** Bold notice for supplementary documents (PH: not valid for claim of input tax), or null. */
   notice: string | null;
   /** The market's usual unit for new free-text lines. */
@@ -145,14 +160,15 @@ function StatusLine({ status }: { status: AutosaveStatus }) {
   }
 }
 
-export function QuoteEditor(props: QuoteEditorProps) {
-  const { locale, taxMode, taxRates } = props;
+export function DocumentEditor(props: DocumentEditorProps) {
+  const { locale, taxMode, taxRates, actions } = props;
+  const kind = KINDS[props.kind];
   const router = useRouter();
-  const [quoteId, setQuoteId] = useState(props.quoteId);
+  const [documentId, setDocumentId] = useState(props.documentId);
   // The saved draft's id, updated the moment the first save returns. A save
   // queued behind that first one runs before React re-renders, so it must read
   // this ref (not state), or it would create a second draft.
-  const quoteIdRef = useRef(props.quoteId);
+  const idRef = useRef(props.documentId);
   const [state, setState] = useState(props.initial);
   const [customer, setCustomer] = useState(props.initialCustomer);
   const [dirty, setDirty] = useState(false);
@@ -165,7 +181,7 @@ export function QuoteEditor(props: QuoteEditorProps) {
   const [deleting, setDeleting] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
 
-  const update = useCallback((patch: Partial<QuoteEditorState>, clearErrorsFor: string[] = []) => {
+  const update = useCallback((patch: Partial<DocumentEditorState>, clearErrorsFor: string[] = []) => {
     setState((s) => ({ ...s, ...patch }));
     setDirty(true);
     if (clearErrorsFor.length > 0) {
@@ -179,12 +195,16 @@ export function QuoteEditor(props: QuoteEditorProps) {
 
   const touch = useCallback((key: string) => setTouched((t) => (t.has(key) ? t : new Set(t).add(key))), []);
 
-  // What the server receives: the editor's state minus row keys.
-  const payload = useMemo(() => ({ ...state, lines: state.lines.map(toRawLine) }), [state]);
+  // What the server receives: the editor's state minus row keys, with the
+  // second date under the document's own name (validUntil / dueDate).
+  const payload = useMemo(() => {
+    const { endDate, ...rest } = state;
+    return { ...rest, [kind.endField]: endDate, lines: state.lines.map(toRawLine) };
+  }, [state, kind.endField]);
   const clientErrors = useMemo(() => {
-    const parsed = parseQuoteDraft(payload, { locale });
+    const parsed = kind.parse(payload, { locale });
     return parsed.ok ? {} : parsed.errors;
-  }, [payload, locale]);
+  }, [payload, locale, kind]);
 
   // The preview shows every line that can already be read, even while others are unfinished.
   const ratesById = useMemo(() => new Map(taxRates.map((r) => [r.id, r])), [taxRates]);
@@ -230,16 +250,17 @@ export function QuoteEditor(props: QuoteEditorProps) {
       taxMode,
       dates: [
         { label: "Date", date: state.issueDate },
-        { label: "Valid until", date: state.validUntil },
+        { label: kind.endLabel, date: state.endDate },
       ].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date)),
       lines: rows.map((r) => r.line),
       amounts,
       notes: state.notes.trim() || null,
       terms: state.terms.trim() || null,
+      paymentInstructions: props.paymentInstructions,
       notice: props.notice,
     });
     return { view, lineAmounts, total: formatMoney(amounts.totalMinor, state.currency, { locale }) };
-  }, [state, customer, locale, taxMode, ratesById, props.title, props.number, props.revision, props.business, props.notice]);
+  }, [state, customer, locale, taxMode, ratesById, kind.endLabel, props.title, props.number, props.revision, props.business, props.notice, props.paymentInstructions]);
 
   // Show a field's problem once the person has left it, or once the server reported it.
   const visibleErrors = useMemo(() => {
@@ -250,26 +271,26 @@ export function QuoteEditor(props: QuoteEditorProps) {
 
   const validate = useCallback(
     (value: typeof payload) => {
-      const result = parseQuoteDraft(value, { locale });
+      const result = kind.parse(value, { locale });
       if (result.ok) return null;
       const first = Object.keys(result.errors)[0] ?? "";
       const line = /^lines\.(\d+)\./.exec(first);
       return line ? `Not saved yet: finish line ${Number(line[1]) + 1}.` : "Not saved yet: fix the highlighted fields.";
     },
-    [locale],
+    [locale, kind],
   );
 
   const save = useCallback(
     async (value: typeof payload) => {
-      const response = await saveQuoteDraftAction(quoteIdRef.current, value);
+      const response = await actions.saveDraft(idRef.current, value);
       if (response.ok) {
         setServerErrors({});
         setFormError(null);
-        if (!quoteIdRef.current) {
-          quoteIdRef.current = response.id;
-          setQuoteId(response.id);
+        if (!idRef.current) {
+          idRef.current = response.id;
+          setDocumentId(response.id);
           // Keep editing in place; the address now points at the saved draft.
-          window.history.replaceState(null, "", `/quotes/${response.id}`);
+          window.history.replaceState(null, "", `${kind.path}/${response.id}`);
         }
         return { ok: true as const };
       }
@@ -280,15 +301,15 @@ export function QuoteEditor(props: QuoteEditorProps) {
       setFormError(response.error);
       return { ok: false as const, message: response.error, retry: false };
     },
-    [],
+    [actions, kind.path],
   );
 
   const { status } = useAutosave({ value: payload, enabled: dirty, validate, save });
 
   // Saving is quiet when it works (the status line); a failure also gets a toast (one at a time).
   useEffect(() => {
-    if (status.kind === "failed") toast.error(status.message, { id: "quote-autosave" });
-    if (status.kind === "saved") toast.dismiss("quote-autosave");
+    if (status.kind === "failed") toast.error(status.message, { id: "document-autosave" });
+    if (status.kind === "saved") toast.dismiss("document-autosave");
   }, [status]);
 
   const changeLine = (key: string, patch: Partial<RawLine>) => {
@@ -364,12 +385,12 @@ export function QuoteEditor(props: QuoteEditorProps) {
   };
 
   const deleteDraft = async () => {
-    if (!quoteId) {
-      router.push("/quotes");
+    if (!documentId) {
+      router.push(kind.path);
       return;
     }
     setDeleting(true);
-    const result = await deleteDraftQuoteAction(quoteId);
+    const result = await actions.deleteDraft(documentId);
     setDeleting(false);
     if (!result.ok) {
       toast.error(result.error);
@@ -377,11 +398,11 @@ export function QuoteEditor(props: QuoteEditorProps) {
     }
     setDirty(false);
     toast.success("Draft deleted.");
-    router.push("/quotes");
+    router.push(kind.path);
   };
 
   const send = async (delivery: Delivery): Promise<DeliveryOutcome> => {
-    const response = await sendQuoteAction(quoteIdRef.current, payload, delivery);
+    const response = await actions.send(idRef.current, payload, delivery);
     if (response.ok) {
       setDirty(false);
       setSendOpen(false);
@@ -397,7 +418,7 @@ export function QuoteEditor(props: QuoteEditorProps) {
           toast.success(`${name} is ready.`, { description: response.url, duration: 20_000 });
         }
       }
-      router.push(`/quotes/${response.id}`);
+      router.push(`${kind.path}/${response.id}`);
       router.refresh();
       return { ok: true };
     }
@@ -424,7 +445,7 @@ export function QuoteEditor(props: QuoteEditorProps) {
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)}>
               <Trash2Icon aria-hidden="true" />
-              {quoteId ? "Delete draft" : "Discard"}
+              {documentId ? "Delete draft" : "Discard"}
             </Button>
             <Button type="button" onClick={() => setSendOpen(true)}>
               <SendIcon aria-hidden="true" />
@@ -434,8 +455,8 @@ export function QuoteEditor(props: QuoteEditorProps) {
         </div>
         <FormAlert message={formError} />
 
-        <section aria-labelledby="quote-customer" className="grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs">
-          <h2 id="quote-customer" className="font-semibold">
+        <section aria-labelledby="doc-customer" className="grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs">
+          <h2 id="doc-customer" className="font-semibold">
             Customer
           </h2>
           <AsyncCombobox<CustomerChoice>
@@ -473,9 +494,9 @@ export function QuoteEditor(props: QuoteEditorProps) {
           )}
         </section>
 
-        <section aria-labelledby="quote-lines" className="grid gap-4">
+        <section aria-labelledby="doc-lines" className="grid gap-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 id="quote-lines" className="font-semibold">
+            <h2 id="doc-lines" className="font-semibold">
               Items
             </h2>
           </div>
@@ -526,17 +547,17 @@ export function QuoteEditor(props: QuoteEditorProps) {
           </div>
         </section>
 
-        <section aria-labelledby="quote-details" className="grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs">
-          <h2 id="quote-details" className="font-semibold">
+        <section aria-labelledby="doc-details" className="grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs">
+          <h2 id="doc-details" className="font-semibold">
             Details
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5 sm:col-span-2">
-              <label htmlFor="quote-currency" className="text-sm font-medium">
+              <label htmlFor="doc-currency" className="text-sm font-medium">
                 Currency
               </label>
               <NativeSelect
-                id="quote-currency"
+                id="doc-currency"
                 value={state.currency}
                 onChange={(e) => update({ currency: e.target.value }, ["currency"])}
               >
@@ -550,29 +571,33 @@ export function QuoteEditor(props: QuoteEditorProps) {
             {(
               [
                 ["issueDate", "Date"],
-                ["validUntil", "Valid until"],
+                ["endDate", kind.endLabel],
               ] as const
-            ).map(([field, label]) => (
+            ).map(([field, label]) => {
+              // Errors are keyed by the document's own field name (validUntil / dueDate).
+              const errorKey = field === "endDate" ? kind.endField : field;
+              return (
               <div key={field} className="grid gap-1.5">
-                <label htmlFor={`quote-${field}`} className="text-sm font-medium">
+                <label htmlFor={`doc-${field}`} className="text-sm font-medium">
                   {label}
                 </label>
                 <Input
-                  id={`quote-${field}`}
+                  id={`doc-${field}`}
                   type="date"
                   value={state[field]}
                   onChange={(e) => update({ [field]: e.target.value }, [field])}
-                  onBlur={() => touch(field)}
-                  aria-invalid={headerError(field) ? true : undefined}
-                  aria-describedby={headerError(field) ? `quote-${field}-error` : undefined}
+                  onBlur={() => touch(errorKey)}
+                  aria-invalid={headerError(errorKey) ? true : undefined}
+                  aria-describedby={headerError(errorKey) ? `doc-${field}-error` : undefined}
                 />
-                {headerError(field) && (
-                  <p id={`quote-${field}-error`} className="text-sm text-destructive">
-                    {headerError(field)}
+                {headerError(errorKey) && (
+                  <p id={`doc-${field}-error`} className="text-sm text-destructive">
+                    {headerError(errorKey)}
                   </p>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
           {(
             [
@@ -581,18 +606,18 @@ export function QuoteEditor(props: QuoteEditorProps) {
             ] as const
           ).map(([field, label, hint]) => (
             <div key={field} className="grid gap-1.5">
-              <label htmlFor={`quote-${field}`} className="text-sm font-medium">
+              <label htmlFor={`doc-${field}`} className="text-sm font-medium">
                 {label} <span className="font-normal text-muted-foreground">(optional)</span>
               </label>
               <Textarea
-                id={`quote-${field}`}
+                id={`doc-${field}`}
                 value={state[field]}
                 onChange={(e) => update({ [field]: e.target.value }, [field])}
                 maxLength={DOCUMENT_LIMITS[field]}
                 rows={2}
-                aria-describedby={`quote-${field}-hint`}
+                aria-describedby={`doc-${field}-hint`}
               />
-              <p id={`quote-${field}-hint`} className="text-sm text-muted-foreground">
+              <p id={`doc-${field}-hint`} className="text-sm text-muted-foreground">
                 {headerError(field) ?? hint}
               </p>
             </div>
@@ -632,7 +657,7 @@ export function QuoteEditor(props: QuoteEditorProps) {
         <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle>Add a new customer</SheetTitle>
-            <SheetDescription>{"They're added to your customers and chosen for this quote."}</SheetDescription>
+            <SheetDescription>{`They're added to your customers and chosen for this ${kind.noun}.`}</SheetDescription>
           </SheetHeader>
           <div className="px-4 pb-6">
             <CustomerForm
@@ -648,7 +673,7 @@ export function QuoteEditor(props: QuoteEditorProps) {
         </SheetContent>
       </Sheet>
 
-      <SendQuoteDialog
+      <SendDocumentDialog
         // Its defaults (email or link, recipient, greeting) follow the chosen customer.
         key={customer?.id ?? "no-customer"}
         open={sendOpen}
@@ -665,9 +690,9 @@ export function QuoteEditor(props: QuoteEditorProps) {
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{quoteId ? "Delete this draft?" : "Discard this quote?"}</DialogTitle>
+            <DialogTitle>{documentId ? "Delete this draft?" : `Discard this ${kind.noun}?`}</DialogTitle>
             <DialogDescription>
-              {quoteId
+              {documentId
                 ? "The draft and its items are removed. This can't be undone."
                 : "Nothing has been saved yet, so there's nothing to keep."}
             </DialogDescription>
@@ -681,7 +706,7 @@ export function QuoteEditor(props: QuoteEditorProps) {
               pendingLabel="Deleting…"
               onClick={() => void deleteDraft()}
             >
-              {quoteId ? "Delete draft" : "Discard"}
+              {documentId ? "Delete draft" : "Discard"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,7 +7,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { DOCUMENT_LIMITS, type RawLine } from "@/modules/documents/client";
-import type { TaxRateChoice } from "../_lib/editor-types";
+import type { TaxRateChoice } from "./editor-types";
 
 export type EditorLine = RawLine & { key: string };
 

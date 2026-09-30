@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildContentSecurityPolicy, isProtectedPath, SECURITY_HEADERS, PORTAL_HEADERS, PORTAL_PATH_PATTERN } from "./headers";
+import { buildContentSecurityPolicy, isProtectedPath, SECURITY_HEADERS, PORTAL_HEADERS, PORTAL_PATH_PATTERNS } from "./headers";
 
 const directives = (csp: string) =>
   Object.fromEntries(
@@ -70,8 +70,9 @@ describe("PORTAL_HEADERS", () => {
   });
 
   it("applies to the customer pages only", () => {
-    expect(PORTAL_PATH_PATTERN).toBe("/q/:path*");
+    expect(PORTAL_PATH_PATTERNS).toEqual(["/q/:path*", "/i/:path*"]);
     expect(isProtectedPath("/q/abc")).toBe(false);
+    expect(isProtectedPath("/i/abc")).toBe(false);
   });
 });
 

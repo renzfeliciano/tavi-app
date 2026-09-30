@@ -15,46 +15,50 @@ import {
   type TaxMode,
 } from "@/modules/documents";
 import { getDocumentSettings } from "@/modules/organizations";
+import { clearQuoteConversion, type CustomerSnapshot } from "@/modules/quotes";
 import { addDays, type CalendarDate, todayIn } from "@/shared/dates/calendar";
 import { escapeLikePattern } from "@/shared/text/search";
-import { type QuoteDraft, parseQuoteDraft } from "../domain/quote-draft";
-import type { QuoteStatus } from "../domain/status";
-import { transitionQuote } from "../domain/transitions";
-import { type CustomerSnapshot, quoteLines, quotes } from "../schema";
+import { type InvoiceDraft, parseInvoiceDraft } from "../domain/invoice-draft";
+import type { InvoiceStatus } from "../domain/status";
+import { transitionInvoice } from "../domain/transitions";
+import { invoiceLines, invoices } from "../schema";
 
-/** Quotes per page in the list. */
-export const QUOTE_PAGE_SIZE = 25;
+// Invoice drafts (§B.4): created blank or from an approved quote, autosaved
+// like quotes, deleted only while never issued.
 
-export type QuoteHeader = {
+/** Invoices per page in the list. */
+export const INVOICE_PAGE_SIZE = 25;
+
+export type InvoiceHeader = {
   id: string;
   number: string | null;
   revision: number;
-  status: QuoteStatus;
+  status: InvoiceStatus;
   customerId: string | null;
+  sourceQuoteId: string | null;
   currency: string;
   taxMode: TaxMode;
   issueDate: CalendarDate;
-  validUntil: CalendarDate;
+  dueDate: CalendarDate;
   notes: string | null;
   terms: string | null;
   customerSnapshot: CustomerSnapshot | null;
+  paymentInstructions: string | null;
   subtotalMinor: number;
   discountTotalMinor: number;
   taxTotalMinor: number;
   totalMinor: number;
+  amountPaidMinor: number;
   sentAt: Date | null;
   viewedAt: Date | null;
-  /** The customer's decision from the link (§B.3). */
-  decidedAt: Date | null;
-  decisionName: string | null;
-  decisionNote: string | null;
-  /** The invoice this approved quote became, once converted. */
-  convertedInvoiceId: string | null;
+  voidedAt: Date | null;
+  voidReason: string | null;
   cancelledAt: Date | null;
+  cancelReason: string | null;
   updatedAt: Date;
 };
 
-export type QuoteLine = {
+export type InvoiceLine = {
   position: number;
   description: string;
   unitLabel: string;
@@ -74,76 +78,75 @@ export type QuoteLine = {
   totalMinor: number;
 };
 
-export type QuoteDetail = QuoteHeader & {
+export type InvoiceDetail = InvoiceHeader & {
   /** The customer as they are now (drafts), for the editor's picker. */
   customer: { id: string; displayName: string; archived: boolean } | null;
-  lines: QuoteLine[];
+  lines: InvoiceLine[];
 };
 
-export type QuoteSummary = Pick<
-  QuoteHeader,
-  "id" | "number" | "revision" | "status" | "currency" | "totalMinor" | "issueDate" | "validUntil" | "updatedAt"
+export type InvoiceSummary = Pick<
+  InvoiceHeader,
+  "id" | "number" | "revision" | "status" | "currency" | "totalMinor" | "amountPaidMinor" | "issueDate" | "dueDate" | "updatedAt"
 > & { customerName: string | null };
 
-export type QuoteList = { quotes: QuoteSummary[]; page: number; hasMore: boolean; total: number };
+export type InvoiceList = { invoices: InvoiceSummary[]; page: number; hasMore: boolean; total: number };
 
-export type NewQuoteDefaults = {
+export type NewInvoiceDefaults = {
   currency: string;
   taxMode: TaxMode;
   issueDate: CalendarDate;
-  validUntil: CalendarDate;
+  dueDate: CalendarDate;
   notes: string;
   terms: string;
   defaultTaxRateId: string | null;
 };
 
-export type SaveQuoteDraftResult =
-  | { ok: true; quote: QuoteHeader }
+export type SaveInvoiceDraftResult =
+  | { ok: true; invoice: InvoiceHeader }
   | { ok: false; errors: Record<string, string> }
   | { ok: false; notFound: true }
-  | { ok: false; notEditable: true; status: QuoteStatus };
+  | { ok: false; notEditable: true; status: InvoiceStatus };
 
-export type QuoteCommandResult = { ok: true } | { ok: false; notFound: true } | { ok: false; error: string };
+export type InvoiceCommandResult = { ok: true } | { ok: false; notFound: true } | { ok: false; error: string };
 
-/** How typed input is read: the business's locale. */
-export type QuoteInputOptions = { locale: string };
-
-/** Module-internal (used by ./sending); not exported from the module. */
+/** Module-internal (used by the other invoice use cases); not exported from the module. */
 export const headerColumns = {
-  id: quotes.id,
-  number: quotes.number,
-  revision: quotes.revision,
-  status: quotes.status,
-  customerId: quotes.customerId,
-  currency: quotes.currency,
-  taxMode: quotes.taxMode,
-  issueDate: quotes.issueDate,
-  validUntil: quotes.validUntil,
-  notes: quotes.notes,
-  terms: quotes.terms,
-  customerSnapshot: quotes.customerSnapshot,
-  subtotalMinor: quotes.subtotalMinor,
-  discountTotalMinor: quotes.discountTotalMinor,
-  taxTotalMinor: quotes.taxTotalMinor,
-  totalMinor: quotes.totalMinor,
-  sentAt: quotes.sentAt,
-  viewedAt: quotes.viewedAt,
-  decidedAt: quotes.decidedAt,
-  decisionName: quotes.decisionName,
-  decisionNote: quotes.decisionNote,
-  convertedInvoiceId: quotes.convertedInvoiceId,
-  cancelledAt: quotes.cancelledAt,
-  updatedAt: quotes.updatedAt,
+  id: invoices.id,
+  number: invoices.number,
+  revision: invoices.revision,
+  status: invoices.status,
+  customerId: invoices.customerId,
+  sourceQuoteId: invoices.sourceQuoteId,
+  currency: invoices.currency,
+  taxMode: invoices.taxMode,
+  issueDate: invoices.issueDate,
+  dueDate: invoices.dueDate,
+  notes: invoices.notes,
+  terms: invoices.terms,
+  customerSnapshot: invoices.customerSnapshot,
+  paymentInstructions: invoices.paymentInstructions,
+  subtotalMinor: invoices.subtotalMinor,
+  discountTotalMinor: invoices.discountTotalMinor,
+  taxTotalMinor: invoices.taxTotalMinor,
+  totalMinor: invoices.totalMinor,
+  amountPaidMinor: invoices.amountPaidMinor,
+  sentAt: invoices.sentAt,
+  viewedAt: invoices.viewedAt,
+  voidedAt: invoices.voidedAt,
+  voidReason: invoices.voidReason,
+  cancelledAt: invoices.cancelledAt,
+  cancelReason: invoices.cancelReason,
+  updatedAt: invoices.updatedAt,
 };
 
 const isUuid = (id: string) => z.uuid().safeParse(id).success;
-const ofOrganization = (actor: Pick<OrgActor, "organizationId">) => eq(quotes.organizationId, actor.organizationId);
+const ofOrganization = (actor: Pick<OrgActor, "organizationId">) => eq(invoices.organizationId, actor.organizationId);
 
 export function audit(
   tx: Executor,
   actor: OrgActor,
   action: AuditAction,
-  quoteId: string,
+  invoiceId: string,
   metadata?: Record<string, unknown>,
 ) {
   return recordAuditEvent(tx, {
@@ -151,26 +154,26 @@ export function audit(
     actorType: "user",
     actorId: actor.userId,
     organizationId: actor.organizationId,
-    entityType: "quote",
-    entityId: quoteId,
+    entityType: "invoice",
+    entityId: invoiceId,
     metadata,
   });
 }
 
-/** Where a new quote starts: today in the business's time zone, its validity, terms and default tax. */
-export async function newQuoteDefaults(
+/** Where a new invoice starts: today in the business's time zone, its payment terms, notes and default tax. */
+export async function newInvoiceDefaults(
   actor: OrgActor,
   db: Database = getDb(),
   now: Date = new Date(),
-): Promise<NewQuoteDefaults> {
-  assertCan(actor, "quotes.write");
+): Promise<NewInvoiceDefaults> {
+  assertCan(actor, "invoices.write");
   const [settings, rates] = await Promise.all([getDocumentSettings(actor, db), listTaxRates(actor, db)]);
   const issueDate = todayIn(settings.timezone, now);
   return {
     currency: settings.currency,
     taxMode: settings.taxMode,
     issueDate,
-    validUntil: addDays(issueDate, settings.quoteValidityDays),
+    dueDate: addDays(issueDate, settings.paymentTermsDays),
     notes: settings.defaultNotes ?? "",
     terms: settings.defaultTerms ?? "",
     defaultTaxRateId: rates.find((r) => r.isDefault && r.archivedAt === null)?.id ?? null,
@@ -179,39 +182,52 @@ export async function newQuoteDefaults(
 
 export async function loadHeader(tx: Executor, actor: Pick<OrgActor, "organizationId">, id: string, lock = false) {
   if (!isUuid(id)) return undefined;
-  const query = tx.select(headerColumns).from(quotes).where(and(eq(quotes.id, id), ofOrganization(actor)));
+  const query = tx.select(headerColumns).from(invoices).where(and(eq(invoices.id, id), ofOrganization(actor)));
   const [row] = await (lock ? query.for("update") : query);
   return row;
 }
 
-export async function loadLines(tx: Executor, quoteId: string): Promise<QuoteLine[]> {
+export async function loadLines(tx: Executor, invoiceId: string): Promise<InvoiceLine[]> {
   const rows = await tx
     .select({
-      position: quoteLines.position,
-      description: quoteLines.description,
-      unitLabel: quoteLines.unitLabel,
-      quantity: quoteLines.quantity,
-      unitPriceMinor: quoteLines.unitPriceMinor,
-      discountKind: quoteLines.discountKind,
-      discountValue: quoteLines.discountValue,
-      taxRateId: quoteLines.taxRateId,
-      taxRateName: quoteLines.taxRateName,
-      taxRateBps: quoteLines.taxRateBps,
-      sourceKind: quoteLines.sourceKind,
-      sourceId: quoteLines.sourceId,
-      grossMinor: quoteLines.grossMinor,
-      discountMinor: quoteLines.discountMinor,
-      taxMinor: quoteLines.taxMinor,
-      totalMinor: quoteLines.totalMinor,
+      position: invoiceLines.position,
+      description: invoiceLines.description,
+      unitLabel: invoiceLines.unitLabel,
+      quantity: invoiceLines.quantity,
+      unitPriceMinor: invoiceLines.unitPriceMinor,
+      discountKind: invoiceLines.discountKind,
+      discountValue: invoiceLines.discountValue,
+      taxRateId: invoiceLines.taxRateId,
+      taxRateName: invoiceLines.taxRateName,
+      taxRateBps: invoiceLines.taxRateBps,
+      sourceKind: invoiceLines.sourceKind,
+      sourceId: invoiceLines.sourceId,
+      grossMinor: invoiceLines.grossMinor,
+      discountMinor: invoiceLines.discountMinor,
+      taxMinor: invoiceLines.taxMinor,
+      totalMinor: invoiceLines.totalMinor,
     })
-    .from(quoteLines)
-    .where(eq(quoteLines.quoteId, quoteId))
-    .orderBy(asc(quoteLines.position));
+    .from(invoiceLines)
+    .where(eq(invoiceLines.invoiceId, invoiceId))
+    .orderBy(asc(invoiceLines.position));
   return rows.map((row) => ({ ...row, quantity: numericToQuantity(row.quantity) }));
 }
 
-export async function getQuote(actor: OrgActor, id: string, db: Database = getDb()): Promise<QuoteDetail | null> {
-  assertCan(actor, "quotes.read");
+/** Stored lines as rows for another invoice (conversion, duplicate): the same snapshot and amounts. */
+export function copyLines(
+  lines: readonly Omit<InvoiceLine, "position">[],
+  target: { organizationId: string; invoiceId: string },
+) {
+  return lines.map((line, position) => ({
+    ...line,
+    ...target,
+    position,
+    quantity: quantityToNumeric(line.quantity),
+  }));
+}
+
+export async function getInvoice(actor: OrgActor, id: string, db: Database = getDb()): Promise<InvoiceDetail | null> {
+  assertCan(actor, "invoices.read");
   const header = await loadHeader(db, actor, id);
   if (!header) return null;
   const [lines, customer] = await Promise.all([
@@ -236,7 +252,7 @@ type ResolvedLine = ParsedLine & { tax: { id: string; name: string; rateBps: num
  */
 async function resolveDraft(
   actor: OrgActor,
-  draft: QuoteDraft,
+  draft: InvoiceDraft,
   current: { customerId: string | null; taxRateIds: Set<string> },
   db: Database,
 ): Promise<{ ok: true; lines: ResolvedLine[] } | { ok: false; errors: Record<string, string> }> {
@@ -271,7 +287,7 @@ function calculate(
     return { ok: true, amounts: calculateDocument({ taxMode, lines }) };
   } catch (error) {
     if (error instanceof RangeError) {
-      return { ok: false, errors: { lines: "This quote is too large to total. Split it into smaller quotes." } };
+      return { ok: false, errors: { lines: "This invoice is too large to total. Split it into smaller invoices." } };
     }
     throw error;
   }
@@ -279,18 +295,18 @@ function calculate(
 
 /**
  * Autosaves a draft: creates it on the first save (`id` null), then replaces
- * its header and lines. Only drafts are edited in place; a sent quote is
- * revised first. Creation is audited; autosaves aren't (they fire as you type).
+ * its header and lines. Only drafts are edited here. Creation is audited;
+ * autosaves aren't (they fire as you type).
  */
-export async function saveQuoteDraft(
+export async function saveInvoiceDraft(
   actor: OrgActor,
   id: string | null,
   input: unknown,
-  { locale }: QuoteInputOptions,
+  { locale }: { locale: string },
   db: Database = getDb(),
-): Promise<SaveQuoteDraftResult> {
-  assertCan(actor, "quotes.write");
-  const parsed = parseQuoteDraft(input, { locale });
+): Promise<SaveInvoiceDraftResult> {
+  assertCan(actor, "invoices.write");
+  const parsed = parseInvoiceDraft(input, { locale });
   if (!parsed.ok) return parsed;
   const draft = parsed.draft;
 
@@ -318,7 +334,7 @@ export async function saveQuoteDraft(
     customerId: draft.customerId,
     currency: draft.currency,
     issueDate: draft.issueDate,
-    validUntil: draft.validUntil,
+    dueDate: draft.dueDate,
     notes: draft.notes,
     terms: draft.terms,
     subtotalMinor: amounts.subtotalMinor,
@@ -327,32 +343,32 @@ export async function saveQuoteDraft(
     totalMinor: amounts.totalMinor,
   };
 
-  return db.transaction(async (tx): Promise<SaveQuoteDraftResult> => {
-    let quote;
+  return db.transaction(async (tx): Promise<SaveInvoiceDraftResult> => {
+    let invoice;
     if (id === null) {
-      [quote] = await tx
-        .insert(quotes)
+      [invoice] = await tx
+        .insert(invoices)
         .values({ ...header, organizationId: actor.organizationId, taxMode, createdBy: actor.userId })
         .returning(headerColumns);
-      if (!quote) throw new Error("Quote insert returned no row");
-      await audit(tx, actor, "quote.created", quote.id);
+      if (!invoice) throw new Error("Invoice insert returned no row");
+      await audit(tx, actor, "invoice.created", invoice.id);
     } else {
-      // Re-check under the lock: it may have been sent from another tab.
+      // Re-check under the lock: it may have been issued from another tab.
       const locked = await loadHeader(tx, actor, id, true);
       if (!locked) return { ok: false, notFound: true };
       if (locked.status !== "DRAFT") return { ok: false, notEditable: true, status: locked.status };
-      [quote] = await tx.update(quotes).set(header).where(eq(quotes.id, locked.id)).returning(headerColumns);
-      if (!quote) throw new Error("Quote update returned no row");
-      await tx.delete(quoteLines).where(eq(quoteLines.quoteId, quote.id));
+      [invoice] = await tx.update(invoices).set(header).where(eq(invoices.id, locked.id)).returning(headerColumns);
+      if (!invoice) throw new Error("Invoice update returned no row");
+      await tx.delete(invoiceLines).where(eq(invoiceLines.invoiceId, invoice.id));
     }
 
     if (resolved.lines.length > 0) {
-      await tx.insert(quoteLines).values(
+      await tx.insert(invoiceLines).values(
         resolved.lines.map((line, position) => {
           const a = amounts.lines[position]!;
           return {
             organizationId: actor.organizationId,
-            quoteId: quote.id,
+            invoiceId: invoice.id,
             position,
             sourceKind: line.source?.kind ?? null,
             sourceId: line.source?.id ?? null,
@@ -374,36 +390,49 @@ export async function saveQuoteDraft(
         }),
       );
     }
-    return { ok: true, quote };
-  });
-}
-
-/** Deletes a draft that was never sent (sent quotes keep their number and are cancelled instead). */
-export async function deleteDraftQuote(actor: OrgActor, id: string, db: Database = getDb()): Promise<QuoteCommandResult> {
-  assertCan(actor, "quotes.write");
-  return db.transaction(async (tx): Promise<QuoteCommandResult> => {
-    const quote = await loadHeader(tx, actor, id, true);
-    if (!quote) return { ok: false, notFound: true };
-    if (!transitionQuote(quote.status, "delete").ok || quote.number !== null) {
-      return { ok: false, error: "Only drafts that were never sent can be deleted. Cancel this quote instead." };
-    }
-    await tx.delete(quotes).where(eq(quotes.id, quote.id));
-    await audit(tx, actor, "quote.deleted", quote.id, { totalMinor: quote.totalMinor, currency: quote.currency });
-    return { ok: true };
+    return { ok: true, invoice };
   });
 }
 
 /**
- * The business's quotes, most recently changed first, optionally filtered by
- * status or searched by number or customer. Sent quotes show the customer as
- * snapshotted; drafts show the customer as they are now.
+ * Deletes a draft that was never issued (issued invoices keep their number
+ * and are voided or cancelled instead). A draft converted from a quote frees
+ * that quote to be converted again.
  */
-export async function listQuotes(
+export async function deleteDraftInvoice(
   actor: OrgActor,
-  { search = null, status, page = 1 }: { search?: string | null; status?: QuoteStatus; page?: number },
+  id: string,
   db: Database = getDb(),
-): Promise<QuoteList> {
-  assertCan(actor, "quotes.read");
+): Promise<InvoiceCommandResult & { sourceQuoteId?: string | null }> {
+  assertCan(actor, "invoices.write");
+  return db.transaction(async (tx) => {
+    const invoice = await loadHeader(tx, actor, id, true);
+    if (!invoice) return { ok: false as const, notFound: true as const };
+    if (!transitionInvoice(invoice.status, "delete").ok || invoice.number !== null) {
+      return { ok: false as const, error: "Only drafts that were never sent can be deleted. Void or cancel this invoice instead." };
+    }
+    await tx.delete(invoices).where(eq(invoices.id, invoice.id));
+    if (invoice.sourceQuoteId) await clearQuoteConversion(tx, actor, invoice.sourceQuoteId, invoice.id);
+    await audit(tx, actor, "invoice.deleted", invoice.id, {
+      totalMinor: invoice.totalMinor,
+      currency: invoice.currency,
+      sourceQuoteId: invoice.sourceQuoteId,
+    });
+    return { ok: true as const, sourceQuoteId: invoice.sourceQuoteId };
+  });
+}
+
+/**
+ * The business's invoices, most recently changed first, optionally filtered
+ * by status or searched by number or customer. Issued invoices show the
+ * customer as snapshotted; drafts show the customer as they are now.
+ */
+export async function listInvoices(
+  actor: OrgActor,
+  { search = null, status, page = 1 }: { search?: string | null; status?: InvoiceStatus; page?: number },
+  db: Database = getDb(),
+): Promise<InvoiceList> {
+  assertCan(actor, "invoices.read");
   const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
 
   let matches;
@@ -411,49 +440,50 @@ export async function listQuotes(
     const pattern = `%${escapeLikePattern(search)}%`;
     const customerIds = await findCustomerIds(actor, search, db);
     matches = or(
-      ilike(quotes.number, pattern),
-      sql`${quotes.customerSnapshot}->>'displayName' ilike ${pattern}`,
-      customerIds.length > 0 ? inArray(quotes.customerId, customerIds) : undefined,
+      ilike(invoices.number, pattern),
+      sql`${invoices.customerSnapshot}->>'displayName' ilike ${pattern}`,
+      customerIds.length > 0 ? inArray(invoices.customerId, customerIds) : undefined,
     );
   }
-  const where = and(ofOrganization(actor), status ? eq(quotes.status, status) : undefined, matches);
+  const where = and(ofOrganization(actor), status ? eq(invoices.status, status) : undefined, matches);
 
   const [rows, [total]] = await Promise.all([
     db
       .select({
-        id: quotes.id,
-        number: quotes.number,
-        revision: quotes.revision,
-        status: quotes.status,
-        currency: quotes.currency,
-        totalMinor: quotes.totalMinor,
-        issueDate: quotes.issueDate,
-        validUntil: quotes.validUntil,
-        updatedAt: quotes.updatedAt,
-        customerId: quotes.customerId,
-        snapshotName: sql<string | null>`${quotes.customerSnapshot}->>'displayName'`,
+        id: invoices.id,
+        number: invoices.number,
+        revision: invoices.revision,
+        status: invoices.status,
+        currency: invoices.currency,
+        totalMinor: invoices.totalMinor,
+        amountPaidMinor: invoices.amountPaidMinor,
+        issueDate: invoices.issueDate,
+        dueDate: invoices.dueDate,
+        updatedAt: invoices.updatedAt,
+        customerId: invoices.customerId,
+        snapshotName: sql<string | null>`${invoices.customerSnapshot}->>'displayName'`,
       })
-      .from(quotes)
+      .from(invoices)
       .where(where)
-      .orderBy(desc(quotes.updatedAt), desc(quotes.id))
-      .limit(QUOTE_PAGE_SIZE + 1)
-      .offset((safePage - 1) * QUOTE_PAGE_SIZE),
-    db.select({ value: count() }).from(quotes).where(ofOrganization(actor)),
+      .orderBy(desc(invoices.updatedAt), desc(invoices.id))
+      .limit(INVOICE_PAGE_SIZE + 1)
+      .offset((safePage - 1) * INVOICE_PAGE_SIZE),
+    db.select({ value: count() }).from(invoices).where(ofOrganization(actor)),
   ]);
 
-  const pageRows = rows.slice(0, QUOTE_PAGE_SIZE);
+  const pageRows = rows.slice(0, INVOICE_PAGE_SIZE);
   const names = await getCustomerNames(
     actor,
     pageRows.flatMap((row) => (row.snapshotName === null && row.customerId ? [row.customerId] : [])),
     db,
   );
   return {
-    quotes: pageRows.map(({ customerId, snapshotName, ...row }) => ({
+    invoices: pageRows.map(({ customerId, snapshotName, ...row }) => ({
       ...row,
       customerName: snapshotName ?? (customerId ? (names.get(customerId) ?? null) : null),
     })),
     page: safePage,
-    hasMore: rows.length > QUOTE_PAGE_SIZE,
+    hasMore: rows.length > INVOICE_PAGE_SIZE,
     total: total?.value ?? 0,
   };
 }

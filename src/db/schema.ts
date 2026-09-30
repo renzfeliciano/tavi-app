@@ -6,6 +6,7 @@ export * from "@/modules/documents/schema";
 export * from "@/modules/catalog/schema";
 export * from "@/modules/customers/schema";
 export * from "@/modules/quotes/schema";
+export * from "@/modules/invoices/schema";
 export * from "@/modules/files/schema";
 export * from "@/modules/audit/schema";
 export * from "@/modules/notifications/schema";
