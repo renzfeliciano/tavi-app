@@ -9,6 +9,8 @@
 //      own module's `application/`/`infra/` layers.
 //   4. Exception to 1: a module's `schema.ts` and `src/db/` may import another
 //      module's `schema.ts`, so tables can declare foreign keys.
+//   5. Exception to 1: `@/modules/<name>/client` is a second public entry
+//      point holding the module's browser-safe exports.
 //
 // Only files under `src/` are checked.
 
@@ -61,7 +63,7 @@ const moduleBoundaries = {
     },
     messages: {
       deepImport:
-        "Import '{{module}}' through its public entry point '@/modules/{{module}}', not its internals.",
+        "Import '{{module}}' through its public entry point '@/modules/{{module}}' (or '@/modules/{{module}}/client' in the browser), not its internals.",
       dbAccess:
         "Only the data layer may access the database. Call a module use case instead.",
       impureDomain:
@@ -118,11 +120,16 @@ const moduleBoundaries = {
         targetModule?.rest === "schema" &&
         (importerModule?.rest === "schema.ts" || relative.startsWith("src/db/"));
 
+      // `@/modules/<name>/client` is a second public entry point: the
+      // browser-safe subset of the module (no server-only code behind it).
+      const clientEntry = targetModule?.rest === "client";
+
       if (
         targetModule &&
         targetModule.rest !== "" &&
         targetModule.name !== importerModule?.name &&
-        !schemaReference
+        !schemaReference &&
+        !clientEntry
       ) {
         context.report({
           node,

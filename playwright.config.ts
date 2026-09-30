@@ -1,30 +1,62 @@
+import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+import { testDatabaseUrl } from "./src/db/testing/env";
 
-const PORT = 3200;
+// E2E runs its own server on :3201 against the Neon `test` branch (or CI's
+// Postgres), never the dev database or a dev server you already have open.
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
+
+const PORT = 3201;
 const baseURL = `http://localhost:${PORT}`;
 const isCI = Boolean(process.env.CI);
+const databaseUrl = testDatabaseUrl();
 
-// E2E runs against a production build in CI and the dev server locally.
-// Every critical flow is checked at desktop and phone widths (§J, §59).
+export const OWNER_STATE = "e2e/.auth/owner.json";
+
 export default defineConfig({
   testDir: "./e2e",
+  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
   workers: isCI ? 2 : undefined,
   reporter: isCI ? [["github"], ["html", { open: "never" }]] : "list",
+  // Locally the dev server compiles each page on first visit (and Neon may be
+  // waking up), so allow slower first responses; CI runs a production build.
+  expect: { timeout: isCI ? 5_000 : 20_000 },
   use: {
     baseURL,
     trace: "on-first-retry",
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
+    // Signs up one owner, creates their business and saves the session.
+    { name: "setup", testMatch: /auth\.setup\.ts/, use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "desktop",
+      use: { ...devices["Desktop Chrome"], storageState: OWNER_STATE },
+      dependencies: ["setup"],
+      testIgnore: /auth\.setup\.ts/,
+    },
+    {
+      name: "mobile",
+      use: { ...devices["Pixel 7"], storageState: OWNER_STATE },
+      dependencies: ["setup"],
+      // Sign-in flows create accounts; run them once (desktop) to stay under
+      // the production sign-up rate limit.
+      testIgnore: [/auth\.setup\.ts/, /auth\.spec\.ts/],
+    },
   ],
   webServer: {
-    command: isCI ? "npm run build && npm run start" : "npm run dev",
+    command: isCI
+      ? `npm run build && npx next start --port ${PORT}`
+      : `npx next dev --port ${PORT}`,
     url: baseURL,
-    reuseExistingServer: !isCI,
-    timeout: 180_000,
+    reuseExistingServer: false,
+    timeout: 240_000,
+    env: {
+      DATABASE_URL: databaseUrl,
+      DATABASE_URL_DIRECT: databaseUrl,
+      APP_URL: baseURL,
+    },
   },
 });

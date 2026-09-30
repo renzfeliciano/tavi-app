@@ -48,3 +48,6 @@ next-env.d.ts
 # python bytecode (vendored skill scripts)
 __pycache__/
 *.pyc
+
+# playwright signed-in state (contains session cookies)
+/e2e/.auth/

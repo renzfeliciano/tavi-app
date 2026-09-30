@@ -1,7 +1,16 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-const SCREENS = ["/dashboard", "/quotes", "/invoices", "/payments", "/customers", "/catalog", "/settings"];
+const SCREENS = [
+  "/dashboard",
+  "/quotes",
+  "/invoices",
+  "/payments",
+  "/customers",
+  "/catalog",
+  "/settings",
+  "/settings/security",
+];
 
 test.describe("app shell", () => {
   for (const path of SCREENS) {

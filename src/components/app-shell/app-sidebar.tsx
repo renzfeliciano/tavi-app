@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import type { ShellAccount } from "./account";
+import { AccountBlock } from "./account-menu";
 import { isActive, type NavItem, newActions, primaryNav, settingsNav } from "./nav";
 
 function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -41,15 +43,24 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 /** Desktop navigation (lg and up). */
-export function AppSidebar() {
+export function AppSidebar({
+  account,
+  signOutAction,
+}: {
+  account: ShellAccount;
+  signOutAction: () => Promise<void>;
+}) {
   const pathname = usePathname();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
-      <div className="flex h-14 items-center px-5">
-        <Link href="/dashboard" className="rounded-sm">
+      <div className="grid gap-0.5 px-5 pt-4 pb-3">
+        <Link href="/dashboard" className="w-fit rounded-sm">
           <Wordmark size={19} />
         </Link>
+        <span className="truncate text-xs text-muted-foreground" title={account.organizationName}>
+          {account.organizationName}
+        </span>
       </div>
 
       <div className="px-3 pb-3">
@@ -93,6 +104,9 @@ export function AppSidebar() {
 
       <div className="grid gap-2 border-t border-sidebar-border p-3">
         <SidebarLink item={settingsNav} pathname={pathname} />
+        <div className="border-t border-sidebar-border pt-3">
+          <AccountBlock account={account} signOutAction={signOutAction} />
+        </div>
       </div>
     </aside>
   );

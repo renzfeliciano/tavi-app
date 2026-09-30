@@ -25,6 +25,20 @@ describe("parseEnv", () => {
     );
   });
 
+  it("allows http://localhost in production, for local and CI builds", () => {
+    const base = {
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://u:p@h/db",
+      BETTER_AUTH_SECRET: "x".repeat(32),
+    };
+    expect(parseEnv({ ...base, APP_URL: "http://localhost:3201" }).APP_URL).toBe(
+      "http://localhost:3201",
+    );
+    expect(() => parseEnv({ ...base, APP_URL: "http://localhost.evil.example" })).toThrow(
+      /https in production/,
+    );
+  });
+
   it("requires APP_URL to use https in production", () => {
     expect(() =>
       parseEnv({ NODE_ENV: "production", APP_URL: "http://tavi.example" }),
@@ -84,6 +98,39 @@ describe("parseEnv", () => {
       expect(() =>
         parseEnv({ NODE_ENV: "production", APP_URL: "https://tavi.example" }),
       ).toThrow(/DATABASE_URL is required in production/);
+    });
+  });
+
+  describe("BETTER_AUTH_SECRET", () => {
+    const secret = "x".repeat(32);
+
+    it("is optional in development", () => {
+      expect(parseEnv({ NODE_ENV: "development" }).BETTER_AUTH_SECRET).toBeUndefined();
+    });
+
+    it("must be at least 32 characters, and is never echoed", () => {
+      let message = "";
+      try {
+        parseEnv({ BETTER_AUTH_SECRET: "short-secret-value" });
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toMatch(/BETTER_AUTH_SECRET must be at least 32 characters/);
+      expect(message).not.toContain("short-secret-value");
+    });
+
+    it("is required in production", () => {
+      expect(() =>
+        parseEnv({
+          NODE_ENV: "production",
+          APP_URL: "https://tavi.example",
+          DATABASE_URL: "postgresql://u:p@h/db",
+        }),
+      ).toThrow(/BETTER_AUTH_SECRET is required in production/);
+    });
+
+    it("accepts a long enough secret", () => {
+      expect(parseEnv({ BETTER_AUTH_SECRET: secret }).BETTER_AUTH_SECRET).toBe(secret);
     });
   });
 });

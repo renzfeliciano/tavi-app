@@ -193,6 +193,8 @@ Depth is mostly tonal: paper, then sheet, then popover, separated by hairlines. 
 - **BrandMascot / StampImprint** (`brand/`): expressions neutral, happy, curious, concerned, waiting, celebrating and resting; sizes xs–xl; decorative unless given a `label`. `animated` plays the press (480ms) then the imprint (320ms, 260ms delay) once. `prefers-reduced-motion` shows the static pose.
 - **EmptyState / SectionEmpty**: the Stamp, a title (what this is), a description (why it matters) and one action (what to do next), on a white sheet.
 - **App shell** (`src/components/app-shell/`): sidebar, mobile top bar, tab bar, "New" as a menu on desktop and a bottom sheet on phones, "More" sheet, `PageHeader`, and a skip link to `#main`.
+- **Auth and forms** (0.3): `AuthShell` (a centered sheet on bond paper with the wordmark above), `PasswordInput` (show/hide toggle, 44px target), `FormAlert` (a danger-wash alert that takes focus when it appears), `NativeSelect` (a styled native `<select>` for short choices, so phones get their own picker). "Unavailable" items get a **"Coming soon" badge at full contrast**, never reduced opacity (it failed WCAG contrast).
+- **Account in the shell:** business name under the wordmark; `AccountBlock` (initials, name, email, sign out) at the foot of the sidebar and in the phone's More sheet. `VerifyEmailBanner` (info wash) reminds unverified users before they send.
 - **Motion tokens:** `--duration-fast` 120ms (press, hover), `--duration-normal` 200ms (menus, badges, toasts), `--duration-slow` 320ms (sheets, dialogs). Easing: `--ease-out` `cubic-bezier(0.23,1,0.32,1)` for entering, `--ease-in-out` for movement, `--ease-drawer` for sheets. Exits are faster than entries.
 
 ## Do's and Don'ts

@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 // `npm test` runs the fast suites (unit + components) and is what the
@@ -5,7 +6,12 @@ import { defineConfig } from "vitest/config";
 // Postgres (the Neon `test` branch, or CI's service container) and run
 // separately via `npm run test:int`.
 export default defineConfig({
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    tsconfigPaths: true,
+    alias: {
+      "server-only": fileURLToPath(new URL("./src/test/server-only.ts", import.meta.url)),
+    },
+  },
   test: {
     projects: [
       {

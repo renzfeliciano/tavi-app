@@ -1,10 +1,22 @@
 import type { ReactNode } from "react";
+import type { ShellAccount } from "@/components/app-shell/account";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { MobileTabBar, MobileTopBar } from "@/components/app-shell/mobile-nav";
+import { VerifyEmailBanner } from "@/components/app-shell/verify-email-banner";
+import { requireOrgContext } from "@/modules/identity";
+import { signOut } from "./actions";
 
-// The signed-in product shell. Authentication and the org context arrive in
-// Phase 0.3; until then these routes only render placeholders.
-export default function AppLayout({ children }: { children: ReactNode }) {
+// The signed-in product shell. `requireOrgContext` is the real gate: it
+// redirects to sign-in without a valid session and to onboarding without an
+// organization. proxy.ts only does a fast, optimistic cookie check.
+export default async function AppLayout({ children }: { children: ReactNode }) {
+  const ctx = await requireOrgContext();
+  const account: ShellAccount = {
+    organizationName: ctx.organizationName,
+    userName: ctx.userName,
+    userEmail: ctx.userEmail,
+  };
+
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <a
@@ -13,14 +25,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
-      <AppSidebar />
-      <MobileTopBar />
+      <AppSidebar account={account} signOutAction={signOut} />
+      <MobileTopBar organizationName={account.organizationName} />
       <main id="main" tabIndex={-1} className="flex-1 outline-none lg:pl-60">
         <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-10 lg:pt-10 lg:pb-12">
+          {!ctx.emailVerified && <VerifyEmailBanner email={ctx.userEmail} />}
           {children}
         </div>
       </main>
-      <MobileTabBar />
+      <MobileTabBar account={account} signOutAction={signOut} />
     </div>
   );
 }

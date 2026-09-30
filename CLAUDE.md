@@ -29,7 +29,8 @@ Quoting and invoicing SaaS for small service businesses: **Customer → Quote �
   - import a module only through `@/modules/<name>`;
   - only `src/db/`, module `application/` and `infra/` folders, module `schema.ts` files and tests may touch the database;
   - `domain/` stays pure.
-- **Tenant data:** never trust an organization ID from the client. It always comes from the server-side session context.
+- **Tenant data:** never trust an organization ID from the client. Every signed-in page and server action starts with `requireOrgContext()` from `@/modules/identity` (the app layout calls it too, but actions must call it themselves), then checks permissions with `assertCan(ctx, "…")` from `@/modules/authz`. Never branch on role names. `proxy.ts` is only an optimistic cookie check.
+- **Auth forms** (sign-in, sign-up, password reset, resend verification) use `authClient` from `@/lib/auth-client`, so Better Auth's rate limits apply. Map errors with `authErrorMessage` from `@/modules/identity/client`, the module's browser-safe entry point (`@/modules/<name>/client`).
 - **Database:** Drizzle over node-postgres. Each module owns its tables in `schema.ts` (listed in `src/db/schema.ts`). App code uses `getDb()` from `@/db`; tests use `@/db/testing`. `sql.raw` is lint-banned outside `src/db`. Document numbers come only from `allocateDocumentNumber` inside the issuing transaction.
 - **Money:** integer minor units plus a currency code. Never use floats. All totals come from the one calculation function (§B.2).
 - **UI:** follow `DESIGN.md` ("Carbon Copy": one stamp-violet accent used only where ink would go, status = icon + label, money tabular and never animated). Use semantic tokens from `src/app/globals.css`, never raw colours. `/dev/design` (development only) shows every token and component rendered. Primitives live in `src/components/ui` (shadcn on Base UI); check with `npx shadcn@latest docs <component>` rather than writing from memory.

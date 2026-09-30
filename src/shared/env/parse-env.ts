@@ -31,9 +31,15 @@ const envSchema = z
     DATABASE_URL_DIRECT: postgresUrl("DATABASE_URL_DIRECT"),
     /** Neon `test` branch. Integration tests wipe it on every run. */
     TEST_DATABASE_URL: postgresUrl("TEST_DATABASE_URL"),
+    /** Signs session cookies and tokens. Generate with `openssl rand -base64 32`. */
+    BETTER_AUTH_SECRET: z
+      .string()
+      .min(32, { error: "BETTER_AUTH_SECRET must be at least 32 characters" })
+      .optional(),
   })
   .superRefine((env, ctx) => {
-    if (env.NODE_ENV === "production" && !env.APP_URL.startsWith("https://")) {
+    const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(env.APP_URL);
+    if (env.NODE_ENV === "production" && !env.APP_URL.startsWith("https://") && !isLocalhost) {
       ctx.addIssue({
         code: "custom",
         path: ["APP_URL"],
@@ -45,6 +51,13 @@ const envSchema = z
         code: "custom",
         path: ["DATABASE_URL"],
         message: "DATABASE_URL is required in production",
+      });
+    }
+    if (env.NODE_ENV === "production" && !env.BETTER_AUTH_SECRET) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["BETTER_AUTH_SECRET"],
+        message: "BETTER_AUTH_SECRET is required in production",
       });
     }
   });

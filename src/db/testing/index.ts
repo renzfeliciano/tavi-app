@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { createDatabase, type Database } from "../create";
-import { organizations } from "../schema";
+import { organizations, users } from "../schema";
 import { testDatabaseUrl } from "./env";
 
 let shared: ReturnType<typeof createDatabase> | undefined;
@@ -36,4 +36,16 @@ export async function createTestOrganization(
     .returning();
   if (!org) throw new Error("Failed to create test organization");
   return org;
+}
+
+export async function createTestUser(
+  db: Database = testDb(),
+  overrides: Partial<typeof users.$inferInsert> = {},
+) {
+  const [user] = await db
+    .insert(users)
+    .values({ name: "Maria Santos", email: "maria@example.com", ...overrides })
+    .returning();
+  if (!user) throw new Error("Failed to create test user");
+  return user;
 }

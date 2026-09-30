@@ -17,4 +17,14 @@ describe("Home (holding page)", () => {
 
     expect(screen.getByText(brand.taglines.primary)).toBeInTheDocument();
   });
+
+  it("offers sign-in and account creation", () => {
+    render(<Home />);
+
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/sign-in");
+    expect(screen.getByRole("link", { name: "Create an account" })).toHaveAttribute(
+      "href",
+      "/sign-up",
+    );
+  });
 });

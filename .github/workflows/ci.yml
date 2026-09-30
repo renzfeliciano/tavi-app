@@ -64,7 +64,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: checks
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: tavi
+          POSTGRES_PASSWORD: tavi
+          POSTGRES_DB: tavi_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tavi -d tavi_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI container, not a secret. Playwright points the app at it.
+      TEST_DATABASE_URL: postgresql://tavi:tavi@localhost:5432/tavi_e2e
     steps:
+      - name: Generate a one-off auth secret
+        run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

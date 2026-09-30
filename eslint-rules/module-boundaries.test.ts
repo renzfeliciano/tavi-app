@@ -87,6 +87,12 @@ ruleTester.run("module-boundaries", rule, {
       options: [{ root: cwd }],
     },
     {
+      name: "client components may import a module's client-safe entry point",
+      filename: file("src/app/(auth)/sign-in/sign-in-form.tsx"),
+      code: `import { authErrorMessage } from "@/modules/identity/client";`,
+      options: [{ root: cwd }],
+    },
+    {
       name: "windows-style paths are normalised",
       filename: "C:\\repo\\src\\modules\\quotes\\application\\send-quote.ts",
       code: `import { transition } from "@/modules/quotes/domain/state-machine";`,
@@ -128,6 +134,13 @@ ruleTester.run("module-boundaries", rule, {
       code: `const m = await import("@/modules/quotes/infra/quote-repository");`,
       options: [{ root: cwd }],
       errors: [{ messageId: "deepImport", data: { module: "quotes" } }],
+    },
+    {
+      name: "the client entry point is not a back door into other internals",
+      filename: file("src/app/(auth)/sign-in/sign-in-form.tsx"),
+      code: `import { x } from "@/modules/identity/client/helpers";`,
+      options: [{ root: cwd }],
+      errors: [{ messageId: "deepImport", data: { module: "identity" } }],
     },
     {
       name: "only schema files get the schema exemption",

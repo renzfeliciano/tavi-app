@@ -14,6 +14,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import type { ShellAccount } from "./account";
+import { AccountBlock } from "./account-menu";
 import {
   isActive,
   mobileMore,
@@ -78,18 +80,25 @@ function SheetLinkList({
 }
 
 /** Top bar (phones and tablets). */
-export function MobileTopBar() {
+export function MobileTopBar({ organizationName }: { organizationName: string }) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center border-b border-border bg-background/90 px-4 backdrop-blur-sm lg:hidden">
-      <Link href="/dashboard" className="rounded-sm">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-sm lg:hidden">
+      <Link href="/dashboard" className="shrink-0 rounded-sm">
         <Wordmark size={18} />
       </Link>
+      <span className="truncate text-sm text-muted-foreground">{organizationName}</span>
     </header>
   );
 }
 
 /** Bottom tab bar with a central "New" action (phones and tablets). */
-export function MobileTabBar() {
+export function MobileTabBar({
+  account,
+  signOutAction,
+}: {
+  account: ShellAccount;
+  signOutAction: () => Promise<void>;
+}) {
   const pathname = usePathname();
   const [newOpen, setNewOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -136,6 +145,9 @@ export function MobileTabBar() {
               <SheetDescription className="sr-only">Other sections of Tavi</SheetDescription>
             </SheetHeader>
             <SheetLinkList items={mobileMore} onNavigate={() => setMoreOpen(false)} />
+            <div className="border-t border-border px-4 pt-3 pb-4">
+              <AccountBlock account={account} signOutAction={signOutAction} />
+            </div>
           </SheetContent>
         </Sheet>
       </div>
