@@ -1,10 +1,10 @@
 import type { MarketProfile } from "@/config/markets";
 import { buildDocumentView, type DocumentView, type DocumentViewLineInput } from "@/components/document/document-view";
 import { calculateDocument, type LineDiscount } from "@/modules/documents/client";
-import type { QuoteDetail } from "@/modules/quotes";
+import type { QuoteDetail, QuoteLine } from "@/modules/quotes";
 
 /** A stored line's discount back into the engine's shape. */
-function discountOf(line: QuoteDetail["lines"][number]): LineDiscount | null {
+function discountOf(line: QuoteLine): LineDiscount | null {
   if (line.discountKind === "percent" && line.discountValue !== null) return { kind: "percent", bps: line.discountValue };
   if (line.discountKind === "amount" && line.discountValue !== null) return { kind: "amount", amountMinor: line.discountValue };
   return null;
@@ -15,7 +15,7 @@ function discountOf(line: QuoteDetail["lines"][number]): LineDiscount | null {
  * sent), totalled by the one calculation (§B.2), never by hand.
  */
 export function quoteDocumentView(
-  quote: QuoteDetail,
+  quote: Omit<QuoteDetail, "customer">,
   { business, market, locale }: { business: DocumentView["business"]; market: MarketProfile; locale: string },
 ): DocumentView {
   const lines: DocumentViewLineInput[] = quote.lines.map((line) => ({

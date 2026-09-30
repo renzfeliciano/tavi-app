@@ -45,3 +45,12 @@ export {
   type RawLine,
   rawLineSchema,
 } from "./domain/line-input";
+export {
+  createShareLink,
+  hashShareToken,
+  recordShareLinkView,
+  resolveShareLink,
+  revokeShareLinks,
+  type ShareableKind,
+  type SharedDocument,
+} from "./infra/share-links";

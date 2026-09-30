@@ -101,7 +101,8 @@ export type QuoteCommandResult = { ok: true } | { ok: false; notFound: true } | 
 /** How typed input is read: the business's locale. */
 export type QuoteInputOptions = { locale: string };
 
-const headerColumns = {
+/** Module-internal (used by ./sending); not exported from the module. */
+export const headerColumns = {
   id: quotes.id,
   number: quotes.number,
   revision: quotes.revision,
@@ -126,7 +127,13 @@ const headerColumns = {
 const isUuid = (id: string) => z.uuid().safeParse(id).success;
 const ofOrganization = (actor: OrgActor) => eq(quotes.organizationId, actor.organizationId);
 
-function audit(tx: Executor, actor: OrgActor, action: AuditAction, quoteId: string, metadata?: Record<string, unknown>) {
+export function audit(
+  tx: Executor,
+  actor: OrgActor,
+  action: AuditAction,
+  quoteId: string,
+  metadata?: Record<string, unknown>,
+) {
   return recordAuditEvent(tx, {
     action,
     actorType: "user",
@@ -158,14 +165,14 @@ export async function newQuoteDefaults(
   };
 }
 
-async function loadHeader(tx: Executor, actor: OrgActor, id: string, lock = false) {
+export async function loadHeader(tx: Executor, actor: OrgActor, id: string, lock = false) {
   if (!isUuid(id)) return undefined;
   const query = tx.select(headerColumns).from(quotes).where(and(eq(quotes.id, id), ofOrganization(actor)));
   const [row] = await (lock ? query.for("update") : query);
   return row;
 }
 
-async function loadLines(tx: Executor, quoteId: string): Promise<QuoteLine[]> {
+export async function loadLines(tx: Executor, quoteId: string): Promise<QuoteLine[]> {
   const rows = await tx
     .select({
       position: quoteLines.position,

@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import type { EmailMessage, EmailSender } from "../domain/email";
+import { type EmailMessage, type EmailSender, fromHeader } from "../domain/email";
 
 type SmtpTransport = { sendMail(options: Record<string, unknown>): Promise<unknown> };
 
@@ -33,11 +33,12 @@ export function createSmtpSender({
       transport ??= createTransport({ host, port, secure: port === 465, auth: { user, pass: password } });
       try {
         await transport.sendMail({
-          from,
+          from: fromHeader(from, message.senderName),
           to: message.to,
           subject: message.subject,
           text: message.text,
           ...(message.html ? { html: message.html } : {}),
+          ...(message.replyTo ? { replyTo: message.replyTo } : {}),
         });
       } catch (error) {
         const code = (error as { responseCode?: number; code?: string }).responseCode ??

@@ -120,3 +120,21 @@ export async function removeOrganizationLogo(actor: OrgActor, db: Database = get
     });
   });
 }
+
+/**
+ * The logo for a document opened from a customer link. There is no signed-in
+ * user: callers must first resolve a valid share link for this organization.
+ */
+export async function readLogoForSharedDocument(organizationId: string, db: Database = getDb()) {
+  const [row] = await db
+    .select({
+      data: files.data,
+      contentType: files.contentType,
+      sha256: files.sha256,
+      width: files.width,
+      height: files.height,
+    })
+    .from(files)
+    .where(and(eq(files.organizationId, organizationId), eq(files.purpose, "logo")));
+  return row ?? null;
+}

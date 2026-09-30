@@ -2,6 +2,7 @@ export {
   getOrganizationLogo,
   type LogoInfo,
   readLogoFile,
+  readLogoForSharedDocument,
   removeOrganizationLogo,
   type UploadLogoResult,
   uploadOrganizationLogo,

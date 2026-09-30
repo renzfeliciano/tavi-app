@@ -46,6 +46,17 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
   },
 ];
 
+/**
+ * Customer pages (/q/…) carry the document's token in the URL, so they never
+ * leak it in a Referer, are never cached and are never indexed (§I).
+ */
+export const PORTAL_PATH_PATTERN = "/q/:path*";
+export const PORTAL_HEADERS: { key: string; value: string }[] = [
+  { key: "Referrer-Policy", value: "no-referrer" },
+  { key: "Cache-Control", value: "private, no-store" },
+  { key: "X-Robots-Tag", value: "noindex, nofollow" },
+];
+
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/quotes",

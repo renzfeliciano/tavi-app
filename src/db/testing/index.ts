@@ -1,7 +1,7 @@
 import { asc, sql } from "drizzle-orm";
 import { DEFAULT_MARKET, MARKETS } from "@/config/markets";
 import { createDatabase, type Database } from "../create";
-import { auditEvents, organizations, users } from "../schema";
+import { auditEvents, organizations, outboxMessages, users } from "../schema";
 import { testDatabaseUrl } from "./env";
 
 let shared: ReturnType<typeof createDatabase> | undefined;
@@ -68,4 +68,9 @@ export async function createTestUser(
 /** Every audit event in insertion order (tests only; the app reads per tenant). */
 export async function listAllAuditEvents(db: Database = testDb()) {
   return db.select().from(auditEvents).orderBy(asc(auditEvents.createdAt), asc(auditEvents.id));
+}
+
+/** Every queued outbox message in insertion order (tests only). */
+export async function listAllOutboxMessages(db: Database = testDb()) {
+  return db.select().from(outboxMessages).orderBy(asc(outboxMessages.createdAt), asc(outboxMessages.id));
 }

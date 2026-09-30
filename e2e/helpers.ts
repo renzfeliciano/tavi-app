@@ -25,3 +25,19 @@ export async function createBusiness(page: Page, name: string) {
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 }
+
+/**
+ * Test-only shortcut for "the user clicked the link in their verification
+ * email": E2E runs have no mailbox. Writes straight to the test database.
+ */
+export async function markEmailVerified(email: string) {
+  const { Client } = await import("pg");
+  const { testDatabaseUrl } = await import("../src/db/testing/env");
+  const client = new Client({ connectionString: testDatabaseUrl() });
+  await client.connect();
+  try {
+    await client.query("update users set email_verified = true where email = $1", [email]);
+  } finally {
+    await client.end();
+  }
+}

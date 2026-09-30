@@ -49,4 +49,16 @@ describe("createSmtpSender", () => {
     await expect(sender.send(message)).rejects.toThrow("SMTP send failed (535)");
     await expect(sender.send(message)).rejects.not.toThrow(/abcd efgh/);
   });
+
+  it("sends as the business, with replies going to the business", async () => {
+    const sendMail = vi.fn(async () => ({}));
+    await createSmtpSender({ ...options, createTransport: () => ({ sendMail }) }).send({
+      ...message,
+      senderName: "Santos Aircon via Tavi",
+      replyTo: "billing@santos.example",
+    });
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ from: '"Santos Aircon via Tavi" <tavi.notify@gmail.com>', replyTo: "billing@santos.example" }),
+    );
+  });
 });

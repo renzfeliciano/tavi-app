@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildContentSecurityPolicy, isProtectedPath, SECURITY_HEADERS } from "./headers";
+import { buildContentSecurityPolicy, isProtectedPath, SECURITY_HEADERS, PORTAL_HEADERS, PORTAL_PATH_PATTERN } from "./headers";
 
 const directives = (csp: string) =>
   Object.fromEntries(
@@ -57,6 +57,21 @@ describe("SECURITY_HEADERS", () => {
     expect(byKey["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
     expect(byKey["Cross-Origin-Opener-Policy"]).toBe("same-origin");
     expect(byKey["Permissions-Policy"]).toContain("camera=()");
+  });
+});
+
+describe("PORTAL_HEADERS", () => {
+  it("keeps customer links out of referrers, caches and search engines (§I)", () => {
+    expect(Object.fromEntries(PORTAL_HEADERS.map((h) => [h.key, h.value]))).toEqual({
+      "Referrer-Policy": "no-referrer",
+      "Cache-Control": "private, no-store",
+      "X-Robots-Tag": "noindex, nofollow",
+    });
+  });
+
+  it("applies to the customer pages only", () => {
+    expect(PORTAL_PATH_PATTERN).toBe("/q/:path*");
+    expect(isProtectedPath("/q/abc")).toBe(false);
   });
 });
 

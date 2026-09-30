@@ -31,4 +31,18 @@ describe("createResendSender", () => {
     await expect(sender.send(message)).rejects.toThrow(/Resend rejected the email \(HTTP 422\)/);
     await expect(sender.send(message)).rejects.not.toThrow(/re_secret_key/);
   });
+
+  it("sends as the business, with replies going to the business", async () => {
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    await createResendSender({ apiKey: "re_k", from: "Tavi <notify@tavi.example>", fetch: fetchMock }).send({
+      ...message,
+      senderName: "Santos Aircon via Tavi",
+      replyTo: "billing@santos.example",
+    });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      from: '"Santos Aircon via Tavi" <notify@tavi.example>',
+      reply_to: "billing@santos.example",
+    });
+  });
 });

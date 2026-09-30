@@ -1,4 +1,4 @@
-import type { EmailMessage, EmailSender } from "../domain/email";
+import { type EmailMessage, type EmailSender, fromHeader } from "../domain/email";
 
 type ResendOptions = {
   apiKey: string;
@@ -18,11 +18,12 @@ export function createResendSender({ apiKey, from, fetch: fetchImpl = fetch }: R
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from,
+          from: fromHeader(from, message.senderName),
           to: [message.to],
           subject: message.subject,
           text: message.text,
           ...(message.html ? { html: message.html } : {}),
+          ...(message.replyTo ? { reply_to: message.replyTo } : {}),
         }),
       });
       if (!response.ok) {

@@ -5,7 +5,16 @@ import { formatAddressLines } from "@/config/markets";
 import { searchLineSources } from "@/modules/catalog";
 import { getCustomer, listCustomers } from "@/modules/customers";
 import { requireOrgContext } from "@/modules/identity";
-import { deleteDraftQuote, saveQuoteDraft } from "@/modules/quotes";
+import { flushOutboxAfterResponse } from "@/modules/notifications";
+import {
+  cancelQuote,
+  createQuoteLink,
+  deleteDraftQuote,
+  reviseQuote,
+  saveQuoteDraft,
+  sendQuote,
+} from "@/modules/quotes";
+import { env } from "@/shared/env";
 import { normalizeSearch } from "@/shared/text/search";
 import type { CustomerChoice, LineSourceChoice } from "./_lib/editor-types";
 
@@ -51,6 +60,7 @@ export async function customerForDocumentAction(id: string) {
   return {
     id: customer.id,
     currency: customer.currency,
+    email: customer.email,
     party: {
       name: customer.displayName,
       subtitle: customer.company,
@@ -77,4 +87,70 @@ export async function searchLineSourcesAction(query: string): Promise<LineSource
     currency: s.currency,
     taxRateId: s.taxRateId,
   }));
+}
+
+export type SendQuoteResponse =
+  | { ok: true; id: string; number: string; url: string; emailedTo: string | null }
+  | { ok: false; errors: Record<string, string> }
+  | { ok: false; error: string };
+
+/**
+ * Saves the editor's latest content, then sends it: by email, or by marking it
+ * sent and returning the link to paste. Emails go out after the response.
+ */
+export async function sendQuoteAction(
+  id: string | null,
+  draft: unknown,
+  delivery: { mode: "email"; to: string; message: string } | { mode: "link" },
+): Promise<SendQuoteResponse> {
+  const ctx = await requireOrgContext();
+  const saved = await saveQuoteDraft(ctx, id, draft, { locale: ctx.locale });
+  if (!saved.ok) {
+    if ("errors" in saved) return { ok: false, errors: saved.errors };
+    return { ok: false, error: "notEditable" in saved ? "This quote was already sent." : "This quote no longer exists." };
+  }
+  const email = delivery.mode === "email" ? { to: delivery.to, message: delivery.message } : null;
+  const sent = await sendQuote(ctx, saved.quote.id, {
+    sender: { emailVerified: ctx.emailVerified },
+    market: ctx.market,
+    appUrl: env.APP_URL,
+    email,
+  });
+  revalidatePath("/quotes");
+  if (!sent.ok) {
+    if ("errors" in sent) return { ok: false, errors: sent.errors };
+    return { ok: false, error: "error" in sent ? sent.error : "This quote no longer exists." };
+  }
+  if (email) flushOutboxAfterResponse();
+  return { ok: true, id: saved.quote.id, number: sent.number, url: sent.url, emailedTo: email?.to.trim().toLowerCase() ?? null };
+}
+
+type LinkResponse = { ok: true; url: string } | { ok: false; error: string };
+type CommandResponse = { ok: true } | { ok: false; error: string };
+
+const GONE = "This quote no longer exists.";
+
+export async function createQuoteLinkAction(id: string): Promise<LinkResponse> {
+  const ctx = await requireOrgContext();
+  const result = await createQuoteLink(ctx, id, { appUrl: env.APP_URL });
+  if (result.ok) return { ok: true, url: result.url };
+  return { ok: false, error: "error" in result ? result.error : GONE };
+}
+
+export async function reviseQuoteAction(id: string): Promise<CommandResponse> {
+  const ctx = await requireOrgContext();
+  const result = await reviseQuote(ctx, id);
+  revalidatePath("/quotes");
+  revalidatePath(`/quotes/${id}`);
+  if (result.ok) return { ok: true };
+  return { ok: false, error: "error" in result ? result.error : GONE };
+}
+
+export async function cancelQuoteAction(id: string, reason: string): Promise<CommandResponse> {
+  const ctx = await requireOrgContext();
+  const result = await cancelQuote(ctx, id, reason);
+  revalidatePath("/quotes");
+  revalidatePath(`/quotes/${id}`);
+  if (result.ok) return { ok: true };
+  return { ok: false, error: "error" in result ? result.error : GONE };
 }

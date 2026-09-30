@@ -47,6 +47,29 @@ export async function getBusinessProfile(
   return row;
 }
 
+export type DocumentLetterhead = BusinessProfile & { countryCode: string; locale: string; timezone: string };
+
+/**
+ * A business's letterhead for a document opened from a customer link. There
+ * is no signed-in user here: callers must first resolve a valid share link,
+ * which is what authorizes reading this one organization.
+ */
+export async function getLetterheadForSharedDocument(
+  organizationId: string,
+  db: Database = getDb(),
+): Promise<DocumentLetterhead | null> {
+  const [row] = await db
+    .select({
+      ...profileColumns,
+      countryCode: organizations.countryCode,
+      locale: organizations.locale,
+      timezone: organizations.timezone,
+    })
+    .from(organizations)
+    .where(eq(organizations.id, organizationId));
+  return row ?? null;
+}
+
 export type DocumentSettings = {
   currency: string;
   taxMode: "inclusive" | "exclusive";

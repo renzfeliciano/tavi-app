@@ -1,7 +1,7 @@
 import "server-only";
 import type { DocumentView } from "@/components/document/document-view";
+import { letterhead } from "@/components/document/letterhead";
 import { currencyOptions } from "@/config/currencies";
-import { formatAddressLines, taxIdStatement } from "@/config/markets";
 import { formatRate, listTaxRates } from "@/modules/catalog";
 import { getOrganizationLogo } from "@/modules/files";
 import type { OrgContext } from "@/modules/identity";
@@ -12,14 +12,11 @@ import type { TaxRateChoice } from "./editor-types";
 /** The business as it heads its documents: logo, names, address, contact and tax ID. */
 export async function documentBusiness(ctx: OrgContext): Promise<DocumentView["business"]> {
   const [profile, logo] = await Promise.all([getBusinessProfile(ctx), getOrganizationLogo(ctx)]);
-  return {
-    name: profile.name,
-    subtitle: profile.legalName && profile.legalName !== profile.name ? profile.legalName : null,
-    addressLines: formatAddressLines(profile, ctx.market),
-    contactLines: [profile.email, profile.phone].filter((line): line is string => Boolean(line)),
-    taxId: profile.taxId ? { label: taxIdStatement(ctx.market, profile.taxRegistration), value: profile.taxId } : null,
-    logo: logo ? { src: `/api/files/${logo.id}`, width: logo.width, height: logo.height } : null,
-  };
+  return letterhead(
+    profile,
+    ctx.market,
+    logo ? { src: `/api/files/${logo.id}`, width: logo.width, height: logo.height } : null,
+  );
 }
 
 /** Everything the editor needs besides the quote itself. */
@@ -42,6 +39,8 @@ export async function editorContext(ctx: OrgContext, currency: string) {
     // Quotations are supplementary documents (RR 7-2024 Sec. 6 B.15, D13).
     notice: ctx.market.supplementaryDocumentNotice,
     defaultUnit: ctx.market.units.service,
+    shareChannels: ctx.market.shareChannels,
+    emailVerified: ctx.emailVerified,
     locale: ctx.locale,
   };
 }

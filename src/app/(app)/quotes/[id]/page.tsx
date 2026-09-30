@@ -11,6 +11,7 @@ import { requireOrgContext } from "@/modules/identity";
 import { getQuote, type QuoteDetail } from "@/modules/quotes";
 import { customerForDocumentAction } from "../actions";
 import { QuoteEditor, type QuoteEditorState } from "../_components/quote-editor";
+import { SentQuoteActions } from "../_components/sent-quote-actions";
 import { documentBusiness, editorContext } from "../_lib/editor-props";
 import { quoteDocumentView } from "../_lib/quote-view";
 
@@ -78,16 +79,30 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
     );
   }
 
-  // Sent quotes are read-only here; sending, revising and cancelling arrive in 1.5b.
+  // A sent quote is read-only; changes go through a revision (§B.3).
   const view = quoteDocumentView(quote, { business: await documentBusiness(ctx), market: ctx.market, locale: ctx.locale });
+  const name = `${title} ${quote.number ?? ""}`.trim();
+  const sentOn = quote.sentAt
+    ? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeZone: ctx.timezone }).format(quote.sentAt)
+    : null;
 
   return (
     <>
       <BackLink href="/quotes">Quotes</BackLink>
       <PageHeader
-        title={`${title} ${quote.number ?? ""}`.trim()}
-        description={quote.customerSnapshot?.displayName}
-        actions={<StatusBadge kind="quote" status={quote.status} />}
+        title={quote.revision > 1 ? `${name} · Rev ${quote.revision}` : name}
+        description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <StatusBadge kind="quote" status={quote.status} />
+            <span>
+              {quote.customerSnapshot?.displayName}
+              {sentOn ? ` · Sent ${sentOn}` : ""}
+            </span>
+          </span>
+        }
+        actions={
+          <SentQuoteActions id={quote.id} status={quote.status} name={name} shareChannels={ctx.market.shareChannels} />
+        }
       />
       <div className="mt-6 max-w-3xl">
         <DocumentPaper view={view} />

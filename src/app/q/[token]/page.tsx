@@ -1,0 +1,112 @@
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { cache } from "react";
+import { BrandMascot } from "@/components/brand/brand-mascot";
+import { DocumentPaper } from "@/components/document/document-paper";
+import { letterhead } from "@/components/document/letterhead";
+import { StatusBadge } from "@/components/status/status-badge";
+import { Wordmark } from "@/components/brand/wordmark";
+import { marketFor } from "@/config/markets";
+import { readLogoForSharedDocument } from "@/modules/files";
+import { getSharedQuote, recordSharedQuoteOpen } from "@/modules/quotes";
+import { consumeRateLimit } from "@/modules/system";
+import { formatCalendarDate } from "@/shared/dates/calendar";
+import { clientIp } from "@/shared/http/client-ip";
+import { quoteDocumentView } from "../../(app)/quotes/_lib/quote-view";
+
+// The customer's view of a quote, opened from its link (§G.4). No account,
+// no third-party scripts; the portal headers keep the token out of referrers,
+// caches and search engines (§I). Approve/decline and view tracking arrive in 1.6.
+
+/** Opens of customer links per IP per minute. */
+const PORTAL_RATE_LIMIT = { windowSeconds: 60, max: 60 };
+
+const loadQuote = cache(async (token: string) => getSharedQuote(token));
+
+export async function generateMetadata({ params }: PageProps<"/q/[token]">): Promise<Metadata> {
+  const shared = await loadQuote((await params).token);
+  const robots = { index: false, follow: false };
+  if (!shared) return { title: "Link not available", robots };
+  const market = marketFor(shared.countryCode);
+  return {
+    title: `${market.documents.quote.singular} ${shared.quote.number ?? ""} from ${shared.business.name}`.replace("  ", " "),
+    robots,
+  };
+}
+
+function Unavailable({ title, body }: { title: string; body: string }) {
+  return (
+    <main className="mx-auto grid min-h-dvh max-w-md place-items-center px-4 py-12 text-center">
+      <div className="grid justify-items-center gap-3">
+        <BrandMascot expression="curious" size="lg" />
+        <h1 className="text-lg font-semibold">{title}</h1>
+        <p className="text-sm text-pretty text-muted-foreground">{body}</p>
+      </div>
+    </main>
+  );
+}
+
+export default async function SharedQuotePage({ params }: PageProps<"/q/[token]">) {
+  const { token } = await params;
+  const limit = await consumeRateLimit(`portal:${clientIp(await headers())}`, PORTAL_RATE_LIMIT);
+  if (!limit.allowed) {
+    return <Unavailable title="Too many requests" body="Please wait a minute, then open the link again." />;
+  }
+
+  const shared = await loadQuote(token);
+  if (!shared) {
+    // Unknown, revoked and expired links look the same: nothing to learn from probing.
+    return (
+      <Unavailable
+        title="This link isn't available"
+        body="It may have expired or been replaced by a newer version. Ask the business to send you the latest link."
+      />
+    );
+  }
+  await recordSharedQuoteOpen(token);
+
+  const market = marketFor(shared.countryCode);
+  const logo = await readLogoForSharedDocument(shared.organizationId);
+  const view = quoteDocumentView(shared.quote, {
+    business: letterhead(
+      shared.business,
+      market,
+      logo ? { src: `/q/${token}/logo`, width: logo.width, height: logo.height } : null,
+    ),
+    market,
+    locale: shared.locale,
+  });
+  const { quote, business } = shared;
+  const contact = [business.email, business.phone].filter(Boolean).join(" · ");
+
+  return (
+    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-sm font-normal text-muted-foreground">
+          {market.documents.quote.singular} from <span className="font-medium text-foreground">{business.name}</span>
+        </h1>
+        <StatusBadge kind="quote" status={quote.status} />
+      </header>
+
+      {(quote.status === "SENT" || quote.status === "VIEWED") && (
+        <p className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-pretty shadow-xs">
+          This quote is valid until{" "}
+          <span className="font-medium">{formatCalendarDate(quote.validUntil, shared.locale)}</span>. To go ahead or
+          ask a question, contact {business.name}
+          {contact ? ` (${contact})` : ""}.
+        </p>
+      )}
+      {quote.status === "CANCELLED" && (
+        <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
+          {business.name} cancelled this quote. Contact them if you have questions.
+        </p>
+      )}
+
+      <DocumentPaper view={view} />
+
+      <footer className="mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+        Sent with <Wordmark size={12} />
+      </footer>
+    </main>
+  );
+}

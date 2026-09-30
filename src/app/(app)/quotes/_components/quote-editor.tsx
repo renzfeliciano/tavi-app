@@ -1,8 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckIcon, CircleAlertIcon, CloudOffIcon, EyeIcon, LoaderCircleIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+  CheckIcon,
+  CircleAlertIcon,
+  CloudOffIcon,
+  EyeIcon,
+  LoaderCircleIcon,
+  PlusIcon,
+  SendIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AsyncCombobox } from "@/components/async-combobox";
 import { DocumentPaper } from "@/components/document/document-paper";
@@ -40,10 +49,12 @@ import {
   saveQuoteDraftAction,
   searchCustomersAction,
   searchLineSourcesAction,
+  sendQuoteAction,
 } from "../actions";
 import type { CustomerChoice, EditorCustomer, LineSourceChoice, TaxRateChoice } from "../_lib/editor-types";
 import { type AutosaveStatus, useAutosave } from "../_lib/use-autosave";
 import { type EditorLine, LineItemsEditor } from "./line-items-editor";
+import { type Delivery, type DeliveryOutcome, SendQuoteDialog } from "./send-quote-dialog";
 
 export type QuoteEditorState = {
   customerId: string;
@@ -74,6 +85,10 @@ type QuoteEditorProps = {
   /** The market's usual unit for new free-text lines. */
   defaultUnit: string;
   customerCopy: CustomerFormCopy;
+  /** Where people paste a link, e.g. "Messenger or Viber". */
+  shareChannels: string;
+  /** Sending needs the sender's own email confirmed. */
+  emailVerified: boolean;
 };
 
 /** An editor row without its React key: what the server and the parser read. */
@@ -134,6 +149,10 @@ export function QuoteEditor(props: QuoteEditorProps) {
   const { locale, taxMode, taxRates } = props;
   const router = useRouter();
   const [quoteId, setQuoteId] = useState(props.quoteId);
+  // The saved draft's id, updated the moment the first save returns. A save
+  // queued behind that first one runs before React re-renders, so it must read
+  // this ref (not state), or it would create a second draft.
+  const quoteIdRef = useRef(props.quoteId);
   const [state, setState] = useState(props.initial);
   const [customer, setCustomer] = useState(props.initialCustomer);
   const [dirty, setDirty] = useState(false);
@@ -144,6 +163,7 @@ export function QuoteEditor(props: QuoteEditorProps) {
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
 
   const update = useCallback((patch: Partial<QuoteEditorState>, clearErrorsFor: string[] = []) => {
     setState((s) => ({ ...s, ...patch }));
@@ -241,11 +261,12 @@ export function QuoteEditor(props: QuoteEditorProps) {
 
   const save = useCallback(
     async (value: typeof payload) => {
-      const response = await saveQuoteDraftAction(quoteId, value);
+      const response = await saveQuoteDraftAction(quoteIdRef.current, value);
       if (response.ok) {
         setServerErrors({});
         setFormError(null);
-        if (!quoteId) {
+        if (!quoteIdRef.current) {
+          quoteIdRef.current = response.id;
           setQuoteId(response.id);
           // Keep editing in place; the address now points at the saved draft.
           window.history.replaceState(null, "", `/quotes/${response.id}`);
@@ -259,7 +280,7 @@ export function QuoteEditor(props: QuoteEditorProps) {
       setFormError(response.error);
       return { ok: false as const, message: response.error, retry: false };
     },
-    [quoteId],
+    [],
   );
 
   const { status } = useAutosave({ value: payload, enabled: dirty, validate, save });
@@ -359,6 +380,37 @@ export function QuoteEditor(props: QuoteEditorProps) {
     router.push("/quotes");
   };
 
+  const send = async (delivery: Delivery): Promise<DeliveryOutcome> => {
+    const response = await sendQuoteAction(quoteIdRef.current, payload, delivery);
+    if (response.ok) {
+      setDirty(false);
+      setSendOpen(false);
+      const name = `${props.title} ${response.number}`;
+      if (delivery.mode === "email") {
+        toast.success(`${name} sent to ${response.emailedTo}.`);
+      } else {
+        try {
+          await navigator.clipboard.writeText(response.url);
+          toast.success(`${name} is ready. Link copied.`, { description: `Paste it into ${props.shareChannels}.` });
+        } catch {
+          // No clipboard access (e.g. permissions): show the link to copy by hand.
+          toast.success(`${name} is ready.`, { description: response.url, duration: 20_000 });
+        }
+      }
+      router.push(`/quotes/${response.id}`);
+      router.refresh();
+      return { ok: true };
+    }
+    if ("errors" in response) {
+      if (response.errors.emailTo) return { ok: false, emailError: response.errors.emailTo };
+      setServerErrors(response.errors);
+      setSendOpen(false);
+      toast.error("Not sent yet: fix the highlighted parts first.");
+      return { ok: false };
+    }
+    return { ok: false, error: response.error };
+  };
+
   const headerError = (field: string) => visibleErrors[field];
   const customerChoice: CustomerChoice | null = customer
     ? { id: customer.id, displayName: customer.party.name, detail: customer.party.subtitle }
@@ -369,10 +421,16 @@ export function QuoteEditor(props: QuoteEditorProps) {
       <div className="grid min-w-0 gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <StatusLine status={status} />
-          <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)}>
-            <Trash2Icon aria-hidden="true" />
-            {quoteId ? "Delete draft" : "Discard"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)}>
+              <Trash2Icon aria-hidden="true" />
+              {quoteId ? "Delete draft" : "Discard"}
+            </Button>
+            <Button type="button" onClick={() => setSendOpen(true)}>
+              <SendIcon aria-hidden="true" />
+              Send
+            </Button>
+          </div>
         </div>
         <FormAlert message={formError} />
 
@@ -589,6 +647,20 @@ export function QuoteEditor(props: QuoteEditorProps) {
           </div>
         </SheetContent>
       </Sheet>
+
+      <SendQuoteDialog
+        // Its defaults (email or link, recipient, greeting) follow the chosen customer.
+        key={customer?.id ?? "no-customer"}
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        title={props.title}
+        customerName={customer?.party.name ?? null}
+        customerEmail={customer?.email ?? null}
+        businessName={props.business.name}
+        shareChannels={props.shareChannels}
+        emailVerified={props.emailVerified}
+        onSend={send}
+      />
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>

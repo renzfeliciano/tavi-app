@@ -1,8 +1,10 @@
 export {
   type BusinessProfile,
+  type DocumentLetterhead,
   type DocumentSettings,
   getBusinessProfile,
   getDocumentSettings,
+  getLetterheadForSharedDocument,
   type UpdateBusinessProfileResult,
   updateBusinessProfile,
 } from "./application/business-profile";

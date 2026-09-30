@@ -17,6 +17,11 @@ export const brand = {
     primary: "Create. Send. Get paid.",
     secondary: "Simple invoicing for modern businesses.",
   },
+  /**
+   * Email clients can't read CSS variables, so emails use these sRGB values
+   * of the Carbon Copy tokens (DESIGN.md): ink, muted ink and stamp violet.
+   */
+  emailColors: { ink: "#1f2130", muted: "#6b6e7c", accent: "#4b3aa8", onAccent: "#ffffff" },
 } as const;
 
 export type Brand = typeof brand;

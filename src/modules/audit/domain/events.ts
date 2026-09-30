@@ -34,6 +34,7 @@ export const AUDIT_ACTIONS = [
   "quote.sent",
   "quote.revised",
   "quote.cancelled",
+  "quote.link_created",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

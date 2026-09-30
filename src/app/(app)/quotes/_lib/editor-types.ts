@@ -19,4 +19,4 @@ export type LineSourceChoice = {
 
 export type TaxRateChoice = { id: string; name: string; rateBps: number; label: string; archived: boolean };
 
-export type EditorCustomer = { id: string; currency: string | null; party: DocumentParty };
+export type EditorCustomer = { id: string; currency: string | null; email: string | null; party: DocumentParty };

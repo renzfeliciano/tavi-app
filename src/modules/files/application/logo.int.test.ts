@@ -9,7 +9,13 @@ import {
   testDb,
 } from "@/db/testing";
 import { ForbiddenError, type OrgActor, type Role } from "@/modules/authz";
-import { getOrganizationLogo, readLogoFile, removeOrganizationLogo, uploadOrganizationLogo } from "./logo";
+import {
+  getOrganizationLogo,
+  readLogoFile,
+  readLogoForSharedDocument,
+  removeOrganizationLogo,
+  uploadOrganizationLogo,
+} from "./logo";
 
 async function actorFor(role: Role = "owner", name = "Acme"): Promise<OrgActor> {
   const org = await createTestOrganization(testDb(), { name });
@@ -159,5 +165,16 @@ describe("readLogoFile", () => {
 
     expect(await readLogoFile(intruder, logo?.id ?? "", testDb())).toBeNull();
     expect(await readLogoFile(intruder, "not-a-uuid", testDb())).toBeNull();
+  });
+});
+
+describe("readLogoForSharedDocument", () => {
+  it("returns the named organization's logo only", async () => {
+    const owner = await actorFor("owner", "One");
+    await uploadOrganizationLogo(owner, await transparentPng(), testDb());
+    const other = await actorFor("owner", "Two");
+
+    expect((await readLogoForSharedDocument(owner.organizationId, testDb()))?.contentType).toBe("image/png");
+    expect(await readLogoForSharedDocument(other.organizationId, testDb())).toBeNull();
   });
 });
