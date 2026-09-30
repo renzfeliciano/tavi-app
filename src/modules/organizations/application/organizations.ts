@@ -114,3 +114,15 @@ export async function resolveMembership(
 
   return row ?? null;
 }
+
+/** A business's members and their roles, oldest first (no session: for notifying the business). */
+export async function listMembers(
+  organizationId: string,
+  db: Database = getDb(),
+): Promise<{ userId: string; role: Role }[]> {
+  return db
+    .select({ userId: memberships.userId, role: memberships.role })
+    .from(memberships)
+    .where(eq(memberships.organizationId, organizationId))
+    .orderBy(asc(memberships.createdAt));
+}

@@ -130,3 +130,60 @@ test("cancelling asks for an optional reason and confirms", async () => {
   await expect(page.getByRole("button", { name: "Copy link" })).toHaveCount(0);
   await expect(page.getByText("Cancelled").first()).toBeVisible();
 });
+
+async function sendByLink(): Promise<{ url: string; link: string }> {
+  await newQuote("Juan Dela Cruz");
+  const url = page.url();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Send quotation" });
+  await dialog.getByLabel("Copy link").check();
+  await dialog.getByRole("button", { name: "Mark as sent and copy link" }).click();
+  await expect(toast(/is ready\. Link copied\./)).toBeVisible();
+  return { url, link: await page.evaluate(() => navigator.clipboard.readText()) };
+}
+
+test("the customer approves with their name, and the business sees who and when", async ({ browser }) => {
+  const { url, link } = await sendByLink();
+  const customer = await (await browser.newContext()).newPage();
+  await customer.goto(link);
+
+  // Opening the link marks it viewed for the business.
+  await page.goto(url);
+  await expect(page.getByText("Viewed", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/^Opened by the customer/)).toBeVisible();
+
+  await customer.getByRole("button", { name: "Approve quote" }).click();
+  const dialog = customer.getByRole("dialog", { name: /^Approve Quotation QUO-/ });
+  expect((await new AxeBuilder({ page: customer }).analyze()).violations).toEqual([]);
+  await dialog.getByRole("button", { name: "Approve quote" }).click();
+  await expect(dialog.getByText("Enter your name.")).toBeVisible();
+  await expect(dialog.getByText("Tick the box to accept the quote's terms.")).toBeVisible();
+
+  await dialog.getByLabel("Your name").fill("Juan Dela Cruz");
+  await dialog.getByRole("checkbox", { name: "I accept this quote, including its terms." }).click();
+  await dialog.getByRole("button", { name: "Approve quote" }).click();
+  await expect(customer.locator("[data-sonner-toast]").filter({ hasText: /^You approved Quotation QUO-/ })).toBeVisible();
+  await expect(customer.getByText(/^Approved by Juan Dela Cruz on /)).toBeVisible();
+  await expect(customer.getByRole("button", { name: "Approve quote" })).toHaveCount(0);
+  await customer.context().close();
+
+  await page.reload();
+  await expect(page.getByText("Approved", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/^Approved by Juan Dela Cruz · /)).toBeVisible();
+});
+
+test("the customer can decline with a reason", async ({ browser }) => {
+  const { url, link } = await sendByLink();
+  const customer = await (await browser.newContext()).newPage();
+  await customer.goto(link);
+  await customer.getByRole("button", { name: "Decline" }).click();
+  const dialog = customer.getByRole("dialog", { name: /^Decline Quotation QUO-/ });
+  await dialog.getByLabel("Reason").fill("Found a cheaper option");
+  await dialog.getByRole("button", { name: "Decline quote" }).click();
+  await expect(customer.getByText(/^You declined this quote on /)).toBeVisible();
+  await customer.context().close();
+
+  await page.goto(url);
+  await expect(page.getByText("Declined", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/^Declined · .*Found a cheaper option/)).toBeVisible();
+});

@@ -7,7 +7,6 @@ import { getCustomer } from "@/modules/customers";
 import {
   allocateDocumentNumber,
   createShareLink,
-  recordShareLinkView,
   resolveShareLink,
   revokeShareLinks,
 } from "@/modules/documents";
@@ -269,9 +268,4 @@ export async function getSharedQuote(token: string, db: Database = getDb()): Pro
     locale: business.locale,
     organizationId: link.organizationId,
   };
-}
-
-/** Counts an open of a customer link (view tracking and VIEWED arrive with the portal, 1.6). */
-export async function recordSharedQuoteOpen(token: string, db: Database = getDb()): Promise<void> {
-  await recordShareLinkView(db, token);
 }

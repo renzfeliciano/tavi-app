@@ -43,6 +43,11 @@ export type QuoteHeader = {
   taxTotalMinor: number;
   totalMinor: number;
   sentAt: Date | null;
+  viewedAt: Date | null;
+  /** The customer's decision from the link (§B.3). */
+  decidedAt: Date | null;
+  decisionName: string | null;
+  decisionNote: string | null;
   cancelledAt: Date | null;
   updatedAt: Date;
 };
@@ -120,12 +125,16 @@ export const headerColumns = {
   taxTotalMinor: quotes.taxTotalMinor,
   totalMinor: quotes.totalMinor,
   sentAt: quotes.sentAt,
+  viewedAt: quotes.viewedAt,
+  decidedAt: quotes.decidedAt,
+  decisionName: quotes.decisionName,
+  decisionNote: quotes.decisionNote,
   cancelledAt: quotes.cancelledAt,
   updatedAt: quotes.updatedAt,
 };
 
 const isUuid = (id: string) => z.uuid().safeParse(id).success;
-const ofOrganization = (actor: OrgActor) => eq(quotes.organizationId, actor.organizationId);
+const ofOrganization = (actor: Pick<OrgActor, "organizationId">) => eq(quotes.organizationId, actor.organizationId);
 
 export function audit(
   tx: Executor,
@@ -165,7 +174,7 @@ export async function newQuoteDefaults(
   };
 }
 
-export async function loadHeader(tx: Executor, actor: OrgActor, id: string, lock = false) {
+export async function loadHeader(tx: Executor, actor: Pick<OrgActor, "organizationId">, id: string, lock = false) {
   if (!isUuid(id)) return undefined;
   const query = tx.select(headerColumns).from(quotes).where(and(eq(quotes.id, id), ofOrganization(actor)));
   const [row] = await (lock ? query.for("update") : query);

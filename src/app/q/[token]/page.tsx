@@ -8,15 +8,19 @@ import { StatusBadge } from "@/components/status/status-badge";
 import { Wordmark } from "@/components/brand/wordmark";
 import { marketFor } from "@/config/markets";
 import { readLogoForSharedDocument } from "@/modules/files";
-import { getSharedQuote, recordSharedQuoteOpen } from "@/modules/quotes";
+import { getCurrentSession } from "@/modules/identity";
+import { resolveMembership } from "@/modules/organizations";
+import { getSharedQuote, recordSharedQuoteOpen, sharedQuoteContentHash } from "@/modules/quotes";
 import { consumeRateLimit } from "@/modules/system";
 import { formatCalendarDate } from "@/shared/dates/calendar";
 import { clientIp } from "@/shared/http/client-ip";
 import { quoteDocumentView } from "../../(app)/quotes/_lib/quote-view";
+import { QuoteDecision } from "./quote-decision";
 
 // The customer's view of a quote, opened from its link (§G.4). No account,
 // no third-party scripts; the portal headers keep the token out of referrers,
-// caches and search engines (§I). Approve/decline and view tracking arrive in 1.6.
+// caches and search engines (§I). The customer approves or declines here, and
+// their first open marks the quote VIEWED (§B.3).
 
 /** Opens of customer links per IP per minute. */
 const PORTAL_RATE_LIMIT = { windowSeconds: 60, max: 60 };
@@ -63,7 +67,10 @@ export default async function SharedQuotePage({ params }: PageProps<"/q/[token]"
       />
     );
   }
-  await recordSharedQuoteOpen(token);
+  // The business opening its own link never counts as the customer's view (§B.3).
+  const session = await getCurrentSession();
+  const membership = session ? await resolveMembership(session.user.id, shared.organizationId) : null;
+  if (membership?.organizationId !== shared.organizationId) await recordSharedQuoteOpen(token);
 
   const market = marketFor(shared.countryCode);
   const logo = await readLogoForSharedDocument(shared.organizationId);
@@ -78,6 +85,11 @@ export default async function SharedQuotePage({ params }: PageProps<"/q/[token]"
   });
   const { quote, business } = shared;
   const contact = [business.email, business.phone].filter(Boolean).join(" · ");
+  const name = `${market.documents.quote.singular} ${quote.number ?? ""}`.trim();
+  const open = quote.status === "SENT" || quote.status === "VIEWED";
+  const decidedOn = quote.decidedAt
+    ? new Intl.DateTimeFormat(shared.locale, { dateStyle: "long", timeZone: business.timezone }).format(quote.decidedAt)
+    : null;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
@@ -88,12 +100,30 @@ export default async function SharedQuotePage({ params }: PageProps<"/q/[token]"
         <StatusBadge kind="quote" status={quote.status} />
       </header>
 
-      {(quote.status === "SENT" || quote.status === "VIEWED") && (
+      {open && (
         <p className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-pretty shadow-xs">
           This quote is valid until{" "}
-          <span className="font-medium">{formatCalendarDate(quote.validUntil, shared.locale)}</span>. To go ahead or
-          ask a question, contact {business.name}
-          {contact ? ` (${contact})` : ""}.
+          <span className="font-medium">{formatCalendarDate(quote.validUntil, shared.locale)}</span>. Approve it below
+          to go ahead, or contact {business.name}
+          {contact ? ` (${contact})` : ""} with questions.
+        </p>
+      )}
+      {quote.status === "APPROVED" && (
+        <p role="status" className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-pretty shadow-xs">
+          {quote.decisionName ? `Approved by ${quote.decisionName}` : "Approved"}
+          {decidedOn ? ` on ${decidedOn}` : ""}. {business.name} has been told
+          {contact ? ` and will be in touch (${contact})` : " and will be in touch"}.
+        </p>
+      )}
+      {quote.status === "REJECTED" && (
+        <p role="status" className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
+          You declined this quote{decidedOn ? ` on ${decidedOn}` : ""}. {business.name} has been told.
+        </p>
+      )}
+      {quote.status === "EXPIRED" && (
+        <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
+          This quote expired on {formatCalendarDate(quote.validUntil, shared.locale)}. Ask {business.name}
+          {contact ? ` (${contact})` : ""} for an updated quote.
         </p>
       )}
       {quote.status === "CANCELLED" && (
@@ -103,6 +133,16 @@ export default async function SharedQuotePage({ params }: PageProps<"/q/[token]"
       )}
 
       <DocumentPaper view={view} />
+
+      {open && (
+        <QuoteDecision
+          token={token}
+          contentHash={sharedQuoteContentHash(quote)}
+          name={name}
+          businessName={business.name}
+          locale={shared.locale}
+        />
+      )}
 
       <footer className="mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground">
         Sent with <Wordmark size={12} />

@@ -16,6 +16,7 @@ export {
   signOutDevice,
   signOutOtherDevices,
 } from "./application/account";
+export { listVerifiedEmails } from "./application/users";
 export { SESSION_POLICY } from "./domain/session-policy";
 
 /** Better Auth instance for the /api/auth route handler and server actions. */

@@ -11,6 +11,7 @@ export {
 export {
   type CreateOrganizationResult,
   createOrganizationForUser,
+  listMembers,
   newOrganizationValues,
   type ResolvedMembership,
   resolveMembership,

@@ -82,9 +82,20 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
   // A sent quote is read-only; changes go through a revision (§B.3).
   const view = quoteDocumentView(quote, { business: await documentBusiness(ctx), market: ctx.market, locale: ctx.locale });
   const name = `${title} ${quote.number ?? ""}`.trim();
+  const when = (date: Date | null) =>
+    date ? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeStyle: "short", timeZone: ctx.timezone }).format(date) : null;
   const sentOn = quote.sentAt
     ? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeZone: ctx.timezone }).format(quote.sentAt)
     : null;
+  // What the customer did from the link (§B.3).
+  const decision =
+    quote.status === "APPROVED" && quote.decidedAt
+      ? `Approved by ${quote.decisionName ?? "the customer"} · ${when(quote.decidedAt)}`
+      : quote.status === "REJECTED" && quote.decidedAt
+        ? `Declined · ${when(quote.decidedAt)}${quote.decisionNote ? ` · “${quote.decisionNote}”` : ""}`
+        : quote.viewedAt && quote.status === "VIEWED"
+          ? `Opened by the customer · ${when(quote.viewedAt)}`
+          : null;
 
   return (
     <>
@@ -104,6 +115,11 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
           <SentQuoteActions id={quote.id} status={quote.status} name={name} shareChannels={ctx.market.shareChannels} />
         }
       />
+      {decision && (
+        <p role="status" className="mt-4 max-w-3xl rounded-lg border border-border bg-card px-4 py-3 text-sm text-pretty">
+          {decision}
+        </p>
+      )}
       <div className="mt-6 max-w-3xl">
         <DocumentPaper view={view} />
       </div>

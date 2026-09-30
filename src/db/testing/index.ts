@@ -1,7 +1,7 @@
 import { asc, sql } from "drizzle-orm";
 import { DEFAULT_MARKET, MARKETS } from "@/config/markets";
 import { createDatabase, type Database } from "../create";
-import { auditEvents, organizations, outboxMessages, users } from "../schema";
+import { auditEvents, memberships, organizations, outboxMessages, users } from "../schema";
 import { testDatabaseUrl } from "./env";
 
 let shared: ReturnType<typeof createDatabase> | undefined;
@@ -63,6 +63,14 @@ export async function createTestUser(
     .returning();
   if (!user) throw new Error("Failed to create test user");
   return user;
+}
+
+/** Makes a user a member of a business. */
+export async function addTestMembership(
+  db: Database,
+  membership: { organizationId: string; userId: string; role: "owner" | "admin" | "member" },
+) {
+  await db.insert(memberships).values(membership);
 }
 
 /** Every audit event in insertion order (tests only; the app reads per tenant). */

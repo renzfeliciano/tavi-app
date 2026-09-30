@@ -20,13 +20,20 @@ export {
   createQuoteLink,
   getSharedQuote,
   type QuoteLinkResult,
-  recordSharedQuoteOpen,
   reviseQuote,
   type SendQuoteOptions,
   type SendQuoteResult,
   type SharedQuote,
   sendQuote,
 } from "./application/sending";
+export {
+  type DecideSharedQuoteOptions,
+  type DecideSharedQuoteResult,
+  decideSharedQuote,
+  recordSharedQuoteOpen,
+  sharedQuoteContentHash,
+} from "./application/portal";
+export { QUOTE_DECISION_LIMITS, type RawQuoteDecision } from "./domain/decision";
 export { parseQuoteDraft, type QuoteDraft, type RawQuoteDraft } from "./domain/quote-draft";
 export { QUOTE_LINK_GRACE_DAYS } from "./domain/sending";
 export { QUOTE_STATUSES, type QuoteStatus } from "./domain/status";
