@@ -78,6 +78,13 @@
       "when": 1790772327580,
       "tag": "0010_quotes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790778924478,
+      "tag": "0011_tax_registration",
+      "breakpoints": true
     }
   ]
 }

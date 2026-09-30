@@ -183,6 +183,10 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
           )}
         </footer>
       )}
+
+      {view.notice && (
+        <p className="mt-8 border-t border-border pt-4 text-center text-sm font-bold tracking-wide">{view.notice}</p>
+      )}
     </article>
   );
 }

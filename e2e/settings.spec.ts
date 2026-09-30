@@ -51,6 +51,7 @@ test("business profile: explains mistakes, then saves and keeps the details", as
   expect((await axe(page)).violations).toEqual([]);
 
   await page.getByLabel("TIN").fill("123-456-789-00000");
+  await page.getByLabel("Tax registration").selectOption({ label: "VAT-registered" });
   await page.getByLabel("Quotes are valid for").fill("14");
   await page.getByLabel("City or municipality").fill("Quezon City");
   await page.getByLabel("Tax is added on top").check();
@@ -61,6 +62,7 @@ test("business profile: explains mistakes, then saves and keeps the details", as
   await page.reload();
   await expect(page.getByLabel("Registered name")).toHaveValue("Santos Aircon Services OPC");
   await expect(page.getByLabel("TIN")).toHaveValue("123-456-789-00000");
+  await expect(page.getByLabel("Tax registration")).toHaveValue("vat");
   await expect(page.getByLabel("Quotes are valid for")).toHaveValue("14");
   await expect(page.getByLabel("Tax is added on top")).toBeChecked();
   await expect(page.getByLabel("How to pay you")).toHaveValue("GCash 0917 555 0100 (Maria S.)");

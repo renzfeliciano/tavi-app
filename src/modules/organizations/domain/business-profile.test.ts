@@ -8,6 +8,7 @@ const valid = {
   name: "Acme Aircon Services",
   legalName: "Acme Aircon Services OPC",
   taxId: "123-456-789-00000",
+  taxRegistration: "vat",
   email: "billing@acmeaircon.ph",
   phone: "+63 917 123 4567",
   addressLine1: "12 Mabini St.",
@@ -94,5 +95,12 @@ describe("businessProfileSchema", () => {
 
   it("lists every field the form posts", () => {
     expect([...BUSINESS_PROFILE_FIELDS].sort()).toEqual(Object.keys(valid).sort());
+  });
+
+  it("accepts only the market's tax registration statuses, or none yet", () => {
+    expect(businessProfileSchema.parse({ ...valid, taxRegistration: "non_vat" }).taxRegistration).toBe("non_vat");
+    expect(businessProfileSchema.parse({ ...valid, taxRegistration: "" }).taxRegistration).toBeNull();
+    const result = businessProfileSchema.safeParse({ ...valid, taxRegistration: "sometimes" });
+    expect(result.error?.flatten().fieldErrors).toEqual({ taxRegistration: ["Choose how you're registered for tax."] });
   });
 });

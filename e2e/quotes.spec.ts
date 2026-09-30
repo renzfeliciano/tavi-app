@@ -42,6 +42,8 @@ test("opening a new quote saves nothing until something changes", async () => {
   await expect(page).toHaveURL(/\/quotes\/new$/);
   await expect(preview()).toContainText("Quotation");
   await expect(preview()).toContainText("No items yet");
+  // A quotation is a supplementary document under RR 7-2024 (D13).
+  await expect(preview()).toContainText("THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.");
   expect((await axe(page)).violations).toEqual([]);
 
   await page.goto("/quotes");

@@ -14,6 +14,7 @@ const validInput = {
   name: "Acme Aircon Services",
   legalName: "Acme Aircon Services OPC",
   taxId: "123-456-789-00000",
+  taxRegistration: "vat",
   email: "Billing@Acme.ph",
   phone: "+63 917 555 0100",
   addressLine1: "12 Mabini St.",
@@ -71,6 +72,7 @@ describe("updateBusinessProfile", () => {
     expect(result).toEqual({ ok: true });
     expect(await getBusinessProfile(actor, testDb())).toMatchObject({
       legalName: "Acme Aircon Services OPC",
+      taxRegistration: "vat",
       email: "billing@acme.ph",
       addressLine2: null,
       taxMode: "exclusive",

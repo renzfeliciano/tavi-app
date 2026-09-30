@@ -22,6 +22,8 @@ export const organizations = pgTable(
     taxMode: text("tax_mode", { enum: ["inclusive", "exclusive"] }).notNull(),
     legalName: text("legal_name"),
     taxId: text("tax_id"),
+    /** A market tax registration code (PH: vat, non_vat, non_vat_exempt); null until set (D13). */
+    taxRegistration: text("tax_registration"),
     email: text("email"),
     phone: text("phone"),
     addressLine1: text("address_line1"),

@@ -17,6 +17,9 @@ import { type BusinessProfileState, type ProfileFormValues, saveBusinessProfile 
 export type BusinessProfileCopy = {
   taxIdLabel: string;
   taxIdHint: string;
+  /** The market's tax registration statuses (PH: VAT-registered, Non-VAT…). */
+  taxRegistrations: { code: string; label: string }[];
+  taxRegistrationHint: string;
   registeredNameHint: string;
   address: { line2Label: string; cityLabel: string; regionLabel: string; postalCodeLabel: string };
   /** e.g. "Quotations and billing statements". */
@@ -95,6 +98,24 @@ export function BusinessProfileForm({
           >
             {(p) => (
               <Input {...p} defaultValue={v.taxId} maxLength={LIMITS.taxId} className="font-mono" />
+            )}
+          </FormField>
+          <FormField
+            name="taxRegistration"
+            label="Tax registration"
+            optional
+            hint={copy.taxRegistrationHint}
+            error={error("taxRegistration")}
+          >
+            {(p) => (
+              <NativeSelect {...p} defaultValue={v.taxRegistration}>
+                <option value="">Not set yet</option>
+                {copy.taxRegistrations.map((r) => (
+                  <option key={r.code} value={r.code}>
+                    {r.label}
+                  </option>
+                ))}
+              </NativeSelect>
             )}
           </FormField>
         </FormSection>

@@ -1,7 +1,7 @@
 import "server-only";
 import type { DocumentView } from "@/components/document/document-view";
 import { currencyOptions } from "@/config/currencies";
-import { formatAddressLines } from "@/config/markets";
+import { formatAddressLines, taxIdStatement } from "@/config/markets";
 import { formatRate, listTaxRates } from "@/modules/catalog";
 import { getOrganizationLogo } from "@/modules/files";
 import type { OrgContext } from "@/modules/identity";
@@ -17,7 +17,7 @@ export async function documentBusiness(ctx: OrgContext): Promise<DocumentView["b
     subtitle: profile.legalName && profile.legalName !== profile.name ? profile.legalName : null,
     addressLines: formatAddressLines(profile, ctx.market),
     contactLines: [profile.email, profile.phone].filter((line): line is string => Boolean(line)),
-    taxId: profile.taxId ? { label: ctx.market.taxId.label, value: profile.taxId } : null,
+    taxId: profile.taxId ? { label: taxIdStatement(ctx.market, profile.taxRegistration), value: profile.taxId } : null,
     logo: logo ? { src: `/api/files/${logo.id}`, width: logo.width, height: logo.height } : null,
   };
 }
@@ -39,6 +39,8 @@ export async function editorContext(ctx: OrgContext, currency: string) {
     currencies: currencyOptions({ locale: ctx.locale, first: currency }),
     customerCopy: customerFormCopy(ctx),
     title: ctx.market.documents.quote.singular,
+    // Quotations are supplementary documents (RR 7-2024 Sec. 6 B.15, D13).
+    notice: ctx.market.supplementaryDocumentNotice,
     defaultUnit: ctx.market.units.service,
     locale: ctx.locale,
   };

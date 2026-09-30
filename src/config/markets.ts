@@ -47,6 +47,16 @@ export type MarketProfile = {
     invoice: { singular: string; plural: string };
     receipt: { singular: string; plural: string; disclaimer?: string };
   };
+  /**
+   * Tax registration statuses a business can have. `statement` precedes the
+   * TIN on every document (PH: "VAT Reg TIN 123-456-789-00000", RR 7-2024
+   * Sec. 6 B.2); only statuses with `suggestsTaxes` see the suggested rates.
+   */
+  taxRegistrations: readonly { code: string; label: string; statement: string; suggestsTaxes: boolean }[];
+  /** Where a business finds its tax registration status. */
+  taxRegistrationHint: string;
+  /** Printed in bold on documents that aren't registered invoices (PH: RR 7-2024 Sec. 6 B.15), or null. */
+  supplementaryDocumentNotice: string | null;
   /** Default unit names for new catalog items, in the market's language. */
   units: { product: string; service: string };
   /** New-business defaults, editable in Settings. */
@@ -89,6 +99,23 @@ export const MARKETS = {
         disclaimer: "Not a BIR official receipt.",
       },
     },
+    taxRegistrations: [
+      { code: "vat", label: "VAT-registered", statement: "VAT Reg TIN", suggestsTaxes: true },
+      {
+        code: "non_vat",
+        label: "Non-VAT, subject to percentage tax",
+        statement: "Non-VAT Reg TIN",
+        suggestsTaxes: false,
+      },
+      {
+        code: "non_vat_exempt",
+        label: "Non-VAT, exempt from VAT and percentage tax",
+        statement: "Non-VAT Reg TIN",
+        suggestsTaxes: false,
+      },
+    ],
+    taxRegistrationHint: "As on your BIR Certificate of Registration. Printed before your TIN.",
+    supplementaryDocumentNotice: "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.",
     units: { product: "pc", service: "hour" },
     quoteValidityDays: 30,
     paymentTermsDays: 15,
@@ -149,4 +176,9 @@ export function formatAddressLines(address: AddressParts, market: Pick<MarketPro
   return [address.addressLine1?.trim(), address.addressLine2?.trim(), locality].filter(
     (line): line is string => Boolean(line),
   );
+}
+
+/** The document statement before a TIN ("VAT Reg TIN"), or the plain tax-ID label when the status isn't set. */
+export function taxIdStatement(market: Pick<MarketProfile, "taxId" | "taxRegistrations">, registration: string | null): string {
+  return market.taxRegistrations.find((r) => r.code === registration)?.statement ?? market.taxId.label;
 }

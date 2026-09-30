@@ -43,6 +43,16 @@ describe("market profiles", () => {
       }
     });
 
+    it("lists the tax registrations a business can have, each with its document statement", () => {
+      expect(market.taxRegistrations.length).toBeGreaterThan(0);
+      const codes = market.taxRegistrations.map((r) => r.code);
+      expect(new Set(codes).size).toBe(codes.length);
+      for (const registration of market.taxRegistrations) {
+        expect(registration.label.trim()).not.toBe("");
+        expect(registration.statement.trim()).not.toBe("");
+      }
+    });
+
     it("names default units for products and services", () => {
       expect(market.units.product.trim()).not.toBe("");
       expect(market.units.service.trim()).not.toBe("");
@@ -92,5 +102,23 @@ describe("formatAddressLines", () => {
     expect(formatAddressLines({ region: "Metro Manila" }, MARKETS.PH)).toEqual(["Metro Manila"]);
     expect(formatAddressLines({ city: "Pasig", region: "Metro Manila" }, MARKETS.PH)).toEqual(["Pasig, Metro Manila"]);
     expect(formatAddressLines({}, MARKETS.PH)).toEqual([]);
+  });
+});
+
+describe("the Philippine market (D13, RR 7-2024)", () => {
+  it("states VAT or Non-VAT registration before the TIN, as Sec. 6(B.2) requires", () => {
+    expect(MARKETS.PH.taxRegistrations.map((r) => [r.code, r.statement])).toEqual([
+      ["vat", "VAT Reg TIN"],
+      ["non_vat", "Non-VAT Reg TIN"],
+      ["non_vat_exempt", "Non-VAT Reg TIN"],
+    ]);
+  });
+
+  it("marks supplementary documents as not valid for claiming input tax (Sec. 6 B.15)", () => {
+    expect(MARKETS.PH.supplementaryDocumentNotice).toBe("THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.");
+  });
+
+  it("only suggests VAT to VAT-registered businesses", () => {
+    expect(MARKETS.PH.taxRegistrations.filter((r) => r.suggestsTaxes).map((r) => r.code)).toEqual(["vat"]);
   });
 });

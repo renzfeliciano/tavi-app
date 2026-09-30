@@ -30,6 +30,7 @@ function view(taxMode: TaxMode) {
     amounts: calculateDocument({ taxMode, lines: lines.map(({ unitPriceMinor, quantity, discount, tax }) => ({ unitPriceMinor, quantity, discount, tax })) }),
     notes: null,
     terms: null,
+    notice: "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.",
   });
 }
 
@@ -52,5 +53,6 @@ describe("buildDocumentView", () => {
     expect(v.totals.some((row) => row.label.startsWith("VAT"))).toBe(false);
     expect(v.taxNotes).toEqual(["Includes VAT 12%: ₱369.64"]);
     expect(v.dates).toEqual([{ label: "Date", value: "Oct 1, 2026" }]);
+    expect(v.notice).toBe("THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.");
   });
 });

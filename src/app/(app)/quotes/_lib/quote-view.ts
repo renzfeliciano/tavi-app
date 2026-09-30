@@ -53,5 +53,7 @@ export function quoteDocumentView(
     amounts: calculateDocument({ taxMode: quote.taxMode, lines }),
     notes: quote.notes,
     terms: quote.terms,
+    // Quotations are supplementary documents (RR 7-2024 Sec. 6 B.15, D13).
+    notice: market.supplementaryDocumentNotice,
   });
 }

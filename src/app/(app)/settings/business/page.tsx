@@ -30,6 +30,8 @@ export default async function BusinessProfilePage() {
   const copy: BusinessProfileCopy = {
     taxIdLabel: market.taxId.label,
     taxIdHint: `Printed on your documents, e.g. ${market.taxId.example}.`,
+    taxRegistrations: market.taxRegistrations.map(({ code, label }) => ({ code, label })),
+    taxRegistrationHint: market.taxRegistrationHint,
     registeredNameHint: market.registeredNameHint,
     address: market.address,
     documentsTitle: `${market.documents.quote.plural} and ${docs.invoices}`,

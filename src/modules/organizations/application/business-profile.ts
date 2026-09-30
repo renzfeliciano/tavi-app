@@ -17,6 +17,7 @@ const profileColumns = {
   name: organizations.name,
   legalName: organizations.legalName,
   taxId: organizations.taxId,
+  taxRegistration: organizations.taxRegistration,
   email: organizations.email,
   phone: organizations.phone,
   addressLine1: organizations.addressLine1,

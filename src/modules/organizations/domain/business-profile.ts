@@ -26,7 +26,7 @@ const days = (range: { min: number; max: number }) =>
       .max(range.max, { error: dayRange(range) }),
   );
 
-export function businessProfileSchemaFor(market: Pick<MarketProfile, "taxId">) {
+export function businessProfileSchemaFor(market: Pick<MarketProfile, "taxId" | "taxRegistrations">) {
   const { label, pattern, example } = market.taxId;
   return z.object({
     name: requiredText(LIMITS.name, "Enter your business name."),
@@ -38,6 +38,16 @@ export function businessProfileSchemaFor(market: Pick<MarketProfile, "taxId">) {
         .trim()
         .max(LIMITS.taxId, { error: tooLong(LIMITS.taxId) })
         .refine((v) => v === "" || pattern.test(v), { error: `Enter your ${label} like ${example}.` })
+        .transform((v) => (v === "" ? null : v)),
+    ),
+    // How the business is registered for tax: prints "VAT Reg TIN …" etc. (D13).
+    taxRegistration: z.preprocess(
+      (v) => (typeof v === "string" ? v : ""),
+      z
+        .string()
+        .refine((v) => v === "" || market.taxRegistrations.some((r) => r.code === v), {
+          error: "Choose how you're registered for tax.",
+        })
         .transform((v) => (v === "" ? null : v)),
     ),
     email: optionalEmail(LIMITS.email),
@@ -67,6 +77,7 @@ export const BUSINESS_PROFILE_FIELDS = [
   "name",
   "legalName",
   "taxId",
+  "taxRegistration",
   "email",
   "phone",
   "addressLine1",

@@ -69,6 +69,8 @@ type QuoteEditorProps = {
   currencies: CurrencyOption[];
   taxRates: TaxRateChoice[];
   defaultTaxRateId: string | null;
+  /** Bold notice for supplementary documents (PH: not valid for claim of input tax), or null. */
+  notice: string | null;
   /** The market's usual unit for new free-text lines. */
   defaultUnit: string;
   customerCopy: CustomerFormCopy;
@@ -214,9 +216,10 @@ export function QuoteEditor(props: QuoteEditorProps) {
       amounts,
       notes: state.notes.trim() || null,
       terms: state.terms.trim() || null,
+      notice: props.notice,
     });
     return { view, lineAmounts, total: formatMoney(amounts.totalMinor, state.currency, { locale }) };
-  }, [state, customer, locale, taxMode, ratesById, props.title, props.number, props.revision, props.business]);
+  }, [state, customer, locale, taxMode, ratesById, props.title, props.number, props.revision, props.business, props.notice]);
 
   // Show a field's problem once the person has left it, or once the server reported it.
   const visibleErrors = useMemo(() => {
