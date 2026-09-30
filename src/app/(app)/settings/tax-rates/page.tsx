@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { brand } from "@/config/brand";
 import { can } from "@/modules/authz";
-import { formatRate, listTaxRates } from "@/modules/catalog";
+import { formatRate, formatRateForInput, listTaxRates } from "@/modules/catalog";
 import { requireOrgContext } from "@/modules/identity";
 import { ReadOnlyNotice, SettingsPageHeader } from "../_components/settings-page-header";
 import { TaxRatesManager } from "./tax-rates-manager";
@@ -25,14 +25,14 @@ export default async function TaxRatesPage() {
         // Presets from the business's market (e.g. VAT in PH); none are created automatically.
         suggestions={ctx.market.suggestedTaxRates.map((rate) => ({
           name: rate.name,
-          rate: formatRate(rate.rateBps),
-          rateInput: formatRate(rate.rateBps).replace("%", ""),
+          rate: formatRate(rate.rateBps, ctx.locale),
+          rateInput: formatRateForInput(rate.rateBps, ctx.locale),
         }))}
         rates={rates.map((rate) => ({
           id: rate.id,
           name: rate.name,
-          rate: formatRate(rate.rateBps),
-          rateInput: formatRate(rate.rateBps).replace("%", ""),
+          rate: formatRate(rate.rateBps, ctx.locale),
+          rateInput: formatRateForInput(rate.rateBps, ctx.locale),
           isDefault: rate.isDefault,
           archived: rate.archivedAt !== null,
         }))}

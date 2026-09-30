@@ -1,3 +1,21 @@
-// Browser-safe entry point: pure numbering helpers for live previews.
+// Browser-safe entry point: pure numbering and calculation helpers for live previews.
 export { formatDocumentNumber, type NumberingFormat } from "./domain/numbering";
 export { NUMBERING_LIMITS, type NumberingInput, numberingInputSchema } from "./domain/numbering-input";
+export {
+  calculateDocument,
+  type DocumentAmounts,
+  type DocumentInput,
+  type LineAmounts,
+  type LineDiscount,
+  type LineInput,
+  type LineTax,
+  type TaxGroup,
+  type TaxMode,
+} from "./domain/calculation";
+export {
+  formatQuantity,
+  MAX_QUANTITY_WHOLE_DIGITS,
+  parseQuantityInput,
+  QUANTITY_DECIMALS,
+  QUANTITY_SCALE,
+} from "./domain/quantity";

@@ -28,7 +28,7 @@ export async function catalogFormCopy(
     currencies: currencyOptions({ locale: ctx.locale, first: current?.currency ?? ctx.currency }),
     taxRates: usable.map((rate) => ({
       id: rate.id,
-      label: `${rate.name} (${formatRate(rate.rateBps)})${rate.archivedAt ? " · archived" : ""}`,
+      label: `${rate.name} (${formatRate(rate.rateBps, ctx.locale)})${rate.archivedAt ? " · archived" : ""}`,
     })),
   };
 }

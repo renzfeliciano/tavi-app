@@ -20,6 +20,6 @@ export function taxModeExamples({ currency, locale, tax }: Example) {
   const money = (minor: number) => formatMoney(minor, currency, { locale });
   return {
     inclusive: `${money(base + taxAmount)} means ${money(base)} + ${money(taxAmount)} ${tax.name}.`,
-    exclusive: `${money(base)} becomes ${money(base + taxAmount)} with ${formatRate(tax.rateBps)} ${tax.name}.`,
+    exclusive: `${money(base)} becomes ${money(base + taxAmount)} with ${formatRate(tax.rateBps, locale)} ${tax.name}.`,
   };
 }

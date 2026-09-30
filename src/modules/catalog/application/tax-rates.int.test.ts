@@ -24,7 +24,7 @@ async function actorFor(role: Role = "owner", name = "Acme Aircon Services"): Pr
 }
 
 async function create(actor: OrgActor, name: string, rate: string) {
-  const result = await createTaxRate(actor, { name, rate }, testDb());
+  const result = await createTaxRate(actor, { name, rate }, { locale: "en-PH" }, testDb());
   if (!result.ok) throw new Error(`create failed: ${JSON.stringify(result)}`);
   return result.taxRate;
 }
@@ -58,7 +58,7 @@ describe("createTaxRate", () => {
   it("makes the first rate the default", async () => {
     const actor = await actorFor();
 
-    const result = await createTaxRate(actor, { name: "VAT", rate: "12", makeDefault: true }, testDb());
+    const result = await createTaxRate(actor, { name: "VAT", rate: "12", makeDefault: true }, { locale: "en-PH" }, testDb());
 
     expect(result).toMatchObject({ ok: true, taxRate: { isDefault: true } });
   });
@@ -67,7 +67,7 @@ describe("createTaxRate", () => {
     const actor = await actorFor();
     await create(actor, "VAT", "12");
 
-    const result = await createTaxRate(actor, { name: "vat", rate: "5" }, testDb());
+    const result = await createTaxRate(actor, { name: "vat", rate: "5" }, { locale: "en-PH" }, testDb());
 
     expect(result).toEqual({ ok: false, fieldErrors: { name: ["You already have a tax called vat."] } });
   });
@@ -75,7 +75,7 @@ describe("createTaxRate", () => {
   it("allows the same name in another organization", async () => {
     await create(await actorFor("owner", "One"), "VAT", "12");
 
-    const result = await createTaxRate(await actorFor("owner", "Two"), { name: "VAT", rate: "12" }, testDb());
+    const result = await createTaxRate(await actorFor("owner", "Two"), { name: "VAT", rate: "12" }, { locale: "en-PH" }, testDb());
 
     expect(result.ok).toBe(true);
   });
@@ -83,7 +83,7 @@ describe("createTaxRate", () => {
   it("returns field errors for invalid input", async () => {
     const actor = await actorFor();
 
-    const result = await createTaxRate(actor, { name: "", rate: "101" }, testDb());
+    const result = await createTaxRate(actor, { name: "", rate: "101" }, { locale: "en-PH" }, testDb());
 
     expect(result).toEqual({
       ok: false,
@@ -97,7 +97,7 @@ describe("createTaxRate", () => {
   it("refuses members", async () => {
     const actor = await actorFor("member");
 
-    await expect(createTaxRate(actor, { name: "VAT", rate: "12" }, testDb())).rejects.toBeInstanceOf(
+    await expect(createTaxRate(actor, { name: "VAT", rate: "12" }, { locale: "en-PH" }, testDb())).rejects.toBeInstanceOf(
       ForbiddenError,
     );
   });
@@ -126,7 +126,7 @@ describe("updateTaxRate", () => {
     const actor = await actorFor();
     const vat = await create(actor, "VAT", "12");
 
-    const result = await updateTaxRate(actor, vat.id, { name: "VAT (12%)", rate: "12.5" }, testDb());
+    const result = await updateTaxRate(actor, vat.id, { name: "VAT (12%)", rate: "12.5" }, { locale: "en-PH" }, testDb());
 
     expect(result).toMatchObject({ ok: true, taxRate: { name: "VAT (12%)", rateBps: 1250 } });
     expect((await listAllAuditEvents(testDb())).at(-1)).toMatchObject({
@@ -141,7 +141,7 @@ describe("updateTaxRate", () => {
     const vat = await create(owner, "VAT", "12");
     const intruder = await actorFor("owner", "Two");
 
-    const result = await updateTaxRate(intruder, vat.id, { name: "Hacked", rate: "0" }, testDb());
+    const result = await updateTaxRate(intruder, vat.id, { name: "Hacked", rate: "0" }, { locale: "en-PH" }, testDb());
 
     expect(result).toEqual({ ok: false, notFound: true });
     expect((await listTaxRates(owner, testDb()))[0]).toMatchObject({ name: "VAT", rateBps: 1200 });

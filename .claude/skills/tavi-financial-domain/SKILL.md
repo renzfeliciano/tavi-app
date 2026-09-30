@@ -17,7 +17,7 @@ Proposal §B is the specification; the decision log (D5–D8) records the founde
 
 ## Calculation (one function, Phase 1.4)
 
-`calculateDocument()` is the only place totals are computed; UI preview, PDF, portal and persistence all call it.
+`calculateDocument({ taxMode, lines })` (`@/modules/documents`, and `@/modules/documents/client` for the browser preview) is the only place totals are computed; UI preview, PDF, portal and persistence all call it. Lines take `unitPriceMinor`, `quantity` (scaled ×10 000, `QUANTITY_SCALE`), `discount` (`{kind:"percent",bps}` | `{kind:"amount",amountMinor}` | null) and `tax` (`{name, rateBps}` | null). It throws `RangeError` for input beyond the limits, so validate with `parseMoneyInput` / `parseQuantityInput` / `parsePercentToBps` first.
 
 ```
 lineGross    = round(unitPrice × qty)                       qty: numeric(14,4) → scaled ×10000
@@ -28,7 +28,7 @@ lineTax      = exclusive ? round(lineNet × rate / 10000)
 lineTotal    = exclusive ? lineNet + lineTax : lineNet
 ```
 
-Rounding: **half away from zero, per line**, then sum. Tax mode (`inclusive` default for PH, D2) is snapshotted on the document. Build it test-first with property tests (fast-check): total = Σ lines, never negative, inclusive/exclusive consistency.
+Rounding: **half away from zero, per line** (`roundDiv` on BigInt), then sum. Tax mode (the market's `defaultTaxMode`, inclusive in PH) is snapshotted on the document. Any change to the engine keeps `calculation.test.ts` (hand-worked examples; check new ones with exact fractions, not mental arithmetic) and `calculation.property.test.ts` (fast-check invariants) green; for a big change, run the properties once with `fc.configureGlobal({ numRuns: 20_000 })` and `--testTimeout`.
 
 ## Snapshots
 

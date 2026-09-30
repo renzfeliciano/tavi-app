@@ -37,8 +37,8 @@ export async function saveTaxRate(
 
   const id = String(formData.get("id") ?? "");
   const result = id
-    ? await updateTaxRate(ctx, id, values)
-    : await createTaxRate(ctx, { ...values, makeDefault: formData.get("makeDefault") === "on" });
+    ? await updateTaxRate(ctx, id, values, { locale: ctx.locale })
+    : await createTaxRate(ctx, { ...values, makeDefault: formData.get("makeDefault") === "on" }, { locale: ctx.locale });
   if (!result.ok) {
     return "notFound" in result
       ? { values, error: GONE, submission: Date.now() }

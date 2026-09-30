@@ -3,7 +3,7 @@ import { z } from "zod";
 import { type Database, type Executor, getDb, isUniqueViolation } from "@/db";
 import { type AuditAction, recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
-import { taxRateInputSchema } from "../domain/tax-rate";
+import { taxRateInputSchemaFor } from "../domain/tax-rate";
 import { taxRates } from "../schema";
 
 export type TaxRate = Pick<
@@ -83,13 +83,17 @@ async function clearDefault(tx: Executor, actor: OrgActor) {
     .where(and(eq(taxRates.organizationId, actor.organizationId), eq(taxRates.isDefault, true)));
 }
 
+/** How a typed rate is read: the business's locale ("12.5" or "12,5"). */
+export type TaxRateInputOptions = { locale: string };
+
 export async function createTaxRate(
   actor: OrgActor,
   input: unknown,
+  { locale }: TaxRateInputOptions,
   db: Database = getDb(),
 ): Promise<SaveTaxRateResult> {
   assertCan(actor, "organization.manage");
-  const parsed = taxRateInputSchema.safeParse(input);
+  const parsed = taxRateInputSchemaFor(locale).safeParse(input);
   if (!parsed.success) return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors };
   const { name, rateBps } = parsed.data;
   const makeDefault = (input as { makeDefault?: unknown }).makeDefault === true;
@@ -119,10 +123,11 @@ export async function updateTaxRate(
   actor: OrgActor,
   id: string,
   input: unknown,
+  { locale }: TaxRateInputOptions,
   db: Database = getDb(),
 ): Promise<SaveTaxRateResult> {
   assertCan(actor, "organization.manage");
-  const parsed = taxRateInputSchema.safeParse(input);
+  const parsed = taxRateInputSchemaFor(locale).safeParse(input);
   if (!parsed.success) return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors };
   const { name, rateBps } = parsed.data;
 

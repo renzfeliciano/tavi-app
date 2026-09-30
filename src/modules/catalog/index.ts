@@ -7,9 +7,16 @@ export {
   setDefaultTaxRate,
   type TaxRate,
   type TaxRateActionResult,
+  type TaxRateInputOptions,
   updateTaxRate,
 } from "./application/tax-rates";
-export { formatRate, parsePercentToBps, type TaxRateInput, taxRateInputSchema } from "./domain/tax-rate";
+export {
+  formatRate,
+  formatRateForInput,
+  parsePercentToBps,
+  type TaxRateInput,
+  taxRateInputSchemaFor,
+} from "./domain/tax-rate";
 export { taxModeExamples } from "./domain/tax-mode-examples";
 export {
   archiveCatalogItem,

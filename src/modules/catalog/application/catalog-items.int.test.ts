@@ -46,7 +46,7 @@ async function add(actor: OrgActor, kind: CatalogItemKind, overrides: Record<str
 }
 
 async function vat(actor: OrgActor) {
-  const result = await createTaxRate({ ...actor, role: "owner" }, { name: "VAT", rate: "12" }, testDb());
+  const result = await createTaxRate({ ...actor, role: "owner" }, { name: "VAT", rate: "12" }, { locale: "en-PH" }, testDb());
   if (!result.ok) throw new Error("tax rate");
   return result.taxRate;
 }
