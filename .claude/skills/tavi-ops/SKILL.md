@@ -55,6 +55,10 @@ Never paste values into chat or commit them. `.env.local` is gitignored; `.env.e
 
 `checks` (lint, typecheck, unit) → `integration` (postgres:18 service) and `e2e` (postgres:18, one-off auth secret, production build, desktop + mobile). All must pass before merging to `main`.
 
+## Dependency advisories
+
+Run `npm audit --omit=dev` before each release. **Accepted (2026-09-30):** GHSA-67mh-4wv8-2f99 (moderate), an old `esbuild` under `drizzle-kit` (which `better-auth` also declares for its CLI). It affects esbuild's development server only, which TAVI never runs; `npm audit fix --force` would downgrade drizzle-kit and break migrations. Re-check when drizzle-kit or better-auth release updates.
+
 ## Deploy checklist
 
 CI green · migrations applied · env vars set for the environment · `/api/health/ready` 200 after deploy · sign-up → onboarding smoke test on the live URL · logs clean for 10 minutes.
