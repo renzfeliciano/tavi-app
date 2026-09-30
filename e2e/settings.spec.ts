@@ -4,10 +4,10 @@ import sharp from "sharp";
 import { createBusiness, signUp, strongPassword, uniqueEmail } from "./helpers";
 
 // One fresh business, set up step by step like a new owner would. Desktop
-// only: it creates an account (sign-up is rate limited per IP).
+// only (see ACCOUNT_CREATING_SPECS in playwright.config.ts): it creates an
+// account, and sign-up is rate limited per IP.
 test.use({ storageState: { cookies: [], origins: [] } });
 test.describe.configure({ mode: "serial" });
-test.skip(({ isMobile }) => isMobile, "Creates an account; covered on desktop");
 
 let page: Page;
 

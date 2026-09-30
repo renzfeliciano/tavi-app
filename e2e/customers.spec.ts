@@ -2,11 +2,10 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { createBusiness, signUp, strongPassword, uniqueEmail } from "./helpers";
 
-// One fresh business adding and managing customers. Desktop only: it creates
-// an account (sign-up is rate limited per IP).
+// One fresh business adding and managing customers. Desktop only (see
+// ACCOUNT_CREATING_SPECS in playwright.config.ts): sign-up is rate limited per IP.
 test.use({ storageState: { cookies: [], origins: [] } });
 test.describe.configure({ mode: "serial" });
-test.skip(({ isMobile }) => isMobile, "Creates an account; covered on desktop");
 
 let page: Page;
 

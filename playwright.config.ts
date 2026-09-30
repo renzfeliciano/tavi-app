@@ -13,6 +13,9 @@ const databaseUrl = testDatabaseUrl();
 
 export const OWNER_STATE = "e2e/.auth/owner.json";
 
+/** Specs that sign up their own fresh business. */
+const ACCOUNT_CREATING_SPECS = [/auth\.spec\.ts/, /settings\.spec\.ts/, /customers\.spec\.ts/, /catalog\.spec\.ts/];
+
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
@@ -41,9 +44,10 @@ export default defineConfig({
       name: "mobile",
       use: { ...devices["Pixel 7"], storageState: OWNER_STATE },
       dependencies: ["setup"],
-      // Sign-in flows create accounts; run them once (desktop) to stay under
-      // the production sign-up rate limit.
-      testIgnore: [/auth\.setup\.ts/, /auth\.spec\.ts/],
+      // Specs that create accounts run once (desktop) to stay under the
+      // production sign-up rate limit; a file-level skip isn't enough, because
+      // their beforeAll would still sign up.
+      testIgnore: [/auth\.setup\.ts/, ...ACCOUNT_CREATING_SPECS],
     },
   ],
   webServer: {

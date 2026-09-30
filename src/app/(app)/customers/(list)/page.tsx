@@ -1,43 +1,29 @@
-import type { Metadata, Route } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeftIcon, ChevronRightIcon, SearchIcon, UserPlusIcon } from "lucide-react";
+import { UserPlusIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { SectionEmpty } from "@/components/app-shell/section-empty";
 import { EmptyState } from "@/components/empty-state";
+import { ListPager, ListSearch, ListViews, listHref, pageParam } from "@/components/list-controls";
 import { buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { documentWording } from "@/config/markets";
-import { cn } from "@/lib/utils";
 import { type CustomerStatus, listCustomers } from "@/modules/customers";
 import { requireOrgContext } from "@/modules/identity";
-import { MAX_SEARCH_LENGTH, normalizeSearch } from "@/shared/text/search";
+import { normalizeSearch } from "@/shared/text/search";
 
 export const metadata: Metadata = { title: "Customers" };
 
-function customersHref({ q, status, page }: { q?: string | null; status?: CustomerStatus; page?: number }): Route {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (status === "archived") params.set("status", "archived");
-  if (page && page > 1) params.set("page", String(page));
-  const query = params.toString();
-  return (query ? `/customers?${query}` : "/customers") as Route;
-}
+const customersHref = (q: string | null, status: CustomerStatus, page?: number) =>
+  listHref("/customers", { q, status: status === "archived" ? "archived" : null, page: page && page > 1 ? page : null });
 
 export default async function CustomersPage({ searchParams }: PageProps<"/customers">) {
   const ctx = await requireOrgContext();
   const params = await searchParams;
   const search = normalizeSearch(params.q);
   const status: CustomerStatus = params.status === "archived" ? "archived" : "active";
-  const page = Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1;
+  const page = pageParam(params.page);
   const list = await listCustomers(ctx, { search, status, page });
   const documents = documentWording(ctx.market).quotesAndInvoices;
-
-  const addButton = (
-    <Link href="/customers/new" className={buttonVariants()}>
-      <UserPlusIcon aria-hidden="true" />
-      Add customer
-    </Link>
-  );
 
   // Brand-new business: nothing to search or filter yet.
   if (list.customers.length === 0 && !search && status === "active" && page === 1 && list.archivedCount === 0) {
@@ -53,53 +39,39 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
     );
   }
 
-  const tabs: { status: CustomerStatus; label: string }[] = [
-    { status: "active", label: "Active" },
-    ...(list.archivedCount > 0 || status === "archived"
-      ? [{ status: "archived" as const, label: `Archived (${list.archivedCount})` }]
-      : []),
-  ];
-
   return (
     <>
-      <PageHeader title="Customers" description="The people and businesses you work for." actions={addButton} />
+      <PageHeader
+        title="Customers"
+        description="The people and businesses you work for."
+        actions={
+          <Link href="/customers/new" className={buttonVariants()}>
+            <UserPlusIcon aria-hidden="true" />
+            Add customer
+          </Link>
+        }
+      />
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <form role="search" action="/customers" className="relative w-full sm:max-w-sm">
-          <label htmlFor="customer-search" className="sr-only">
-            Search customers
-          </label>
-          <SearchIcon
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+        <ListSearch
+          action="/customers"
+          label="Search customers"
+          placeholder="Name, company, email or phone"
+          value={search}
+          keep={{ status: status === "archived" ? "archived" : undefined }}
+        />
+        {(list.archivedCount > 0 || status === "archived") && (
+          <ListViews
+            label="Customer lists"
+            views={[
+              { href: customersHref(search, "active"), label: "Active", current: status === "active" },
+              {
+                href: customersHref(search, "archived"),
+                label: `Archived (${list.archivedCount})`,
+                current: status === "archived",
+              },
+            ]}
           />
-          <Input
-            id="customer-search"
-            type="search"
-            name="q"
-            defaultValue={search ?? ""}
-            maxLength={MAX_SEARCH_LENGTH}
-            placeholder="Name, company, email or phone"
-            className="pl-9"
-          />
-          {status === "archived" && <input type="hidden" name="status" value="archived" />}
-        </form>
-        {tabs.length > 1 && (
-          <nav aria-label="Customer lists" className="flex gap-1">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.status}
-                href={customersHref({ q: search, status: tab.status })}
-                aria-current={tab.status === status ? "page" : undefined}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground pointer-coarse:py-2.5",
-                  tab.status === status && "bg-card text-foreground shadow-xs ring-1 ring-border",
-                )}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
         )}
       </div>
 
@@ -114,12 +86,11 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
             }
             action={
               search && (
-                <Link href={customersHref({ status })} className={buttonVariants({ variant: "outline" })}>
+                <Link href={customersHref(null, status)} className={buttonVariants({ variant: "outline" })}>
                   Clear search
                 </Link>
               )
             }
-            expression="curious"
           />
         ) : (
           <ul className="divide-y divide-border">
@@ -147,33 +118,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
         )}
       </section>
 
-      {(list.page > 1 || list.hasMore) && (
-        <nav aria-label="Pages" className="mt-4 flex items-center justify-between gap-2">
-          {list.page > 1 ? (
-            <Link
-              href={customersHref({ q: search, status, page: list.page - 1 })}
-              className={buttonVariants({ variant: "outline" })}
-            >
-              <ChevronLeftIcon aria-hidden="true" />
-              Previous
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="text-sm text-muted-foreground">Page {list.page}</span>
-          {list.hasMore ? (
-            <Link
-              href={customersHref({ q: search, status, page: list.page + 1 })}
-              className={buttonVariants({ variant: "outline" })}
-            >
-              Next
-              <ChevronRightIcon aria-hidden="true" />
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
-      )}
+      <ListPager page={list.page} hasMore={list.hasMore} hrefFor={(p) => customersHref(search, status, p)} />
     </>
   );
 }

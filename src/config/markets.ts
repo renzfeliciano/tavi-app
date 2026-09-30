@@ -45,6 +45,8 @@ export type MarketProfile = {
     invoice: { singular: string; plural: string };
     receipt: { singular: string; plural: string; disclaimer?: string };
   };
+  /** Default unit names for new catalog items, in the market's language. */
+  units: { product: string; service: string };
   /** New-business defaults, editable in Settings. */
   quoteValidityDays: number;
   paymentTermsDays: number;
@@ -84,6 +86,7 @@ export const MARKETS = {
         disclaimer: "Not a BIR official receipt.",
       },
     },
+    units: { product: "pc", service: "hour" },
     quoteValidityDays: 30,
     paymentTermsDays: 15,
   },

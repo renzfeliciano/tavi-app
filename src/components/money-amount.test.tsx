@@ -17,4 +17,11 @@ describe("MoneyAmount", () => {
     render(<MoneyAmount amountMinor={100} currency="PHP" />);
     expect(screen.getByText("₱1.00")).toHaveClass("tabular-nums", "whitespace-nowrap");
   });
+
+  it("formats in the business's locale when given", () => {
+    const { container } = render(<MoneyAmount amountMinor={125_050} currency="EUR" locale="de-DE" />);
+    const amount = container.querySelector("data");
+    expect(amount).toHaveTextContent(/^1\.250,50\s€$/);
+    expect(amount).toHaveAttribute("value", "1250.50 EUR");
+  });
 });

@@ -35,6 +35,11 @@ describe("market profiles", () => {
       }
     });
 
+    it("names default units for products and services", () => {
+      expect(market.units.product.trim()).not.toBe("");
+      expect(market.units.service.trim()).not.toBe("");
+    });
+
     it("has document defaults the database accepts", () => {
       expect(market.quoteValidityDays).toBeGreaterThanOrEqual(1);
       expect(market.quoteValidityDays).toBeLessThanOrEqual(365);

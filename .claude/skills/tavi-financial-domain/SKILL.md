@@ -13,6 +13,7 @@ Proposal §B is the specification; the decision log (D5–D8) records the founde
 - `formatMoney(minor, currency)` / `<MoneyAmount amountMinor currency />` for display (`₱8,400.00`); `minorToDecimalString` for machine values. Both are exact (decimal strings, no float division).
 - Exponent per currency from `currencyExponent` (PHP 2, JPY 0, KWD 3). Validate codes with `isCurrencyCode` (rejects made-up codes Intl would accept).
 - Totals across currencies are never summed; group by currency.
+- Typed amounts: `parseMoneyInput(text, currency, ctx.locale)` → minor units or null (locale separators, currency decimals, 12 whole digits max); `formatAmountForInput` for editing. Never `Number(text) * 100`.
 
 ## Calculation (one function, Phase 1.4)
 
