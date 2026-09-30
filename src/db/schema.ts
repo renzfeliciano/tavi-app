@@ -3,3 +3,6 @@
 export * from "@/modules/identity/schema";
 export * from "@/modules/organizations/schema";
 export * from "@/modules/documents/schema";
+export * from "@/modules/audit/schema";
+export * from "@/modules/notifications/schema";
+export * from "@/modules/system/schema";

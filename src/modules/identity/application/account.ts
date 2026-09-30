@@ -1,5 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
+import { getDb } from "@/db";
+import { recordAuditEvent } from "@/modules/audit";
 import { describeDevice } from "../domain/device";
 import { getAuth } from "../infra/auth";
 import {
@@ -7,7 +9,7 @@ import {
   revokeOtherSessions,
   revokeSessionForUser,
 } from "../infra/session-repository";
-import { requireSession } from "./request-context";
+import { getCurrentSession, requireSession } from "./request-context";
 
 export type DeviceSession = {
   id: string;
@@ -34,15 +36,45 @@ export async function listMyDevices(): Promise<DeviceSession[]> {
 export async function signOutDevice(sessionId: string): Promise<boolean> {
   const { user, session } = await requireSession();
   if (sessionId === session.id) return false;
-  return revokeSessionForUser(user.id, sessionId);
+  const revoked = await revokeSessionForUser(user.id, sessionId);
+  if (revoked) {
+    await recordAuditEvent(getDb(), {
+      action: "auth.session_revoked",
+      actorType: "user",
+      actorId: user.id,
+      entityType: "session",
+      entityId: sessionId,
+    });
+  }
+  return revoked;
 }
 
 export async function signOutOtherDevices(): Promise<number> {
   const { user, session } = await requireSession();
-  return revokeOtherSessions(user.id, session.id);
+  const count = await revokeOtherSessions(user.id, session.id);
+  if (count > 0) {
+    await recordAuditEvent(getDb(), {
+      action: "auth.session_revoked",
+      actorType: "user",
+      actorId: user.id,
+      entityType: "session",
+      metadata: { scope: "all_other_devices", count },
+    });
+  }
+  return count;
 }
 
 /** Ends this session and clears its cookie (via the nextCookies plugin). */
 export async function signOutCurrentSession(): Promise<void> {
+  const current = await getCurrentSession();
   await getAuth().api.signOut({ headers: await headers() });
+  if (current) {
+    await recordAuditEvent(getDb(), {
+      action: "auth.signed_out",
+      actorType: "user",
+      actorId: current.user.id,
+      entityType: "session",
+      entityId: current.session.id,
+    });
+  }
 }

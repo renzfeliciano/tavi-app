@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { closeTestDb, resetTables, testDb } from "@/db/testing";
+import { closeTestDb, listAllAuditEvents, resetTables, testDb } from "@/db/testing";
 import { createMemorySender, setEmailSender } from "@/modules/notifications";
 import { accounts, sessions, users } from "../schema";
 import { createAuth } from "./create-auth";
@@ -127,5 +127,30 @@ describe("password reset", () => {
     ).resolves.toMatchObject({ status: true });
     await new Promise((r) => setTimeout(r, 100));
     expect(mail.sent).toHaveLength(0);
+  });
+});
+
+describe("audit trail", () => {
+  const actions = async () => (await listAllAuditEvents()).map((e) => e.action);
+
+  it("records sign-up and the first sign-in", async () => {
+    const { user } = await signUp();
+    const rows = await listAllAuditEvents();
+    expect(rows.map((r) => r.action).sort()).toEqual(["auth.signed_in", "auth.signed_up"]);
+    expect(rows.every((r) => r.actorId === user.id && r.actorType === "user")).toBe(true);
+  });
+
+  it("records password resets", async () => {
+    await signUp();
+    await vi.waitFor(() => expect(mail.sent).toHaveLength(1));
+    mail.sent.length = 0;
+    await auth.api.requestPasswordReset({
+      body: { email: "maria@example.com", redirectTo: "http://localhost:3200/reset-password" },
+    });
+    await vi.waitFor(() => expect(mail.sent).toHaveLength(1));
+    const token = mail.sent[0]?.text.match(/reset-password\/([^?\s]+)/)?.[1];
+    await auth.api.resetPassword({ body: { token: token!, newPassword: "a brand new passphrase" } });
+
+    expect(await actions()).toContain("auth.password_reset");
   });
 });

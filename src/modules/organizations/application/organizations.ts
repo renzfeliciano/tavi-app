@@ -1,6 +1,7 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type Database, getDb } from "@/db";
+import { recordAuditEvent } from "@/modules/audit";
 import type { Role } from "@/modules/authz";
 import { organizationInputSchema } from "../domain/organization-input";
 import { memberships, organizations } from "../schema";
@@ -32,6 +33,15 @@ export async function createOrganizationForUser(
       .returning();
     if (!org) throw new Error("Organization insert returned no row");
     await tx.insert(memberships).values({ organizationId: org.id, userId, role: "owner" });
+    await recordAuditEvent(tx, {
+      action: "organization.created",
+      actorType: "user",
+      actorId: userId,
+      organizationId: org.id,
+      entityType: "organization",
+      entityId: org.id,
+      metadata: { name: org.name, currency: org.defaultCurrency },
+    });
     return org;
   });
 

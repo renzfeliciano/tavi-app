@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { closeTestDb, createTestUser, resetTables, testDb } from "@/db/testing";
+import { listAuditEvents } from "@/modules/audit";
 import { memberships } from "../schema";
 import { createOrganizationForUser, resolveMembership } from "./organizations";
 
@@ -30,6 +31,15 @@ describe("createOrganizationForUser", () => {
     const rows = await testDb().select().from(memberships).where(eq(memberships.userId, user.id));
     expect(rows).toEqual([
       expect.objectContaining({ organizationId: result.organization.id, role: "owner" }),
+    ]);
+    expect(await listAuditEvents(result.organization.id, testDb())).toEqual([
+      expect.objectContaining({
+        action: "organization.created",
+        actorType: "user",
+        actorId: user.id,
+        entityType: "organization",
+        entityId: result.organization.id,
+      }),
     ]);
   });
 

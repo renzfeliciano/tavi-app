@@ -133,4 +133,35 @@ describe("parseEnv", () => {
       expect(parseEnv({ BETTER_AUTH_SECRET: secret }).BETTER_AUTH_SECRET).toBe(secret);
     });
   });
+
+  describe("email and cron settings", () => {
+    it("are optional", () => {
+      const env = parseEnv({});
+      expect(env.RESEND_API_KEY).toBeUndefined();
+      expect(env.EMAIL_FROM).toBeUndefined();
+      expect(env.CRON_SECRET).toBeUndefined();
+    });
+
+    it("accept a Resend key, a named sender and a long cron secret", () => {
+      const env = parseEnv({
+        RESEND_API_KEY: "re_123456789",
+        EMAIL_FROM: "Tavi <notify@tavi.example>",
+        CRON_SECRET: "c".repeat(32),
+      });
+      expect(env.EMAIL_FROM).toBe("Tavi <notify@tavi.example>");
+    });
+
+    it("reject a malformed sender, a non-Resend key and a short cron secret, without echoing them", () => {
+      let message = "";
+      try {
+        parseEnv({ RESEND_API_KEY: "sk_live_wrong", EMAIL_FROM: "notify at tavi", CRON_SECRET: "short" });
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toMatch(/RESEND_API_KEY/);
+      expect(message).toMatch(/EMAIL_FROM must look like/);
+      expect(message).toMatch(/CRON_SECRET must be at least 32 characters/);
+      expect(message).not.toContain("sk_live_wrong");
+    });
+  });
 });

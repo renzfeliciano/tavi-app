@@ -4,7 +4,9 @@ import { nextCookies } from "better-auth/next-js";
 import { haveIBeenPwned } from "better-auth/plugins";
 import type { Database } from "@/db";
 import { brand } from "@/config/brand";
+import { recordAuditEvent } from "@/modules/audit";
 import { passwordResetEmail, sendEmail, verifyEmailEmail } from "@/modules/notifications";
+import { logger } from "@/shared/logger";
 import { SESSION_POLICY } from "../domain/session-policy";
 import { accounts, rateLimits, sessions, users, verifications } from "../schema";
 
@@ -22,7 +24,7 @@ export type AuthConfig = {
 // the background and log failures (timing-safe for password resets).
 function deliver(send: Promise<void>) {
   send.catch((error: unknown) => {
-    console.error("[auth] email delivery failed", error instanceof Error ? error.message : error);
+    logger.error("auth email delivery failed", { error });
   });
 }
 
@@ -63,6 +65,15 @@ export function createAuth(db: Database, config: AuthConfig) {
       requireEmailVerification: false,
       resetPasswordTokenExpiresIn: 30 * 60,
       revokeSessionsOnPasswordReset: true,
+      onPasswordReset: async ({ user }) => {
+        await recordAuditEvent(db, {
+          action: "auth.password_reset",
+          actorType: "user",
+          actorId: user.id,
+          entityType: "user",
+          entityId: user.id,
+        });
+      },
       sendResetPassword: async ({ user, url }) => {
         deliver(sendEmail(passwordResetEmail({ to: user.email, name: user.name, url })));
       },
@@ -83,6 +94,36 @@ export function createAuth(db: Database, config: AuthConfig) {
       cookieCache: { enabled: false },
       additionalFields: {
         activeOrganizationId: { type: "string", required: false, input: false },
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user) => {
+            await recordAuditEvent(db, {
+              action: "auth.signed_up",
+              actorType: "user",
+              actorId: user.id,
+              entityType: "user",
+              entityId: user.id,
+            });
+          },
+        },
+      },
+      session: {
+        create: {
+          after: async (session) => {
+            await recordAuditEvent(db, {
+              action: "auth.signed_in",
+              actorType: "user",
+              actorId: session.userId,
+              entityType: "session",
+              entityId: session.id,
+              ipAddress: session.ipAddress ?? null,
+              userAgent: session.userAgent ?? null,
+            });
+          },
+        },
       },
     },
     rateLimit: {

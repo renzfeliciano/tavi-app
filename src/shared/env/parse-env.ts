@@ -36,6 +36,23 @@ const envSchema = z
       .string()
       .min(32, { error: "BETTER_AUTH_SECRET must be at least 32 characters" })
       .optional(),
+    /** Email provider. Without it, development prints emails and production refuses to send. */
+    RESEND_API_KEY: z
+      .string()
+      .regex(/^re_[A-Za-z0-9_]+$/, { error: "RESEND_API_KEY must be a Resend API key (starts with re_)" })
+      .optional(),
+    /** Sender shown to recipients, on a domain verified in Resend. */
+    EMAIL_FROM: z
+      .string()
+      .regex(/^[^<>]+ <[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>$/, {
+        error: 'EMAIL_FROM must look like "Tavi <notify@your-domain.com>"',
+      })
+      .optional(),
+    /** Shared secret Vercel Cron sends as a Bearer token to /api/cron/* routes. */
+    CRON_SECRET: z
+      .string()
+      .min(32, { error: "CRON_SECRET must be at least 32 characters" })
+      .optional(),
   })
   .superRefine((env, ctx) => {
     const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(env.APP_URL);

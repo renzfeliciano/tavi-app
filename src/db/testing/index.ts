@@ -1,6 +1,6 @@
-import { sql } from "drizzle-orm";
+import { asc, sql } from "drizzle-orm";
 import { createDatabase, type Database } from "../create";
-import { organizations, users } from "../schema";
+import { auditEvents, organizations, users } from "../schema";
 import { testDatabaseUrl } from "./env";
 
 let shared: ReturnType<typeof createDatabase> | undefined;
@@ -48,4 +48,9 @@ export async function createTestUser(
     .returning();
   if (!user) throw new Error("Failed to create test user");
   return user;
+}
+
+/** Every audit event in insertion order (tests only; the app reads per tenant). */
+export async function listAllAuditEvents(db: Database = testDb()) {
+  return db.select().from(auditEvents).orderBy(asc(auditEvents.createdAt), asc(auditEvents.id));
 }
