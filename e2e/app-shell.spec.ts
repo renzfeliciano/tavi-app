@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 const SCREENS = [
   "/dashboard",
   "/quotes",
+  "/quotes/new",
   "/invoices",
   "/payments",
   "/customers",

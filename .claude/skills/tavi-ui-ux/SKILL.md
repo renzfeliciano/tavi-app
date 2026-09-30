@@ -42,9 +42,26 @@ Proposal §G holds the product UX; `DESIGN.md` the visual system; `tavi-design-s
 - Errors: `error.tsx` with human copy and a retry; not-found for foreign or missing IDs.
 - Success: toasts from §32 ("Quote sent", "Payment recorded", "Link copied").
 
+## Feedback standard (founder rule)
+
+Every action gets visible feedback; nothing happens silently.
+
+| Situation | Feedback |
+|---|---|
+| Action succeeded | `toast.success("<what happened>.")`, naming the thing: "Juan Dela Cruz archived." |
+| Action failed | `toast.error` with what to do next; the entered values stay |
+| Reversible action (archive, remove) | Toast with an **Undo** action, no dialog |
+| Destructive, hard to undo, or affects several things | **Dialog** first (below), then a toast |
+| Field problem | Inline under the field (`FieldError`), plus the screen-reader summary |
+| Form-level problem | `FormAlert` (takes focus) |
+| Background autosave | Inline status ("Saving… / Saved"); a toast only on failure (one, with a stable `id`) |
+| Navigates to a page showing the result | The page itself is the feedback |
+
+Review every new button and server action against this table before calling a screen done.
+
 ## Confirmations (§33)
 
-Only for destructive or financial actions: void invoice, void payment, delete draft, cancel quote, record payment (summary step). Never for save/send (send is reversible via revise).
+Only for destructive, financial, or many-at-once actions: void invoice, void payment, delete draft, cancel quote, record payment (summary step), sign out all other devices. Never for save/send (send is reversible via revise).
 
 ## Mobile
 

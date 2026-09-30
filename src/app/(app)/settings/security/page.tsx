@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import { LaptopIcon, SmartphoneIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
-import { Button } from "@/components/ui/button";
 import { listMyDevices, requireOrgContext, SESSION_POLICY } from "@/modules/identity";
 import { describeDuration } from "@/shared/format/duration";
-import { signOutDeviceAction, signOutOtherDevicesAction } from "./actions";
+import { SignOutDeviceButton, SignOutOthersButton } from "./device-actions";
 
 export const metadata: Metadata = { title: "Security" };
-
 
 function DeviceIcon({ device }: { device: string }) {
   const Icon = /iPhone|Android|iPad/.test(device) ? SmartphoneIcon : LaptopIcon;
@@ -30,15 +28,7 @@ export default async function SecurityPage() {
       <PageHeader
         title="Security"
         description="Devices signed in to your account. Sign out any you don't recognise."
-        actions={
-          others > 0 && (
-            <form action={signOutOtherDevicesAction}>
-              <Button type="submit" variant="outline">
-                Sign out all other devices
-              </Button>
-            </form>
-          )
-        }
+        actions={others > 0 && <SignOutOthersButton count={others} />}
       />
 
       <section aria-labelledby="devices-heading" className="mt-8">
@@ -66,14 +56,7 @@ export default async function SecurityPage() {
                   </span>
                 </div>
               </div>
-              {!d.current && (
-                <form action={signOutDeviceAction}>
-                  <input type="hidden" name="sessionId" value={d.id} />
-                  <Button type="submit" variant="ghost" size="sm">
-                    Sign out
-                  </Button>
-                </form>
-              )}
+              {!d.current && <SignOutDeviceButton sessionId={d.id} device={d.device} />}
             </li>
           ))}
         </ul>

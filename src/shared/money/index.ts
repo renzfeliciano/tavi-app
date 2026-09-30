@@ -1,5 +1,6 @@
 export {
   currencyExponent,
+  examplePrice,
   formatMoney,
   isCurrencyCode,
   minorToDecimalString,

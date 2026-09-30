@@ -12,7 +12,9 @@ import { CUSTOMER_PAGE_SIZE } from "../domain/limits";
 import {
   archiveCustomer,
   createCustomer,
+  findCustomerIds,
   getCustomer,
+  getCustomerNames,
   listCustomers,
   restoreCustomer,
   updateCustomer,
@@ -202,5 +204,26 @@ describe("archiveCustomer / restoreCustomer", () => {
       "customer.archived",
       "customer.restored",
     ]);
+  });
+});
+
+describe("getCustomerNames / findCustomerIds", () => {
+  it("resolve only the business's own customers", async () => {
+    const actor = await actorFor("member", "One");
+    const juan = await add(actor, "Juan Dela Cruz", { company: "Dela Cruz Bakery" });
+    const ana = await add(actor, "Ana Reyes");
+    const theirs = await add(await actorFor("owner", "Two"), "Juan Someone");
+
+    const names = await getCustomerNames(actor, [juan.id, ana.id, theirs.id, "nope"], testDb());
+    expect([...names.entries()]).toEqual(
+      expect.arrayContaining([
+        [juan.id, "Juan Dela Cruz"],
+        [ana.id, "Ana Reyes"],
+      ]),
+    );
+    expect(names.size).toBe(2);
+
+    expect(await findCustomerIds(actor, "juan", testDb())).toEqual([juan.id]);
+    expect(await findCustomerIds(actor, "bakery", testDb())).toEqual([juan.id]);
   });
 });

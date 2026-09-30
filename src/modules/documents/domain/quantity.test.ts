@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatQuantity, parseQuantityInput, QUANTITY_SCALE } from "./quantity";
+import { formatQuantity, numericToQuantity, parseQuantityInput, QUANTITY_SCALE, quantityToNumeric } from "./quantity";
 
 describe("parseQuantityInput", () => {
   it.each([
@@ -33,5 +33,17 @@ describe("formatQuantity", () => {
     for (const scaled of [1, 2500, 15_000, 12_345_678, 9_999_999_999]) {
       expect(parseQuantityInput(formatQuantity(scaled, "en-PH"), "en-PH")).toBe(scaled);
     }
+  });
+});
+
+describe("numeric storage", () => {
+  it("writes and reads Postgres numeric(14,4) exactly", () => {
+    expect(quantityToNumeric(15_000)).toBe("1.5000");
+    expect(quantityToNumeric(1)).toBe("0.0001");
+    expect(quantityToNumeric(9_999_999_999)).toBe("999999.9999");
+    expect(numericToQuantity("1.5000")).toBe(15_000);
+    expect(numericToQuantity("2")).toBe(20_000);
+    expect(numericToQuantity("0.0001")).toBe(1);
+    expect(() => numericToQuantity("1.00001")).toThrow(RangeError);
   });
 });

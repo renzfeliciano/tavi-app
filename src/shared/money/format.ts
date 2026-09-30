@@ -89,3 +89,12 @@ export function formatMoney(
     toDecimalString(amountMinor, exponent) as unknown as number,
   );
 }
+
+/** An example price in the reader's own format ("1,250.50", "1.250,50", "1,250"). */
+export function examplePrice(currency: string, locale: string): string {
+  const digits = currencyExponent(currency);
+  // Whole-unit currencies (JPY) get no fraction, rather than a rounded one.
+  return new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(
+    digits > 0 ? 1250.5 : 1250,
+  );
+}

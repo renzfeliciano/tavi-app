@@ -71,6 +71,13 @@
       "when": 1790767608626,
       "tag": "0009_products_and_services",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790772327580,
+      "tag": "0010_quotes",
+      "breakpoints": true
     }
   ]
 }

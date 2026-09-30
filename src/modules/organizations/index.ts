@@ -1,6 +1,8 @@
 export {
   type BusinessProfile,
+  type DocumentSettings,
   getBusinessProfile,
+  getDocumentSettings,
   type UpdateBusinessProfileResult,
   updateBusinessProfile,
 } from "./application/business-profile";

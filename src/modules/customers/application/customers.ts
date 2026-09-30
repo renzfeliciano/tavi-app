@@ -1,4 +1,4 @@
-import { and, asc, count, eq, getTableColumns, ilike, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, getTableColumns, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type Database, type Executor, getDb } from "@/db";
 import { type AuditAction, recordAuditEvent } from "@/modules/audit";
@@ -104,6 +104,39 @@ export async function getCustomer(
     .from(customers)
     .where(and(eq(customers.id, id), ofOrganization(actor)));
   return row ?? null;
+}
+
+/** Display names for a set of the business's customers (other ids are ignored). For lists elsewhere. */
+export async function getCustomerNames(
+  actor: OrgActor,
+  ids: readonly string[],
+  db: Database = getDb(),
+): Promise<Map<string, string>> {
+  assertCan(actor, "customers.read");
+  const valid = [...new Set(ids)].filter((id) => z.uuid().safeParse(id).success);
+  if (valid.length === 0) return new Map();
+  const rows = await db
+    .select({ id: customers.id, displayName: customers.displayName })
+    .from(customers)
+    .where(and(ofOrganization(actor), inArray(customers.id, valid)));
+  return new Map(rows.map((row) => [row.id, row.displayName]));
+}
+
+/** Ids of the business's customers (active or archived) matching a search, for filtering other lists. */
+export async function findCustomerIds(
+  actor: OrgActor,
+  search: string,
+  db: Database = getDb(),
+  limit = 200,
+): Promise<string[]> {
+  assertCan(actor, "customers.read");
+  const pattern = `%${escapeLikePattern(search)}%`;
+  const rows = await db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(and(ofOrganization(actor), or(ilike(customers.displayName, pattern), ilike(customers.company, pattern))))
+    .limit(limit);
+  return rows.map((row) => row.id);
 }
 
 async function findForUpdate(tx: Executor, actor: OrgActor, id: string) {

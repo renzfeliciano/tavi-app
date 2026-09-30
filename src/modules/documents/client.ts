@@ -19,3 +19,15 @@ export {
   QUANTITY_DECIMALS,
   QUANTITY_SCALE,
 } from "./domain/quantity";
+export {
+  blankLine,
+  DISCOUNT_KINDS,
+  DOCUMENT_LIMITS,
+  LINE_SOURCE_KINDS,
+  type LineSourceKind,
+  type LinesResult,
+  type ParsedLine,
+  parseDocumentLines,
+  type RawLine,
+  rawLineSchema,
+} from "./domain/line-input";

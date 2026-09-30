@@ -32,6 +32,8 @@ export type MarketProfile = {
     cityLabel: string;
     regionLabel: string;
     postalCodeLabel: string;
+    /** How the last address line is written, e.g. "{city}, {region} {postalCode}". */
+    localityFormat: string;
   };
   /** How customers here usually pay, in running text. */
   paymentMethods: string;
@@ -72,6 +74,7 @@ export const MARKETS = {
       cityLabel: "City or municipality",
       regionLabel: "Province",
       postalCodeLabel: "ZIP code",
+      localityFormat: "{city}, {region} {postalCode}",
     },
     paymentMethods: "bank transfer, GCash, Maya, cash or card",
     paymentInstructionsHint: "Bank account, GCash or Maya number.",
@@ -116,4 +119,34 @@ export function documentWording(market: MarketProfile) {
     quoteAndInvoice: `${quote.singular.toLowerCase()} and ${invoice.singular.toLowerCase()}`,
     invoices: invoice.plural.toLowerCase(),
   };
+}
+
+export type AddressParts = {
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  region?: string | null;
+  postalCode?: string | null;
+};
+
+/**
+ * An address as printed lines, in the market's format. Missing parts are left
+ * out without stray commas: "Pasig, Metro Manila 1600", "Pasig 1600".
+ */
+export function formatAddressLines(address: AddressParts, market: Pick<MarketProfile, "address">): string[] {
+  // Walk the template: each placeholder keeps the separator written before it,
+  // but only when a part was already printed and this one is present.
+  let locality = "";
+  const placeholder = /\{(city|region|postalCode)\}/g;
+  let cursor = 0;
+  for (const match of market.address.localityFormat.matchAll(placeholder)) {
+    const separator = market.address.localityFormat.slice(cursor, match.index);
+    cursor = match.index + match[0].length;
+    const value = address[match[1] as "city" | "region" | "postalCode"]?.trim();
+    if (!value) continue;
+    locality += (locality ? separator : "") + value;
+  }
+  return [address.addressLine1?.trim(), address.addressLine2?.trim(), locality].filter(
+    (line): line is string => Boolean(line),
+  );
 }

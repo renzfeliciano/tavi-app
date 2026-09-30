@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { currencyExponent, isCurrencyCode, parseMoneyInput } from "@/shared/money";
+import { examplePrice, isCurrencyCode, parseMoneyInput } from "@/shared/money";
 import { optionalText, requiredCurrency, requiredText } from "@/shared/validation/fields";
 
 // Products and services (§B.1, D8): two separate lists with the same shape,
@@ -18,15 +18,6 @@ export const CATALOG_ITEM_LIMITS = {
 
 /** Items per page in the catalog lists. */
 export const CATALOG_PAGE_SIZE = 25;
-
-/** An example price in the reader's own format ("1,250.50", "1.250,50", "1,250"). */
-export function examplePrice(currency: string, locale: string): string {
-  const digits = currencyExponent(currency);
-  // Whole-unit currencies (JPY) get no fraction, rather than a rounded one.
-  return new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(
-    digits > 0 ? 1250.5 : 1250,
-  );
-}
 
 const asText = (value: unknown) => (typeof value === "string" ? value : "");
 
@@ -81,3 +72,5 @@ export const CATALOG_ITEM_FIELDS = {
   product: ["name", "description", "sku", "unitLabel", "unitPrice", "currency", "taxRateId"],
   service: ["name", "description", "unitLabel", "unitPrice", "currency", "taxRateId"],
 } as const satisfies Record<CatalogItemKind, readonly string[]>;
+
+export { examplePrice } from "@/shared/money";

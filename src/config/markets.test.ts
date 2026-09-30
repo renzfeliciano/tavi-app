@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { isCurrencyCode } from "@/shared/money";
-import { DEFAULT_MARKET, documentWording, isMarketCode, MARKET_CODES, MARKETS, marketFor } from "./markets";
+import {
+  DEFAULT_MARKET,
+  documentWording,
+  formatAddressLines,
+  isMarketCode,
+  MARKET_CODES,
+  MARKETS,
+  marketFor,
+} from "./markets";
 
 describe("market profiles", () => {
   it("includes the default market", () => {
@@ -66,5 +74,23 @@ describe("documentWording", () => {
       quoteAndInvoice: "quotation and billing statement",
       invoices: "billing statements",
     });
+  });
+});
+
+describe("formatAddressLines", () => {
+  it("writes an address the way the market does", () => {
+    expect(
+      formatAddressLines(
+        { addressLine1: "45 Rizal Ave.", addressLine2: "Unit 3", city: "Pasig", region: "Metro Manila", postalCode: "1600" },
+        MARKETS.PH,
+      ),
+    ).toEqual(["45 Rizal Ave.", "Unit 3", "Pasig, Metro Manila 1600"]);
+  });
+
+  it("leaves out missing parts without stray punctuation", () => {
+    expect(formatAddressLines({ city: "Pasig", postalCode: "1600" }, MARKETS.PH)).toEqual(["Pasig 1600"]);
+    expect(formatAddressLines({ region: "Metro Manila" }, MARKETS.PH)).toEqual(["Metro Manila"]);
+    expect(formatAddressLines({ city: "Pasig", region: "Metro Manila" }, MARKETS.PH)).toEqual(["Pasig, Metro Manila"]);
+    expect(formatAddressLines({}, MARKETS.PH)).toEqual([]);
   });
 });

@@ -46,6 +46,36 @@ export async function getBusinessProfile(
   return row;
 }
 
+export type DocumentSettings = {
+  currency: string;
+  taxMode: "inclusive" | "exclusive";
+  timezone: string;
+  locale: string;
+  quoteValidityDays: number;
+  paymentTermsDays: number;
+  defaultNotes: string | null;
+  defaultTerms: string | null;
+};
+
+/** What new quotes and invoices start from: the business's defaults, time zone and locale. */
+export async function getDocumentSettings(actor: OrgActor, db: Database = getDb()): Promise<DocumentSettings> {
+  const [row] = await db
+    .select({
+      currency: organizations.defaultCurrency,
+      taxMode: organizations.taxMode,
+      timezone: organizations.timezone,
+      locale: organizations.locale,
+      quoteValidityDays: organizations.quoteValidityDays,
+      paymentTermsDays: organizations.paymentTermsDays,
+      defaultNotes: organizations.defaultNotes,
+      defaultTerms: organizations.defaultTerms,
+    })
+    .from(organizations)
+    .where(eq(organizations.id, actor.organizationId));
+  if (!row) throw new Error("Organization not found");
+  return row;
+}
+
 /**
  * Saves the business profile. Only fields that actually changed are written
  * and audited (by name, not value: the log shouldn't copy contact details).

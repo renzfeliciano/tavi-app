@@ -29,6 +29,11 @@ export const AUDIT_ACTIONS = [
   "service.updated",
   "service.archived",
   "service.restored",
+  "quote.created",
+  "quote.deleted",
+  "quote.sent",
+  "quote.revised",
+  "quote.cancelled",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
