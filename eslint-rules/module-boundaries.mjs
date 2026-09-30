@@ -7,6 +7,8 @@
 //      `schema.ts` files and tests.
 //   3. Module `domain/` code stays pure: no framework, React, database, or its
 //      own module's `application/`/`infra/` layers.
+//   4. Exception to 1: a module's `schema.ts` and `src/db/` may import another
+//      module's `schema.ts`, so tables can declare foreign keys.
 //
 // Only files under `src/` are checked.
 
@@ -110,10 +112,17 @@ const moduleBoundaries = {
         }
       }
 
+      // Foreign keys: schema files (and the central barrel in src/db) may
+      // reference another module's schema.ts, and nothing else inside it.
+      const schemaReference =
+        targetModule?.rest === "schema" &&
+        (importerModule?.rest === "schema.ts" || relative.startsWith("src/db/"));
+
       if (
         targetModule &&
         targetModule.rest !== "" &&
-        targetModule.name !== importerModule?.name
+        targetModule.name !== importerModule?.name &&
+        !schemaReference
       ) {
         context.report({
           node,

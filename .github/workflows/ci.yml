@@ -28,6 +28,37 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  integration:
+    name: Integration tests (Postgres 18)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: checks
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: tavi
+          POSTGRES_PASSWORD: tavi
+          POSTGRES_DB: tavi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tavi -d tavi_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI container, not a secret.
+      TEST_DATABASE_URL: postgresql://tavi:tavi@localhost:5432/tavi_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run test:int
+
   e2e:
     name: E2E (desktop + mobile)
     runs-on: ubuntu-latest

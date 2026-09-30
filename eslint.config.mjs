@@ -15,6 +15,21 @@ const eslintConfig = defineConfig([
       "react/no-danger": "error",
     },
   },
+  {
+    // §I: Drizzle parameterizes every query; `sql.raw` bypasses that, so it is
+    // only allowed in the data layer's own plumbing (src/db).
+    ignores: ["src/db/**"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "sql",
+          property: "raw",
+          message: "sql.raw skips parameterization. Use the sql`` template (or move the code into src/db).",
+        },
+      ],
+    },
+  },
   globalIgnores([
     ".next/**",
     "out/**",

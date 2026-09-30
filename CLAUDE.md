@@ -15,6 +15,10 @@ Quoting and invoicing SaaS for small service businesses: **Customer â†’ Quote â†
 | `npm run typecheck` | `next typegen` + `tsc --noEmit` |
 | `npm test` | Fast unit + component tests (Vitest). The pre-commit hook runs lint, typecheck and this. |
 | `npm run test:e2e` | Playwright on desktop + mobile, including axe accessibility checks |
+| `npm run test:int` | Integration tests against real Postgres (Neon `test` branch; **wipes it**, and refuses to run against `DATABASE_URL`) |
+| `npm run db:generate` | Generate a SQL migration from schema changes (review it, then commit it) |
+| `npm run db:migrate` | Apply migrations to the `DATABASE_URL_DIRECT` database |
+| `npm run db:studio` | Browse the data (Drizzle Studio) |
 | `npm run build` | Production build |
 
 ## Rules
@@ -26,6 +30,7 @@ Quoting and invoicing SaaS for small service businesses: **Customer â†’ Quote â†
   - only `src/db/`, module `application/` and `infra/` folders, module `schema.ts` files and tests may touch the database;
   - `domain/` stays pure.
 - **Tenant data:** never trust an organization ID from the client. It always comes from the server-side session context.
+- **Database:** Drizzle over node-postgres. Each module owns its tables in `schema.ts` (listed in `src/db/schema.ts`). App code uses `getDb()` from `@/db`; tests use `@/db/testing`. `sql.raw` is lint-banned outside `src/db`. Document numbers come only from `allocateDocumentNumber` inside the issuing transaction.
 - **Money:** integer minor units plus a currency code. Never use floats. All totals come from the one calculation function (Â§B.2).
 - **UI:** follow `DESIGN.md` ("Carbon Copy": one stamp-violet accent used only where ink would go, status = icon + label, money tabular and never animated). Use semantic tokens from `src/app/globals.css`, never raw colours. `/dev/design` (development only) shows every token and component rendered. Primitives live in `src/components/ui` (shadcn on Base UI); check with `npx shadcn@latest docs <component>` rather than writing from memory.
 - **Secrets:** never paste or log connection strings or keys. `.env.local` is gitignored, and `.env.example` documents every variable.

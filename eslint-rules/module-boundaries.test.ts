@@ -75,6 +75,18 @@ ruleTester.run("module-boundaries", rule, {
       options: [{ root: cwd }],
     },
     {
+      name: "a schema file may reference another module's schema (foreign keys)",
+      filename: file("src/modules/documents/schema.ts"),
+      code: `import { organizations } from "@/modules/organizations/schema";`,
+      options: [{ root: cwd }],
+    },
+    {
+      name: "the central schema barrel may collect every module's schema",
+      filename: file("src/db/schema.ts"),
+      code: `export * from "@/modules/organizations/schema";`,
+      options: [{ root: cwd }],
+    },
+    {
       name: "windows-style paths are normalised",
       filename: "C:\\repo\\src\\modules\\quotes\\application\\send-quote.ts",
       code: `import { transition } from "@/modules/quotes/domain/state-machine";`,
@@ -116,6 +128,20 @@ ruleTester.run("module-boundaries", rule, {
       code: `const m = await import("@/modules/quotes/infra/quote-repository");`,
       options: [{ root: cwd }],
       errors: [{ messageId: "deepImport", data: { module: "quotes" } }],
+    },
+    {
+      name: "only schema files get the schema exemption",
+      filename: file("src/modules/documents/infra/sequences.ts"),
+      code: `import { organizations } from "@/modules/organizations/schema";`,
+      options: [{ root: cwd }],
+      errors: [{ messageId: "deepImport", data: { module: "organizations" } }],
+    },
+    {
+      name: "a schema file still may not reach another module's other internals",
+      filename: file("src/modules/documents/schema.ts"),
+      code: `import { x } from "@/modules/organizations/infra/repo";`,
+      options: [{ root: cwd }],
+      errors: [{ messageId: "deepImport", data: { module: "organizations" } }],
     },
     {
       name: "a page may not touch the database",

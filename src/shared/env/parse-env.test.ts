@@ -49,4 +49,41 @@ describe("parseEnv", () => {
     expect(message).toMatch(/APP_URL/);
     expect(message).not.toContain("super-secret");
   });
+
+  describe("database URLs", () => {
+    const pg = "postgresql://user:secret-pw@ep-x.example.neon.tech/tavi?sslmode=require";
+
+    it("are optional outside production", () => {
+      const env = parseEnv({ NODE_ENV: "development" });
+      expect(env.DATABASE_URL).toBeUndefined();
+      expect(env.TEST_DATABASE_URL).toBeUndefined();
+    });
+
+    it("accepts postgres:// and postgresql:// URLs", () => {
+      const env = parseEnv({
+        DATABASE_URL: pg,
+        DATABASE_URL_DIRECT: pg.replace("postgresql:", "postgres:"),
+        TEST_DATABASE_URL: pg,
+      });
+      expect(env.DATABASE_URL).toBe(pg);
+      expect(env.DATABASE_URL_DIRECT).toMatch(/^postgres:/);
+    });
+
+    it("rejects a URL that isn't Postgres, without echoing it", () => {
+      let message = "";
+      try {
+        parseEnv({ DATABASE_URL: "mongodb://user:secret-pw@cluster/tavi" });
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toMatch(/DATABASE_URL must be a postgres/);
+      expect(message).not.toContain("secret-pw");
+    });
+
+    it("requires DATABASE_URL in production", () => {
+      expect(() =>
+        parseEnv({ NODE_ENV: "production", APP_URL: "https://tavi.example" }),
+      ).toThrow(/DATABASE_URL is required in production/);
+    });
+  });
 });
