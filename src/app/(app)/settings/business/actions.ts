@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/modules/authz";
-import { removeOrganizationLogo, uploadOrganizationLogo } from "@/modules/files";
+import { removeOrganizationLogo, UPLOAD_MESSAGES, uploadOrganizationLogo } from "@/modules/files";
 import { requireOrgContext } from "@/modules/identity";
-import { type BusinessProfileInput, businessProfileSchema, updateBusinessProfile } from "@/modules/organizations";
+import { BUSINESS_PROFILE_FIELDS, type BusinessProfileInput, updateBusinessProfile } from "@/modules/organizations";
 
 type ProfileField = keyof BusinessProfileInput;
 export type ProfileFormValues = Record<ProfileField, string>;
@@ -28,9 +28,8 @@ export async function saveBusinessProfile(
   formData: FormData,
 ): Promise<BusinessProfileState> {
   const ctx = await requireOrgContext();
-  const fields = Object.keys(businessProfileSchema.shape) as ProfileField[];
   const values = Object.fromEntries(
-    fields.map((field) => [field, String(formData.get(field) ?? "")]),
+    BUSINESS_PROFILE_FIELDS.map((field) => [field, String(formData.get(field) ?? "")]),
   ) as ProfileFormValues;
   if (!can(ctx, "organization.manage")) return { values, error: NOT_ALLOWED, submission: Date.now() };
 
@@ -47,7 +46,7 @@ export async function uploadLogo(_previous: LogoState, formData: FormData): Prom
   const ctx = await requireOrgContext();
   if (!can(ctx, "organization.manage")) return { error: NOT_ALLOWED };
   const file = formData.get("logo");
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose an image to upload." };
+  if (!(file instanceof File) || file.size === 0) return { error: UPLOAD_MESSAGES.empty };
 
   const result = await uploadOrganizationLogo(ctx, new Uint8Array(await file.arrayBuffer()));
   if (!result.ok) return { error: result.error };

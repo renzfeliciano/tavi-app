@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { brand } from "@/config/brand";
+import { DEFAULT_MARKET, MARKETS } from "@/config/markets";
 import "./globals.css";
 
 // Geist (UI) and Geist Mono (serial numbers), per DESIGN.md. Both pass the
@@ -39,7 +40,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   await connection();
   return (
     <html
-      lang="en-PH"
+      lang={MARKETS[DEFAULT_MARKET].locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">

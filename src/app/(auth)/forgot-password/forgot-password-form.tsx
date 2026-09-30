@@ -7,8 +7,9 @@ import { FormAlert } from "@/components/form-alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { brand } from "@/config/brand";
 import { authClient } from "@/lib/auth-client";
-import { authErrorMessage } from "@/modules/identity/client";
+import { authErrorMessage, passwordResetLifetime } from "@/modules/identity/client";
 
 export function ForgotPasswordForm() {
   const [pending, setPending] = useState(false);
@@ -39,8 +40,8 @@ export function ForgotPasswordForm() {
         <div className="flex gap-3 rounded-md border border-border bg-surface-sunken p-4 text-sm">
           <MailCheckIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-stamp" />
           <p className="text-pretty">
-            If there&apos;s a Tavi account for <strong className="font-medium">{sentTo}</strong>,
-            we&apos;ve sent it a link to choose a new password. The link expires in 30 minutes.
+            If there&apos;s a {brand.name} account for <strong className="font-medium">{sentTo}</strong>,
+            we&apos;ve sent it a link to choose a new password. The link expires in {passwordResetLifetime()}.
           </p>
         </div>
         <Link href="/sign-in" className="text-center text-sm font-medium underline underline-offset-4">

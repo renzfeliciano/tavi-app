@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { brand } from "@/config/brand";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/modules/identity/client";
 
@@ -65,7 +66,7 @@ export function SignInForm() {
         Sign in
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        New to Tavi?{" "}
+        New to {brand.name}?{" "}
         <Link href="/sign-up" className="font-medium text-foreground underline underline-offset-4">
           Create an account
         </Link>

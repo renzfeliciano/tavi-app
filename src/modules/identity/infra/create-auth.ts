@@ -6,6 +6,7 @@ import type { Database } from "@/db";
 import { brand } from "@/config/brand";
 import { recordAuditEvent } from "@/modules/audit";
 import { passwordResetEmail, sendEmail, verifyEmailEmail } from "@/modules/notifications";
+import { LINK_LIFETIMES, PASSWORD_POLICY, passwordResetLifetime } from "../domain/auth-policy";
 import { logger } from "@/shared/logger";
 import { SESSION_POLICY } from "../domain/session-policy";
 import { accounts, rateLimits, sessions, users, verifications } from "../schema";
@@ -58,12 +59,12 @@ export function createAuth(db: Database, config: AuthConfig) {
     },
     emailAndPassword: {
       enabled: true,
-      minPasswordLength: 12,
-      maxPasswordLength: 128,
+      minPasswordLength: PASSWORD_POLICY.minLength,
+      maxPasswordLength: PASSWORD_POLICY.maxLength,
       autoSignIn: true,
       // Progressive verification: explore first, verify before sending (§D).
       requireEmailVerification: false,
-      resetPasswordTokenExpiresIn: 30 * 60,
+      resetPasswordTokenExpiresIn: LINK_LIFETIMES.passwordResetSeconds,
       revokeSessionsOnPasswordReset: true,
       onPasswordReset: async ({ user }) => {
         await recordAuditEvent(db, {
@@ -75,13 +76,13 @@ export function createAuth(db: Database, config: AuthConfig) {
         });
       },
       sendResetPassword: async ({ user, url }) => {
-        deliver(sendEmail(passwordResetEmail({ to: user.email, name: user.name, url })));
+        deliver(sendEmail(passwordResetEmail({ to: user.email, name: user.name, url, expiresIn: passwordResetLifetime() })));
       },
     },
     emailVerification: {
       sendOnSignUp: true,
       autoSignInAfterVerification: true,
-      expiresIn: 24 * 60 * 60,
+      expiresIn: LINK_LIFETIMES.emailVerificationSeconds,
       sendVerificationEmail: async ({ user, url }) => {
         deliver(sendEmail(verifyEmailEmail({ to: user.email, name: user.name, url })));
       },

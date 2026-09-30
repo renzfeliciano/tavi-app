@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { businessProfileSchema } from "./business-profile";
+import { MARKETS, type MarketProfile } from "@/config/markets";
+import { BUSINESS_PROFILE_FIELDS, businessProfileSchemaFor } from "./business-profile";
+
+const businessProfileSchema = businessProfileSchemaFor(MARKETS.PH);
 
 const valid = {
   name: "Acme Aircon Services",
@@ -10,7 +13,7 @@ const valid = {
   addressLine1: "12 Mabini St.",
   addressLine2: "",
   city: "Quezon City",
-  province: "Metro Manila",
+  region: "Metro Manila",
   postalCode: "1100",
   currency: "PHP",
   taxMode: "inclusive",
@@ -62,7 +65,7 @@ describe("businessProfileSchema", () => {
     expect(errors).toMatchObject({
       name: ["Enter your business name."],
       email: ["Enter a valid email address."],
-      taxId: ["Enter your TIN as digits, e.g. 123-456-789-00000."],
+      taxId: ["Enter your TIN like 123-456-789-00000."],
       quoteValidityDays: ["Choose between 1 and 365 days."],
       paymentTermsDays: ["Choose between 0 and 365 days."],
       currency: ["Choose a currency."],
@@ -73,5 +76,23 @@ describe("businessProfileSchema", () => {
   it("limits long text so documents stay readable", () => {
     const result = businessProfileSchema.safeParse({ ...valid, defaultTerms: "x".repeat(2001) });
     expect(result.success).toBe(false);
+  });
+
+  it("checks the tax ID against the business's own market", () => {
+    const elsewhere: MarketProfile = {
+      ...MARKETS.PH,
+      country: "XX",
+      taxId: { label: "VAT number", pattern: /^[A-Z]{2}\d{6}$/, example: "AB123456" },
+    };
+    const schema = businessProfileSchemaFor(elsewhere);
+
+    expect(schema.safeParse({ ...valid, taxId: "AB123456" }).success).toBe(true);
+    const result = schema.safeParse(valid);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("Enter your VAT number like AB123456.");
+  });
+
+  it("lists every field the form posts", () => {
+    expect([...BUSINESS_PROFILE_FIELDS].sort()).toEqual(Object.keys(valid).sort());
   });
 });

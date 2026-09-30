@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { CURRENCIES } from "@/config/currencies";
+import type { CurrencyOption } from "@/config/currencies";
+import { BUSINESS_PROFILE_LIMITS as LIMITS } from "@/modules/organizations/client";
 import { type BusinessProfileState, type ProfileFormValues, saveBusinessProfile } from "./actions";
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
@@ -26,24 +27,38 @@ function Section({ title, description, children }: { title: string; description?
   );
 }
 
+/** Country-specific wording, from the business's market profile. */
+export type BusinessProfileCopy = {
+  taxIdLabel: string;
+  taxIdHint: string;
+  registeredNameHint: string;
+  address: { line2Label: string; cityLabel: string; regionLabel: string; postalCodeLabel: string };
+  /** e.g. "Quotations and billing statements". */
+  documentsTitle: string;
+  /** e.g. "quotation and billing statement". */
+  documentsPhrase: string;
+  paymentInstructionsHint: string;
+  paymentInstructionsPlaceholder: string;
+  taxModes: { inclusive: string; exclusive: string };
+  currencies: CurrencyOption[];
+};
+
+const DAYS_MAX_LENGTH = String(
+  Math.max(LIMITS.quoteValidityDays.max, LIMITS.paymentTermsDays.max),
+).length;
+
 const TAX_MODES = [
-  {
-    value: "inclusive",
-    label: "Prices include tax",
-    description: "₱1,120 means ₱1,000 + ₱120 VAT. Common in the Philippines.",
-  },
-  {
-    value: "exclusive",
-    label: "Tax is added on top",
-    description: "₱1,000 becomes ₱1,120 with 12% VAT.",
-  },
+  { value: "inclusive", label: "Prices include tax" },
+  { value: "exclusive", label: "Tax is added on top" },
 ] as const;
 
 export function BusinessProfileForm({
   initialValues,
+  copy,
   editable,
 }: {
   initialValues: ProfileFormValues;
+  copy: BusinessProfileCopy;
   editable: boolean;
 }) {
   const [state, formAction, pending] = useActionState<BusinessProfileState, FormData>(
@@ -74,66 +89,66 @@ export function BusinessProfileForm({
             hint="As customers know you."
             error={error("name")}
           >
-            {(p) => <Input {...p} defaultValue={v.name} maxLength={120} autoComplete="organization" />}
+            {(p) => <Input {...p} defaultValue={v.name} maxLength={LIMITS.name} autoComplete="organization" />}
           </FormField>
           <FormField
             name="legalName"
             label="Registered name"
             optional
-            hint="If different, e.g. as on your DTI or SEC papers."
+            hint={copy.registeredNameHint}
             error={error("legalName")}
           >
-            {(p) => <Input {...p} defaultValue={v.legalName} maxLength={160} />}
+            {(p) => <Input {...p} defaultValue={v.legalName} maxLength={LIMITS.legalName} />}
           </FormField>
           <FormField
             name="taxId"
-            label="TIN"
+            label={copy.taxIdLabel}
             optional
-            hint="Printed on your documents, e.g. 123-456-789-00000."
+            hint={copy.taxIdHint}
             error={error("taxId")}
           >
             {(p) => (
-              <Input {...p} defaultValue={v.taxId} inputMode="numeric" maxLength={20} className="font-mono" />
+              <Input {...p} defaultValue={v.taxId} maxLength={LIMITS.taxId} className="font-mono" />
             )}
           </FormField>
         </Section>
 
         <Section title="Contact and address" description="Shown on documents so customers can reach you.">
           <FormField name="email" label="Email" optional error={error("email")}>
-            {(p) => <Input {...p} type="email" defaultValue={v.email} autoComplete="email" maxLength={254} />}
+            {(p) => <Input {...p} type="email" defaultValue={v.email} autoComplete="email" maxLength={LIMITS.email} />}
           </FormField>
           <FormField name="phone" label="Phone" optional error={error("phone")}>
-            {(p) => <Input {...p} type="tel" defaultValue={v.phone} autoComplete="tel" maxLength={40} />}
+            {(p) => <Input {...p} type="tel" defaultValue={v.phone} autoComplete="tel" maxLength={LIMITS.phone} />}
           </FormField>
           <FormField name="addressLine1" label="Street address" optional error={error("addressLine1")}>
             {(p) => (
-              <Input {...p} defaultValue={v.addressLine1} autoComplete="address-line1" maxLength={160} />
+              <Input {...p} defaultValue={v.addressLine1} autoComplete="address-line1" maxLength={LIMITS.addressLine} />
             )}
           </FormField>
           <FormField
             name="addressLine2"
-            label="Building, unit or barangay"
+            label={copy.address.line2Label}
             optional
             error={error("addressLine2")}
           >
             {(p) => (
-              <Input {...p} defaultValue={v.addressLine2} autoComplete="address-line2" maxLength={160} />
+              <Input {...p} defaultValue={v.addressLine2} autoComplete="address-line2" maxLength={LIMITS.addressLine} />
             )}
           </FormField>
-          <FormField name="city" label="City or municipality" optional error={error("city")}>
-            {(p) => <Input {...p} defaultValue={v.city} autoComplete="address-level2" maxLength={80} />}
+          <FormField name="city" label={copy.address.cityLabel} optional error={error("city")}>
+            {(p) => <Input {...p} defaultValue={v.city} autoComplete="address-level2" maxLength={LIMITS.city} />}
           </FormField>
-          <FormField name="province" label="Province" optional error={error("province")}>
-            {(p) => <Input {...p} defaultValue={v.province} autoComplete="address-level1" maxLength={80} />}
+          <FormField name="region" label={copy.address.regionLabel} optional error={error("region")}>
+            {(p) => <Input {...p} defaultValue={v.region} autoComplete="address-level1" maxLength={LIMITS.region} />}
           </FormField>
-          <FormField name="postalCode" label="ZIP code" optional error={error("postalCode")}>
+          <FormField name="postalCode" label={copy.address.postalCodeLabel} optional error={error("postalCode")}>
             {(p) => (
               <Input
                 {...p}
                 defaultValue={v.postalCode}
                 autoComplete="postal-code"
                 inputMode="numeric"
-                maxLength={12}
+                maxLength={LIMITS.postalCode}
                 className="sm:max-w-40"
               />
             )}
@@ -141,7 +156,7 @@ export function BusinessProfileForm({
         </Section>
 
         <Section
-          title="Quotes and billing statements"
+          title={copy.documentsTitle}
           description="Where new documents start. Documents you've already sent don't change."
         >
           <FormField
@@ -152,9 +167,9 @@ export function BusinessProfileForm({
           >
             {(p) => (
               <NativeSelect {...p} defaultValue={v.currency}>
-                {CURRENCIES.map(([code, label]) => (
+                {copy.currencies.map(({ code, label }) => (
                   <option key={code} value={code}>
-                    {code} · {label}
+                    {label}
                   </option>
                 ))}
               </NativeSelect>
@@ -180,7 +195,7 @@ export function BusinessProfileForm({
                   />
                   <span className="grid gap-0.5">
                     <span className="text-sm font-medium">{mode.label}</span>
-                    <span className="text-sm text-pretty text-muted-foreground">{mode.description}</span>
+                    <span className="text-sm text-pretty text-muted-foreground">{copy.taxModes[mode.value]}</span>
                   </span>
                 </label>
               ))}
@@ -211,13 +226,13 @@ export function BusinessProfileForm({
 
         <Section
           title="Notes, terms and payment"
-          description="Added to every new quote and billing statement. You can change them on each one."
+          description={`Added to every new ${copy.documentsPhrase}. You can change them on each one.`}
         >
           <FormField
             name="paymentInstructions"
             label="How to pay you"
             optional
-            hint="Bank account, GCash or Maya number. Shown on billing statements."
+            hint={copy.paymentInstructionsHint}
             error={error("paymentInstructions")}
             className="sm:col-span-2"
           >
@@ -225,9 +240,9 @@ export function BusinessProfileForm({
               <Textarea
                 {...p}
                 defaultValue={v.paymentInstructions}
-                maxLength={2000}
+                maxLength={LIMITS.longText}
                 rows={3}
-                placeholder={"BDO Savings 0012 3456 7890 (Maria Santos)\nGCash 0917 555 0100"}
+                placeholder={copy.paymentInstructionsPlaceholder}
               />
             )}
           </FormField>
@@ -239,7 +254,7 @@ export function BusinessProfileForm({
             error={error("defaultNotes")}
             className="sm:col-span-2"
           >
-            {(p) => <Textarea {...p} defaultValue={v.defaultNotes} maxLength={2000} rows={2} />}
+            {(p) => <Textarea {...p} defaultValue={v.defaultNotes} maxLength={LIMITS.longText} rows={2} />}
           </FormField>
           <FormField
             name="defaultTerms"
@@ -249,7 +264,7 @@ export function BusinessProfileForm({
             error={error("defaultTerms")}
             className="sm:col-span-2"
           >
-            {(p) => <Textarea {...p} defaultValue={v.defaultTerms} maxLength={2000} rows={3} />}
+            {(p) => <Textarea {...p} defaultValue={v.defaultTerms} maxLength={LIMITS.longText} rows={3} />}
           </FormField>
         </Section>
       </fieldset>
@@ -268,7 +283,7 @@ export function BusinessProfileForm({
 function DaysInput(props: ComponentProps<typeof Input>) {
   return (
     <div className="flex items-center gap-2">
-      <Input {...props} inputMode="numeric" maxLength={3} className="w-24 font-mono tabular-nums" />
+      <Input {...props} inputMode="numeric" maxLength={DAYS_MAX_LENGTH} className="w-24 font-mono tabular-nums" />
       <span className="text-sm text-muted-foreground">days</span>
     </div>
   );

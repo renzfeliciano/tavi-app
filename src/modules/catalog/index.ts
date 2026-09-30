@@ -10,3 +10,4 @@ export {
   updateTaxRate,
 } from "./application/tax-rates";
 export { formatRate, parsePercentToBps, type TaxRateInput, taxRateInputSchema } from "./domain/tax-rate";
+export { taxModeExamples } from "./domain/tax-mode-examples";

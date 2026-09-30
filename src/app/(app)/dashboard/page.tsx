@@ -4,38 +4,47 @@ import { ArrowRightIcon, BellIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { BrandMascot } from "@/components/brand/brand-mascot";
 import { buttonVariants } from "@/components/ui/button";
+import { brand } from "@/config/brand";
+import type { MarketProfile } from "@/config/markets";
 import { cn } from "@/lib/utils";
+import { requireOrgContext } from "@/modules/identity";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-// First-run checklist (§G.5). Static until onboarding milestones exist
-// (Phase 1.1); then each step reads its completion from the organization.
-const steps: { title: string; description: string; href: Route; cta: string }[] = [
-  {
-    title: "Add your first customer",
-    description: "Their name and contact details fill in on every quote and invoice.",
-    href: "/customers/new",
-    cta: "Add customer",
-  },
-  {
-    title: "Create a quote",
-    description: "List the work and your price. Tavi does the totals and VAT.",
-    href: "/quotes/new",
-    cta: "New quote",
-  },
-  {
-    title: "Send it",
-    description: "Email it, or copy the link into Messenger or Viber. They can approve it from their phone.",
-    href: "/quotes",
-    cta: "Go to quotes",
-  },
-];
+// First-run checklist (§G.5). Each step reads its completion from the
+// organization once the dashboard milestone (1.10) tracks it.
+type Step = { title: string; description: string; href: Route; cta: string };
 
-export default function DashboardPage() {
+function setupSteps(market: MarketProfile): Step[] {
+  return [
+    {
+      title: "Add your first customer",
+      description: "Their name and contact details fill in on every quote and invoice.",
+      href: "/customers/new",
+      cta: "Add customer",
+    },
+    {
+      title: "Create a quote",
+      description: `List the work and your price. ${brand.name} does the totals and tax.`,
+      href: "/quotes/new",
+      cta: "New quote",
+    },
+    {
+      title: "Send it",
+      description: `Email it, or copy the link into ${market.shareChannels}. They can approve it from their phone.`,
+      href: "/quotes",
+      cta: "Go to quotes",
+    },
+  ];
+}
+
+export default async function DashboardPage() {
+  const { market } = await requireOrgContext();
+  const steps = setupSteps(market);
   return (
     <>
       <PageHeader
-        title="Welcome to Tavi"
+        title={`Welcome to ${brand.name}`}
         description="Three steps to your first sent quote."
       />
 

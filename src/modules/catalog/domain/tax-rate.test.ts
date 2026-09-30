@@ -37,7 +37,7 @@ describe("taxRateInputSchema", () => {
     expect(result.success).toBe(false);
     const errors = result.success ? {} : result.error.flatten().fieldErrors;
     expect(errors).toMatchObject({
-      name: ["Give this tax a name, e.g. VAT."],
+      name: ["Give this tax a name."],
       rate: ["Enter a percentage from 0 to 100, with up to 2 decimals."],
     });
   });

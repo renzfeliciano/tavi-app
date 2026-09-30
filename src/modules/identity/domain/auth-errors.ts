@@ -1,14 +1,16 @@
+import { brand } from "@/config/brand";
+import { PASSWORD_POLICY } from "./auth-policy";
+
 // Human copy for Better Auth errors (§28): what happened and what to do.
 // Internal messages are never shown.
 
 const MESSAGES: Record<string, string> = {
   INVALID_EMAIL_OR_PASSWORD:
     "That email and password don't match. Try again, or reset your password.",
-  USER_ALREADY_EXISTS: "This email already has a Tavi account. Sign in instead.",
-  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL:
-    "This email already has a Tavi account. Sign in instead.",
-  PASSWORD_TOO_SHORT: "Use at least 12 characters. A short phrase works well.",
-  PASSWORD_TOO_LONG: "Use 128 characters or fewer.",
+  USER_ALREADY_EXISTS: `This email already has a ${brand.name} account. Sign in instead.`,
+  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: `This email already has a ${brand.name} account. Sign in instead.`,
+  PASSWORD_TOO_SHORT: `Use at least ${PASSWORD_POLICY.minLength} characters. A short phrase works well.`,
+  PASSWORD_TOO_LONG: `Use ${PASSWORD_POLICY.maxLength} characters or fewer.`,
   PASSWORD_COMPROMISED:
     "This password has appeared in a data breach. Choose a different one.",
   INVALID_EMAIL: "Enter a valid email address.",

@@ -2,6 +2,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { type MarketProfile, marketFor } from "@/config/markets";
 import type { Role } from "@/modules/authz";
 import { resolveMembership } from "@/modules/organizations";
 import { isPastAbsoluteLifetime } from "../domain/session-policy";
@@ -63,6 +64,12 @@ export type OrgContext = {
   organizationId: string;
   organizationName: string;
   role: Role;
+  /** The business's market profile: wording, tax suggestions, formats. */
+  market: MarketProfile;
+  /** The business's own settings (they may differ from its market's defaults). */
+  currency: string;
+  locale: string;
+  timezone: string;
 };
 
 /**
@@ -88,6 +95,10 @@ export const requireOrgContext = cache(async (): Promise<OrgContext> => {
     organizationId: membership.organizationId,
     organizationName: membership.organizationName,
     role: membership.role,
+    market: marketFor(membership.countryCode),
+    currency: membership.currency,
+    locale: membership.locale,
+    timezone: membership.timezone,
   };
 });
 

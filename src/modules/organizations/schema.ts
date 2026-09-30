@@ -13,12 +13,13 @@ export const organizations = pgTable(
   {
     id: id(),
     name: text("name").notNull(),
-    defaultCurrency: char("default_currency", { length: 3 }).notNull().default("PHP"),
-    timezone: text("timezone").notNull().default("Asia/Manila"),
-    locale: text("locale").notNull().default("en-PH"),
-    taxMode: text("tax_mode", { enum: ["inclusive", "exclusive"] })
-      .notNull()
-      .default("inclusive"),
+    // No column defaults for market-specific values: new businesses take them
+    // from their market profile (src/config/markets.ts).
+    countryCode: char("country_code", { length: 2 }).notNull(),
+    defaultCurrency: char("default_currency", { length: 3 }).notNull(),
+    timezone: text("timezone").notNull(),
+    locale: text("locale").notNull(),
+    taxMode: text("tax_mode", { enum: ["inclusive", "exclusive"] }).notNull(),
     legalName: text("legal_name"),
     taxId: text("tax_id"),
     email: text("email"),
@@ -26,10 +27,10 @@ export const organizations = pgTable(
     addressLine1: text("address_line1"),
     addressLine2: text("address_line2"),
     city: text("city"),
-    province: text("province"),
+    region: text("region"),
     postalCode: text("postal_code"),
-    quoteValidityDays: integer("quote_validity_days").notNull().default(30),
-    paymentTermsDays: integer("payment_terms_days").notNull().default(15),
+    quoteValidityDays: integer("quote_validity_days").notNull(),
+    paymentTermsDays: integer("payment_terms_days").notNull(),
     defaultNotes: text("default_notes"),
     defaultTerms: text("default_terms"),
     paymentInstructions: text("payment_instructions"),
@@ -37,6 +38,7 @@ export const organizations = pgTable(
   },
   (t) => [
     check("organizations_name_not_blank", sql`length(btrim(${t.name})) > 0`),
+    check("organizations_country_iso", sql`${t.countryCode} ~ '^[A-Z]{2}$'`),
     check("organizations_currency_iso", sql`${t.defaultCurrency} ~ '^[A-Z]{3}$'`),
     check("organizations_tax_mode", sql`${t.taxMode} in ('inclusive', 'exclusive')`),
     check("organizations_quote_validity_days", sql`${t.quoteValidityDays} between 1 and 365`),

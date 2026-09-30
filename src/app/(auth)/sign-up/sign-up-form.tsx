@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { authErrorMessage } from "@/modules/identity/client";
+import { authErrorMessage, PASSWORD_HINT, PASSWORD_POLICY } from "@/modules/identity/client";
 
 export function SignUpForm() {
   const router = useRouter();
@@ -61,11 +61,11 @@ export function SignUpForm() {
           name="password"
           autoComplete="new-password"
           required
-          minLength={12}
-          maxLength={128}
+          minLength={PASSWORD_POLICY.minLength}
+          maxLength={PASSWORD_POLICY.maxLength}
           aria-describedby="password-hint"
         />
-        <FieldDescription id="password-hint">At least 12 characters. A short phrase works well.</FieldDescription>
+        <FieldDescription id="password-hint">{PASSWORD_HINT}</FieldDescription>
       </Field>
       <Button type="submit" size="lg" pending={pending} pendingLabel="Creating account…">
         Create account

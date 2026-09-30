@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { brand } from "@/config/brand";
 import { cn } from "@/lib/utils";
 import type { ShellAccount } from "./account";
 import { AccountBlock } from "./account-menu";
@@ -142,7 +143,7 @@ export function MobileTabBar({
           <SheetContent side="bottom" className="gap-2">
             <SheetHeader>
               <SheetTitle>More</SheetTitle>
-              <SheetDescription className="sr-only">Other sections of Tavi</SheetDescription>
+              <SheetDescription className="sr-only">Other sections of {brand.name}</SheetDescription>
             </SheetHeader>
             <SheetLinkList items={mobileMore} onNavigate={() => setMoreOpen(false)} />
             <div className="border-t border-border px-4 pt-3 pb-4">

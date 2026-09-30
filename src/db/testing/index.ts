@@ -1,4 +1,5 @@
 import { asc, sql } from "drizzle-orm";
+import { DEFAULT_MARKET, MARKETS } from "@/config/markets";
 import { createDatabase, type Database } from "../create";
 import { auditEvents, organizations, users } from "../schema";
 import { testDatabaseUrl } from "./env";
@@ -26,13 +27,27 @@ export async function resetTables(db: Database = testDb()): Promise<void> {
   await db.execute(sql.raw(`TRUNCATE ${tables} RESTART IDENTITY CASCADE`));
 }
 
+/** A new business's market-derived columns, as onboarding would set them. */
+function marketDefaults() {
+  const market = MARKETS[DEFAULT_MARKET];
+  return {
+    countryCode: market.country,
+    defaultCurrency: market.currency,
+    locale: market.locale,
+    timezone: market.timezone,
+    taxMode: market.defaultTaxMode,
+    quoteValidityDays: market.quoteValidityDays,
+    paymentTermsDays: market.paymentTermsDays,
+  };
+}
+
 export async function createTestOrganization(
   db: Database = testDb(),
   overrides: Partial<typeof organizations.$inferInsert> = {},
 ) {
   const [org] = await db
     .insert(organizations)
-    .values({ name: "Acme Aircon Services", ...overrides })
+    .values({ ...marketDefaults(), name: "Acme Aircon Services", ...overrides })
     .returning();
   if (!org) throw new Error("Failed to create test organization");
   return org;

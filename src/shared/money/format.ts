@@ -2,7 +2,10 @@
 // plus an ISO 4217 code (docs/foundation-proposal.md §B.2). This module only
 // formats; arithmetic lives in the calculation engine.
 
-const DEFAULT_LOCALE = "en-PH";
+import { DEFAULT_MARKET, MARKETS } from "@/config/markets";
+
+/** Pass the business's own locale; this is only the fallback. */
+const DEFAULT_LOCALE = MARKETS[DEFAULT_MARKET].locale;
 
 const SUPPORTED_CURRENCIES: ReadonlySet<string> = new Set(
   Intl.supportedValuesOf("currency"),

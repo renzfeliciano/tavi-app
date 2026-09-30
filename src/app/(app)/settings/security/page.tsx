@@ -2,16 +2,12 @@ import type { Metadata } from "next";
 import { LaptopIcon, SmartphoneIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { Button } from "@/components/ui/button";
-import { listMyDevices, requireOrgContext } from "@/modules/identity";
+import { listMyDevices, requireOrgContext, SESSION_POLICY } from "@/modules/identity";
+import { describeDuration } from "@/shared/format/duration";
 import { signOutDeviceAction, signOutOtherDevicesAction } from "./actions";
 
 export const metadata: Metadata = { title: "Security" };
 
-const dateTime = new Intl.DateTimeFormat("en-PH", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "Asia/Manila",
-});
 
 function DeviceIcon({ device }: { device: string }) {
   const Icon = /iPhone|Android|iPad/.test(device) ? SmartphoneIcon : LaptopIcon;
@@ -19,8 +15,14 @@ function DeviceIcon({ device }: { device: string }) {
 }
 
 export default async function SecurityPage() {
-  await requireOrgContext();
+  const ctx = await requireOrgContext();
   const devices = await listMyDevices();
+  // In the business's own locale and time zone.
+  const dateTime = new Intl.DateTimeFormat(ctx.locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: ctx.timezone,
+  });
   const others = devices.filter((d) => !d.current).length;
 
   return (
@@ -76,7 +78,8 @@ export default async function SecurityPage() {
           ))}
         </ul>
         <p className="mt-3 text-sm text-muted-foreground">
-          Sessions end after 7 days without activity, and 30 days after signing in.
+          Sessions end after {describeDuration(SESSION_POLICY.idleTimeoutSeconds)} without activity, and{" "}
+          {describeDuration(SESSION_POLICY.absoluteLifetimeSeconds)} after signing in.
         </p>
       </section>
     </>

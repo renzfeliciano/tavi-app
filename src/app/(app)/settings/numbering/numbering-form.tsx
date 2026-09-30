@@ -8,10 +8,11 @@ import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
-import { formatDocumentNumber } from "@/modules/documents/client";
+import { formatDocumentNumber, NUMBERING_LIMITS } from "@/modules/documents/client";
 import { type NumberingFormState, saveNumbering } from "./actions";
 
-const PADDINGS = [3, 4, 5, 6, 7, 8, 9, 10];
+const { prefixMaxLength, padding: PADDING } = NUMBERING_LIMITS;
+const PADDINGS = Array.from({ length: PADDING.max - PADDING.min + 1 }, (_, i) => PADDING.min + i);
 
 type NumberingFormProps = {
   kind: string;
@@ -69,7 +70,7 @@ export function NumberingForm({ kind, title, description, prefix, padding, nextV
                   {...p}
                   value={draft.prefix}
                   onChange={(e) => setDraft((d) => ({ ...d, prefix: e.target.value }))}
-                  maxLength={12}
+                  maxLength={prefixMaxLength}
                   autoCapitalize="characters"
                   spellCheck={false}
                   className="font-mono uppercase"

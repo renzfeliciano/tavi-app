@@ -79,6 +79,12 @@ Record founder decisions in the proposal's decision log (next `D` number) and im
 - No N+1: join or batch.
 - No caching layer, Redis or queue until a measurement says so.
 
+## Configuration, not literals (D12)
+
+- Country-specific facts: `src/config/markets.ts` → `ctx.market` (tax suggestions, tax-ID, address labels, document names, currency, locale, time zone).
+- Product identity: `src/config/brand.ts`. Offered currencies: `src/config/currencies.ts` (names from `Intl.DisplayNames`).
+- Limits and lifetimes: a named constant in the owning module's `domain/`, exported from `index.ts` for the server and `client.ts` for forms; messages are built from it.
+
 ## Anti-patterns
 
 Business logic in components or actions; `if (role === "admin")`; trusting an `organizationId` from the client; a helper file that grows into a god module; generic repositories; new top-level folders outside this map.

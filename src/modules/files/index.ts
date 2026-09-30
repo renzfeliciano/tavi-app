@@ -6,4 +6,4 @@ export {
   type UploadLogoResult,
   uploadOrganizationLogo,
 } from "./application/logo";
-export { MAX_UPLOAD_BYTES } from "./domain/limits";
+export { MAX_UPLOAD_BYTES, UPLOAD_MESSAGES } from "./domain/limits";

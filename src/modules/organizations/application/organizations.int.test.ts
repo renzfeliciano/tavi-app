@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { closeTestDb, createTestUser, resetTables, testDb } from "@/db/testing";
+import { MARKETS } from "@/config/markets";
 import { listAuditEvents } from "@/modules/audit";
 import { memberships } from "../schema";
 import { createOrganizationForUser, resolveMembership } from "./organizations";
@@ -41,6 +42,43 @@ describe("createOrganizationForUser", () => {
         entityId: result.organization.id,
       }),
     ]);
+  });
+
+  it("sets the business up from its country's market profile", async () => {
+    const user = await createUser();
+
+    const result = await createOrganizationForUser(
+      user.id,
+      { name: "Acme", currency: "USD", country: "PH" },
+      testDb(),
+    );
+
+    const ph = MARKETS.PH;
+    expect(result).toMatchObject({
+      ok: true,
+      organization: {
+        countryCode: "PH",
+        // The owner's choice wins over the market's usual currency.
+        defaultCurrency: "USD",
+        locale: ph.locale,
+        timezone: ph.timezone,
+        taxMode: ph.defaultTaxMode,
+        quoteValidityDays: ph.quoteValidityDays,
+        paymentTermsDays: ph.paymentTermsDays,
+      },
+    });
+  });
+
+  it("refuses a country TAVI has no market profile for", async () => {
+    const user = await createUser();
+
+    const result = await createOrganizationForUser(
+      user.id,
+      { name: "Acme", currency: "PHP", country: "ZZ" },
+      testDb(),
+    );
+
+    expect(result).toEqual({ ok: false, fieldErrors: { country: ["Choose a country."] } });
   });
 
   it("returns field errors instead of throwing for invalid input", async () => {

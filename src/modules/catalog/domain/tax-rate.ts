@@ -1,7 +1,14 @@
 import { z } from "zod";
+import { tooLong } from "@/shared/validation/messages";
 
 // Tax rates are stored as integer basis points (12% = 1200), never floats
 // (docs/foundation-proposal.md §B.2).
+
+export const TAX_RATE_LIMITS = {
+  name: 40,
+  /** Longest accepted rate as typed, e.g. "100.00%". */
+  rateInput: "100.00%".length,
+} as const;
 
 const PERCENT = /^(\d{1,3})(?:\.(\d{1,2}))?$/;
 
@@ -25,10 +32,10 @@ export function formatRate(bps: number): string {
 export const taxRateInputSchema = z
   .object({
     name: z
-      .string({ error: "Give this tax a name, e.g. VAT." })
+      .string({ error: "Give this tax a name." })
       .trim()
-      .min(1, { error: "Give this tax a name, e.g. VAT." })
-      .max(40, { error: "Use 40 characters or fewer." }),
+      .min(1, { error: "Give this tax a name." })
+      .max(TAX_RATE_LIMITS.name, { error: tooLong(TAX_RATE_LIMITS.name) }),
     rate: z.string({ error: "Enter a percentage from 0 to 100, with up to 2 decimals." }).refine(
       (v) => parsePercentToBps(v) !== null,
       { error: "Enter a percentage from 0 to 100, with up to 2 decimals." },

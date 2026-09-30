@@ -6,20 +6,28 @@ import { ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { FormAlert } from "@/components/form-alert";
 import { Button } from "@/components/ui/button";
+import {
+  ACCEPTED_IMAGE_NAMES,
+  ACCEPTED_IMAGES,
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_SIZE_LABEL,
+  UPLOAD_MESSAGES,
+} from "@/modules/files/client";
 import { type LogoState, removeLogo, uploadLogo } from "./actions";
 
-const MAX_BYTES = 2 * 1024 * 1024;
-const ACCEPT = "image/png,image/jpeg,image/webp";
+const ACCEPT = ACCEPTED_IMAGES.map((i) => i.type).join(",");
 
 type Logo = { src: string; width: number; height: number };
 
 export function LogoUploader({
   logo,
   businessName,
+  description,
   editable,
 }: {
   logo: Logo | null;
   businessName: string;
+  description: string;
   editable: boolean;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -40,8 +48,8 @@ export function LogoUploader({
     setClientError(null);
     if (!file) return;
     // Checked again on the server; this just saves a slow upload on mobile data.
-    if (file.size > MAX_BYTES) {
-      setClientError("That image is over 2 MB. Try a smaller one.");
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setClientError(UPLOAD_MESSAGES.tooLarge);
       event.target.value = "";
       return;
     }
@@ -56,9 +64,7 @@ export function LogoUploader({
         <h2 id="logo-heading" className="font-semibold">
           Logo
         </h2>
-        <p className="text-sm text-pretty text-muted-foreground">
-          Printed at the top of your quotes and billing statements.
-        </p>
+        <p className="text-sm text-pretty text-muted-foreground">{description}</p>
       </header>
       <div className="grid gap-4 px-5 py-5 sm:px-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -117,7 +123,7 @@ export function LogoUploader({
                 )}
               </form>
               <p id="logo-hint" className="text-sm text-muted-foreground">
-                PNG, JPG or WebP, up to 2 MB. A transparent PNG looks best.
+                {ACCEPTED_IMAGE_NAMES}, up to {MAX_UPLOAD_SIZE_LABEL}. A transparent PNG looks best.
               </p>
             </div>
           )}

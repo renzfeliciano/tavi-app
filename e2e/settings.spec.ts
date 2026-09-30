@@ -44,7 +44,7 @@ test("business profile: explains mistakes, then saves and keeps the details", as
   await page.getByLabel("Registered name").fill("Santos Aircon Services OPC");
   await page.getByRole("button", { name: "Save changes" }).click();
 
-  await expect(page.getByText("Enter your TIN as digits, e.g. 123-456-789-00000.")).toBeVisible();
+  await expect(page.getByText("Enter your TIN like 123-456-789-00000.")).toBeVisible();
   await expect(page.getByText("Choose between 1 and 365 days.")).toBeVisible();
   // What was typed is kept.
   await expect(page.getByLabel("Registered name")).toHaveValue("Santos Aircon Services OPC");

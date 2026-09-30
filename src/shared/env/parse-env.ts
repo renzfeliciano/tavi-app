@@ -55,7 +55,7 @@ const envSchema = z
     EMAIL_FROM: z
       .string()
       .regex(/^[^<>]+ <[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>$/, {
-        error: 'EMAIL_FROM must look like "Tavi <notify@your-domain.com>"',
+        error: 'EMAIL_FROM must look like "Name <address@example.com>"',
       })
       .optional(),
     /** Shared secret Vercel Cron sends as a Bearer token to /api/cron/* routes. */

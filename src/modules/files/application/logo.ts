@@ -6,7 +6,7 @@ import { recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import { logger } from "@/shared/logger";
 import { detectImageType } from "../domain/image-type";
-import { MAX_STORED_FILE_BYTES, MAX_UPLOAD_BYTES } from "../domain/limits";
+import { MAX_STORED_FILE_BYTES, MAX_UPLOAD_BYTES, UPLOAD_MESSAGES } from "../domain/limits";
 import { normalizeLogo } from "../infra/image";
 import { files } from "../schema";
 
@@ -55,11 +55,11 @@ export async function uploadOrganizationLogo(
   db: Database = getDb(),
 ): Promise<UploadLogoResult> {
   assertCan(actor, "organization.manage");
-  if (bytes.byteLength === 0) return { ok: false, error: "Choose an image to upload." };
+  if (bytes.byteLength === 0) return { ok: false, error: UPLOAD_MESSAGES.empty };
   if (bytes.byteLength > MAX_UPLOAD_BYTES) {
-    return { ok: false, error: "That image is over 2 MB. Try a smaller one." };
+    return { ok: false, error: UPLOAD_MESSAGES.tooLarge };
   }
-  if (!detectImageType(bytes)) return { ok: false, error: "Upload a PNG, JPG or WebP image." };
+  if (!detectImageType(bytes)) return { ok: false, error: UPLOAD_MESSAGES.wrongType };
 
   let image;
   try {

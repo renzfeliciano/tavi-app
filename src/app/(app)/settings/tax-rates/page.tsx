@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { brand } from "@/config/brand";
 import { can } from "@/modules/authz";
 import { formatRate, listTaxRates } from "@/modules/catalog";
 import { requireOrgContext } from "@/modules/identity";
@@ -16,11 +17,17 @@ export default async function TaxRatesPage() {
     <>
       <SettingsPageHeader
         title="Tax rates"
-        description="The taxes you charge. Tavi works out the tax on every line, so totals always add up."
+        description={`The taxes you charge. ${brand.name} works out the tax on every line, so totals always add up.`}
       />
       {!editable && <ReadOnlyNotice />}
       <TaxRatesManager
         editable={editable}
+        // Presets from the business's market (e.g. VAT in PH); none are created automatically.
+        suggestions={ctx.market.suggestedTaxRates.map((rate) => ({
+          name: rate.name,
+          rate: formatRate(rate.rateBps),
+          rateInput: formatRate(rate.rateBps).replace("%", ""),
+        }))}
         rates={rates.map((rate) => ({
           id: rate.id,
           name: rate.name,

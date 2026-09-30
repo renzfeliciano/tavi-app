@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AuthHeading } from "@/components/auth-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { ResetPasswordForm } from "./reset-password-form";
+import { passwordResetLifetime } from "@/modules/identity/client";
 
 export const metadata: Metadata = { title: "Choose a new password" };
 
@@ -14,7 +15,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps<"/re
       <>
         <AuthHeading
           title="This link has expired"
-          description="Reset links work once and expire after 30 minutes. Request a new one and use it from the newest email."
+          description={`Reset links work once and expire after ${passwordResetLifetime()}. Request a new one and use it from the newest email.`}
         />
         <Link href="/forgot-password" className={buttonVariants({ size: "lg", className: "w-full" })}>
           Send a new link

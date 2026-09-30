@@ -1,9 +1,11 @@
+import { brand } from "@/config/brand";
 import { escapeHtml, type EmailMessage } from "./email";
 
 // Account emails. Plain and short; branded templates (React Email) arrive with
 // the outbox in Phase 0.5.
 
 type AuthEmailInput = { to: string; name: string; url: string };
+type ExpiringLinkInput = AuthEmailInput & { /** e.g. "30 minutes", from the auth policy. */ expiresIn: string };
 
 function layout(paragraphs: string[], action: { label: string; url: string }): string {
   const body = paragraphs.map((p) => `<p>${p}</p>`).join("");
@@ -14,37 +16,37 @@ function layout(paragraphs: string[], action: { label: string; url: string }): s
 export function verifyEmailEmail({ to, name, url }: AuthEmailInput): EmailMessage {
   return {
     to,
-    subject: "Verify your email for Tavi",
+    subject: `Verify your email for ${brand.name}`,
     text: [
       `Hi ${name},`,
-      "Confirm your email address to start sending quotes and invoices from Tavi:",
+      `Confirm your email address to start sending quotes and invoices from ${brand.name}:`,
       url,
-      "If you didn't create a Tavi account, you can ignore this email.",
+      `If you didn't create a ${brand.name} account, you can ignore this email.`,
     ].join("\n\n"),
     html: layout(
       [
         `Hi ${escapeHtml(name)},`,
-        "Confirm your email address to start sending quotes and invoices from Tavi.",
+        `Confirm your email address to start sending quotes and invoices from ${brand.name}.`,
       ],
       { label: "Verify email", url },
     ),
   };
 }
 
-export function passwordResetEmail({ to, name, url }: AuthEmailInput): EmailMessage {
+export function passwordResetEmail({ to, name, url, expiresIn }: ExpiringLinkInput): EmailMessage {
   return {
     to,
-    subject: "Reset your Tavi password",
+    subject: `Reset your ${brand.name} password`,
     text: [
       `Hi ${name},`,
-      "Use this link to choose a new password. It works once and expires in 30 minutes:",
+      `Use this link to choose a new password. It works once and expires in ${expiresIn}:`,
       url,
       "If you didn't ask to reset your password, you can ignore this email. Your password won't change.",
     ].join("\n\n"),
     html: layout(
       [
         `Hi ${escapeHtml(name)},`,
-        "Use this link to choose a new password. It works once and expires in 30 minutes.",
+        `Use this link to choose a new password. It works once and expires in ${expiresIn}.`,
         "If you didn't ask to reset your password, you can ignore this email. Your password won't change.",
       ],
       { label: "Choose a new password", url },

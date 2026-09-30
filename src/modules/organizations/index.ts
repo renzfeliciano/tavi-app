@@ -7,8 +7,14 @@ export {
 export {
   type CreateOrganizationResult,
   createOrganizationForUser,
+  newOrganizationValues,
   type ResolvedMembership,
   resolveMembership,
 } from "./application/organizations";
-export { type BusinessProfileInput, businessProfileSchema } from "./domain/business-profile";
+export {
+  BUSINESS_PROFILE_FIELDS,
+  type BusinessProfileInput,
+  businessProfileSchemaFor,
+} from "./domain/business-profile";
+export { BUSINESS_PROFILE_LIMITS } from "./domain/limits";
 export { type OrganizationInput, organizationInputSchema } from "./domain/organization-input";

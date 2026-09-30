@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { TAX_RATE_LIMITS } from "@/modules/catalog/client";
 import {
   archiveTaxRateAction,
   makeDefaultTaxRate,
@@ -43,9 +44,20 @@ export type TaxRateRow = {
   archived: boolean;
 };
 
+/** A tax the business's market commonly charges, offered as a preset. */
+export type TaxSuggestion = { name: string; rate: string; rateInput: string };
+
 type Editing = { mode: "create"; preset?: { name: string; rate: string } } | { mode: "edit"; row: TaxRateRow };
 
-export function TaxRatesManager({ rates, editable }: { rates: TaxRateRow[]; editable: boolean }) {
+export function TaxRatesManager({
+  rates,
+  suggestions,
+  editable,
+}: {
+  rates: TaxRateRow[];
+  suggestions: TaxSuggestion[];
+  editable: boolean;
+}) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [pending, startTransition] = useTransition();
   const active = rates.filter((r) => !r.archived);
@@ -66,15 +78,29 @@ export function TaxRatesManager({ rates, editable }: { rates: TaxRateRow[]; edit
         <div className="rounded-xl border border-border bg-card shadow-xs">
           <EmptyState
             title="No taxes yet"
-            description="VAT-registered? Add VAT at 12% and it's applied to new lines. Not registered for VAT? Leave this empty and your documents won't show tax."
+            description={
+              suggestions[0]
+                ? `Registered for ${suggestions[0].name}? Add it at ${suggestions[0].rate} and it's applied to new lines. Not registered? Leave this empty and your documents won't show tax.`
+                : "Add the taxes you charge and they're applied to new lines. If you don't charge tax, leave this empty."
+            }
             action={
               editable && (
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button onClick={() => setEditing({ mode: "create", preset: { name: "VAT", rate: "12" } })}>
-                    Add VAT (12%)
-                  </Button>
-                  <Button variant="outline" onClick={() => setEditing({ mode: "create" })}>
-                    Add another tax
+                  {suggestions.map((suggestion) => (
+                    <Button
+                      key={suggestion.name}
+                      onClick={() =>
+                        setEditing({ mode: "create", preset: { name: suggestion.name, rate: suggestion.rateInput } })
+                      }
+                    >
+                      Add {suggestion.name} ({suggestion.rate})
+                    </Button>
+                  ))}
+                  <Button
+                    variant={suggestions.length > 0 ? "outline" : "default"}
+                    onClick={() => setEditing({ mode: "create" })}
+                  >
+                    {suggestions.length > 0 ? "Add another tax" : "Add a tax"}
                   </Button>
                 </div>
               )
@@ -180,6 +206,7 @@ export function TaxRatesManager({ rates, editable }: { rates: TaxRateRow[]; edit
 
       <TaxRateDialog
         editing={editing}
+        example={suggestions[0] ?? null}
         isFirst={active.length === 0}
         onClose={() => setEditing(null)}
       />
@@ -189,10 +216,12 @@ export function TaxRatesManager({ rates, editable }: { rates: TaxRateRow[]; edit
 
 function TaxRateDialog({
   editing,
+  example,
   isFirst,
   onClose,
 }: {
   editing: Editing | null;
+  example: TaxSuggestion | null;
   isFirst: boolean;
   onClose: () => void;
 }) {
@@ -204,6 +233,7 @@ function TaxRateDialog({
           <TaxRateForm
             key={editing.mode === "edit" ? editing.row.id : `new-${editing.preset?.name ?? ""}`}
             editing={editing}
+            example={example}
             isFirst={isFirst}
             onSaved={onClose}
           />
@@ -215,10 +245,12 @@ function TaxRateDialog({
 
 function TaxRateForm({
   editing,
+  example,
   isFirst,
   onSaved,
 }: {
   editing: Editing;
+  example: TaxSuggestion | null;
   isFirst: boolean;
   onSaved: () => void;
 }) {
@@ -242,14 +274,16 @@ function TaxRateForm({
         <DialogDescription>
           {editing.mode === "edit"
             ? "Changes apply to new lines. Documents already sent keep their rate."
-            : "For example VAT at 12%, or a local tax your business charges."}
+            : example
+              ? `For example ${example.name} at ${example.rate}, or a local tax your business charges.`
+              : "A tax your business charges, such as a sales or local business tax."}
         </DialogDescription>
       </DialogHeader>
       <FormAlert message={state.error} />
       {editing.mode === "edit" && <input type="hidden" name="id" value={editing.row.id} />}
       <div key={state.submission} className="grid gap-4">
-        <FormField name="name" label="Name" hint="Shown on documents, e.g. VAT." error={state.fieldErrors?.name?.[0]}>
-          {(p) => <Input {...p} defaultValue={values.name} maxLength={40} autoFocus />}
+        <FormField name="name" label="Name" hint={example ? `Shown on documents, e.g. ${example.name}.` : "Shown on documents."} error={state.fieldErrors?.name?.[0]}>
+          {(p) => <Input {...p} defaultValue={values.name} maxLength={TAX_RATE_LIMITS.name} autoFocus />}
         </FormField>
         <FormField name="rate" label="Rate" error={state.fieldErrors?.rate?.[0]}>
           {(p) => (
@@ -258,7 +292,7 @@ function TaxRateForm({
                 {...p}
                 defaultValue={values.rate}
                 inputMode="decimal"
-                maxLength={7}
+                maxLength={TAX_RATE_LIMITS.rateInput}
                 className="w-28 font-mono tabular-nums"
               />
               <span className="text-sm text-muted-foreground">%</span>

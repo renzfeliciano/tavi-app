@@ -88,7 +88,7 @@ describe("createTaxRate", () => {
     expect(result).toEqual({
       ok: false,
       fieldErrors: {
-        name: ["Give this tax a name, e.g. VAT."],
+        name: ["Give this tax a name."],
         rate: ["Enter a percentage from 0 to 100, with up to 2 decimals."],
       },
     });

@@ -22,10 +22,12 @@ describe("verifyEmailEmail", () => {
 
 describe("passwordResetEmail", () => {
   it("explains the link expires and is safe to ignore", () => {
-    const email = passwordResetEmail({ to: "maria@example.com", name: "Maria", url });
+    const email = passwordResetEmail({ to: "maria@example.com", name: "Maria", url, expiresIn: "45 minutes" });
     expect(email.subject).toBe("Reset your Tavi password");
     expect(email.text).toContain(url);
-    expect(email.text).toMatch(/30 minutes/);
+    // The lifetime is passed in from the auth policy, never written into the copy.
+    expect(email.text).toMatch(/expires in 45 minutes/);
+    expect(email.html).toMatch(/expires in 45 minutes/);
     expect(email.text).toMatch(/ignore this email/);
   });
 });

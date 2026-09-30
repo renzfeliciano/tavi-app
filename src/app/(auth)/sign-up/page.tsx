@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthHeading } from "@/components/auth-shell";
+import { brand } from "@/config/brand";
 import { getCurrentSession } from "@/modules/identity";
 import { SignUpForm } from "./sign-up-form";
 
@@ -11,7 +12,7 @@ export default async function SignUpPage() {
   return (
     <>
       <AuthHeading
-        title="Create your Tavi account"
+        title={`Create your ${brand.name} account`}
         description="Send your first quote in a few minutes. No card needed."
       />
       <SignUpForm />

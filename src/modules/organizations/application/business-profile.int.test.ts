@@ -19,7 +19,7 @@ const validInput = {
   addressLine1: "12 Mabini St.",
   addressLine2: "",
   city: "Quezon City",
-  province: "Metro Manila",
+  region: "Metro Manila",
   postalCode: "1100",
   currency: "PHP",
   taxMode: "exclusive",

@@ -1,27 +1,30 @@
 import type { Metadata } from "next";
 import { can } from "@/modules/authz";
-import { getDocumentNumbering } from "@/modules/documents";
+import type { MarketProfile } from "@/config/markets";
+import { type DocumentKind, getDocumentNumbering } from "@/modules/documents";
 import { requireOrgContext } from "@/modules/identity";
 import { ReadOnlyNotice, SettingsPageHeader } from "../_components/settings-page-header";
 import { NumberingForm } from "./numbering-form";
 
 export const metadata: Metadata = { title: "Document numbers" };
 
-// PH-facing names until the BIR confirms otherwise (D11): never "Official
-// Receipt" or "Sales Invoice".
-const LABELS = {
-  quote: { title: "Quotations", description: "Numbered when you first send one." },
-  invoice: { title: "Billing statements", description: "Numbered when you first send one." },
-  receipt: {
-    title: "Payment acknowledgements",
-    description: "Numbered when you record a payment. Not a BIR official receipt.",
-  },
-} as const;
+// Document names come from the business's market profile (in PH, non-BIR
+// wording until the BIR confirms otherwise, D11).
+function labelsFor(market: MarketProfile): Record<DocumentKind, { title: string; description: string }> {
+  const { quote, invoice, receipt } = market.documents;
+  const disclaimer = receipt.disclaimer ? ` ${receipt.disclaimer}` : "";
+  return {
+    quote: { title: quote.plural, description: "Numbered when you first send one." },
+    invoice: { title: invoice.plural, description: "Numbered when you first send one." },
+    receipt: { title: receipt.plural, description: `Numbered when you record a payment.${disclaimer}` },
+  };
+}
 
 export default async function NumberingPage() {
   const ctx = await requireOrgContext();
   const numbering = await getDocumentNumbering(ctx);
   const editable = can(ctx, "organization.manage");
+  const labels = labelsFor(ctx.market);
 
   return (
     <>
@@ -35,8 +38,8 @@ export default async function NumberingPage() {
           <NumberingForm
             key={n.kind}
             kind={n.kind}
-            title={LABELS[n.kind].title}
-            description={LABELS[n.kind].description}
+            title={labels[n.kind].title}
+            description={labels[n.kind].description}
             prefix={n.prefix}
             padding={n.padding}
             nextValue={n.nextValue}

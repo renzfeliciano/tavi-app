@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { marketFor } from "@/config/markets";
 import { type Database, getDb } from "@/db";
 import { recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
-import { type BusinessProfileInput, businessProfileSchema } from "../domain/business-profile";
+import { type BusinessProfileInput, businessProfileSchemaFor } from "../domain/business-profile";
 import { organizations } from "../schema";
 
 export type BusinessProfile = BusinessProfileInput;
@@ -21,7 +22,7 @@ const profileColumns = {
   addressLine1: organizations.addressLine1,
   addressLine2: organizations.addressLine2,
   city: organizations.city,
-  province: organizations.province,
+  region: organizations.region,
   postalCode: organizations.postalCode,
   currency: organizations.defaultCurrency,
   taxMode: organizations.taxMode,
@@ -55,24 +56,27 @@ export async function updateBusinessProfile(
   db: Database = getDb(),
 ): Promise<UpdateBusinessProfileResult> {
   assertCan(actor, "organization.manage");
-  const parsed = businessProfileSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors };
-  }
-  const next = parsed.data;
 
-  await db.transaction(async (tx) => {
-    const [current] = await tx
-      .select(profileColumns)
+  return db.transaction(async (tx): Promise<UpdateBusinessProfileResult> => {
+    const [row] = await tx
+      .select({ ...profileColumns, countryCode: organizations.countryCode })
       .from(organizations)
       .where(eq(organizations.id, actor.organizationId))
       .for("update");
-    if (!current) throw new Error("Organization not found");
+    if (!row) throw new Error("Organization not found");
+    const { countryCode, ...current } = row;
+
+    // Validated against the business's own market (e.g. its tax-ID format).
+    const parsed = businessProfileSchemaFor(marketFor(countryCode)).safeParse(input);
+    if (!parsed.success) {
+      return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors };
+    }
+    const next = parsed.data;
 
     const changed = (Object.keys(next) as (keyof BusinessProfile)[]).filter(
       (key) => next[key] !== current[key],
     );
-    if (changed.length === 0) return;
+    if (changed.length === 0) return { ok: true };
 
     const { currency, ...rest } = next;
     await tx
@@ -88,7 +92,6 @@ export async function updateBusinessProfile(
       entityId: actor.organizationId,
       metadata: { changed },
     });
+    return { ok: true };
   });
-
-  return { ok: true };
 }

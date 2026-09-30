@@ -2,7 +2,9 @@
 // Only raster formats we can safely re-encode are accepted; SVG is refused
 // because it can carry scripts.
 
-export type AcceptedImageType = "image/png" | "image/jpeg" | "image/webp";
+import type { ACCEPTED_IMAGES } from "./limits";
+
+export type AcceptedImageType = (typeof ACCEPTED_IMAGES)[number]["type"];
 
 const startsWith = (bytes: Uint8Array, signature: number[], offset = 0) =>
   signature.every((value, i) => bytes[offset + i] === value);
