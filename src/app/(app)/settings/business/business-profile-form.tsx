@@ -1,9 +1,10 @@
 "use client";
 
-import { type ComponentProps, type ReactNode, useActionState, useEffect } from "react";
+import { type ComponentProps, useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { FormAlert } from "@/components/form-alert";
 import { FormField } from "@/components/form-field";
+import { FormSection } from "@/components/form-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -11,21 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import type { CurrencyOption } from "@/config/currencies";
 import { BUSINESS_PROFILE_LIMITS as LIMITS } from "@/modules/organizations/client";
 import { type BusinessProfileState, type ProfileFormValues, saveBusinessProfile } from "./actions";
-
-function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
-  const id = `section-${title.toLowerCase().replace(/\W+/g, "-")}`;
-  return (
-    <section aria-labelledby={id} className="rounded-xl border border-border bg-card shadow-xs">
-      <header className="grid gap-0.5 border-b border-border px-5 py-4 sm:px-6">
-        <h2 id={id} className="font-semibold">
-          {title}
-        </h2>
-        {description && <p className="text-sm text-pretty text-muted-foreground">{description}</p>}
-      </header>
-      <div className="grid gap-5 px-5 py-5 sm:grid-cols-2 sm:px-6">{children}</div>
-    </section>
-  );
-}
 
 /** Country-specific wording, from the business's market profile. */
 export type BusinessProfileCopy = {
@@ -82,7 +68,7 @@ export function BusinessProfileForm({
       )}
       <fieldset key={state.submission} disabled={!editable} className="grid min-w-0 gap-8">
         <legend className="sr-only">Business profile</legend>
-        <Section title="Business details" description="How your business is named on documents.">
+        <FormSection title="Business details" description="How your business is named on documents.">
           <FormField
             name="name"
             label="Business name"
@@ -111,9 +97,9 @@ export function BusinessProfileForm({
               <Input {...p} defaultValue={v.taxId} maxLength={LIMITS.taxId} className="font-mono" />
             )}
           </FormField>
-        </Section>
+        </FormSection>
 
-        <Section title="Contact and address" description="Shown on documents so customers can reach you.">
+        <FormSection title="Contact and address" description="Shown on documents so customers can reach you.">
           <FormField name="email" label="Email" optional error={error("email")}>
             {(p) => <Input {...p} type="email" defaultValue={v.email} autoComplete="email" maxLength={LIMITS.email} />}
           </FormField>
@@ -153,9 +139,9 @@ export function BusinessProfileForm({
               />
             )}
           </FormField>
-        </Section>
+        </FormSection>
 
-        <Section
+        <FormSection
           title={copy.documentsTitle}
           description="Where new documents start. Documents you've already sent don't change."
         >
@@ -222,9 +208,9 @@ export function BusinessProfileForm({
           >
             {(p) => <DaysInput {...p} defaultValue={v.paymentTermsDays} />}
           </FormField>
-        </Section>
+        </FormSection>
 
-        <Section
+        <FormSection
           title="Notes, terms and payment"
           description={`Added to every new ${copy.documentsPhrase}. You can change them on each one.`}
         >
@@ -266,7 +252,7 @@ export function BusinessProfileForm({
           >
             {(p) => <Textarea {...p} defaultValue={v.defaultTerms} maxLength={LIMITS.longText} rows={3} />}
           </FormField>
-        </Section>
+        </FormSection>
       </fieldset>
 
       {editable && (

@@ -7,6 +7,7 @@ const SCREENS = [
   "/invoices",
   "/payments",
   "/customers",
+  "/customers/new",
   "/catalog",
   "/settings",
   "/settings/business",

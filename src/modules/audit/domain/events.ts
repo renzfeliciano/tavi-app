@@ -17,6 +17,10 @@ export const AUDIT_ACTIONS = [
   "tax_rate.restored",
   "tax_rate.default_changed",
   "numbering.updated",
+  "customer.created",
+  "customer.updated",
+  "customer.archived",
+  "customer.restored",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

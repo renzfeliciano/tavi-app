@@ -1,6 +1,11 @@
 import { z } from "zod";
 import type { MarketProfile } from "@/config/markets";
-import { isCurrencyCode } from "@/shared/money";
+import {
+  optionalEmail,
+  optionalText,
+  requiredCurrency,
+  requiredText,
+} from "@/shared/validation/fields";
 import { dayRange, tooLong } from "@/shared/validation/messages";
 import { BUSINESS_PROFILE_LIMITS as LIMITS } from "./limits";
 
@@ -10,16 +15,6 @@ import { BUSINESS_PROFILE_LIMITS as LIMITS } from "./limits";
 // business's market profile.
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
-
-const optionalText = (max: number) =>
-  z.preprocess(
-    text,
-    z
-      .string()
-      .trim()
-      .max(max, { error: tooLong(max) })
-      .transform((v) => (v === "" ? null : v)),
-  );
 
 const days = (range: { min: number; max: number }) =>
   z.preprocess(
@@ -34,14 +29,7 @@ const days = (range: { min: number; max: number }) =>
 export function businessProfileSchemaFor(market: Pick<MarketProfile, "taxId">) {
   const { label, pattern, example } = market.taxId;
   return z.object({
-    name: z.preprocess(
-      text,
-      z
-        .string()
-        .trim()
-        .min(1, { error: "Enter your business name." })
-        .max(LIMITS.name, { error: tooLong(LIMITS.name) }),
-    ),
+    name: requiredText(LIMITS.name, "Enter your business name."),
     legalName: optionalText(LIMITS.legalName),
     taxId: z.preprocess(
       text,
@@ -52,23 +40,14 @@ export function businessProfileSchemaFor(market: Pick<MarketProfile, "taxId">) {
         .refine((v) => v === "" || pattern.test(v), { error: `Enter your ${label} like ${example}.` })
         .transform((v) => (v === "" ? null : v)),
     ),
-    email: z.preprocess(
-      text,
-      z
-        .string()
-        .trim()
-        .toLowerCase()
-        .max(LIMITS.email, { error: tooLong(LIMITS.email) })
-        .refine((v) => v === "" || z.email().safeParse(v).success, { error: "Enter a valid email address." })
-        .transform((v) => (v === "" ? null : v)),
-    ),
+    email: optionalEmail(LIMITS.email),
     phone: optionalText(LIMITS.phone),
     addressLine1: optionalText(LIMITS.addressLine),
     addressLine2: optionalText(LIMITS.addressLine),
     city: optionalText(LIMITS.city),
     region: optionalText(LIMITS.region),
     postalCode: optionalText(LIMITS.postalCode),
-    currency: z.preprocess(text, z.string().refine(isCurrencyCode, { error: "Choose a currency." })),
+    currency: requiredCurrency(),
     taxMode: z.preprocess(
       text,
       z.enum(["inclusive", "exclusive"], { error: "Choose how your prices handle tax." }),
