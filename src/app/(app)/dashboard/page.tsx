@@ -49,8 +49,11 @@ export default function DashboardPage() {
             <h2 id="setup-heading" className="font-semibold">
               Get ready to send your first quote
             </h2>
-            <p className="text-sm text-muted-foreground">
-              You can add your logo and business details later, when you send.
+            <p className="text-sm text-pretty text-muted-foreground">
+              Your logo and business details can wait.{" "}
+              <Link href="/settings/business" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
+                Add them now
+              </Link>
             </p>
           </div>
         </div>

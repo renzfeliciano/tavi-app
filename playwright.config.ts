@@ -54,6 +54,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 240_000,
     env: {
+      NEXT_DIST_DIR: ".next-e2e",
       DATABASE_URL: databaseUrl,
       DATABASE_URL_DIRECT: databaseUrl,
       APP_URL: baseURL,

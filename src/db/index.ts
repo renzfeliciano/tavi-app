@@ -3,6 +3,7 @@ import { env } from "@/shared/env";
 import { createDatabase, type Database } from "./create";
 
 export type { Database, Executor, Transaction } from "./create";
+export { isUniqueViolation } from "./errors";
 
 // One pool per server process. In development the module is re-evaluated on
 // every hot reload, so the instance is parked on globalThis to avoid leaking

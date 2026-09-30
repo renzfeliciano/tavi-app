@@ -74,6 +74,13 @@ export function capabilitiesFor(role: Role): ReadonlySet<Capability> {
 /** Anything that carries a role: the request's organization context. */
 export type Actor = { role: Role };
 
+/**
+ * Who is acting, and in which organization. Use cases take this (the
+ * request's `OrgContext` satisfies it) and scope every query to
+ * `organizationId`.
+ */
+export type OrgActor = Actor & { organizationId: string; userId: string };
+
 export function can(actor: Actor, capability: Capability): boolean {
   return ROLE_CAPABILITIES[actor.role].has(capability);
 }

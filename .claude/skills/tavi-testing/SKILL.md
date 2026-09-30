@@ -49,4 +49,4 @@ description: How TAVI is tested — the test pyramid and commands, the test-firs
 
 ## Gotchas already paid for
 
-Postgres rejects constant `ORDER BY`; Drizzle errors carry the pg error in `cause`; Next's route announcer is a second `role="alert"`; Testing Library needs explicit `cleanup` (done in `vitest.setup.ts`); Intl joins currency codes with a non-breaking space.
+The E2E server builds into `.next-e2e` (`NEXT_DIST_DIR`), because Next 16 allows one `next dev` per build directory and your own dev server holds `.next`; `AxeBuilder` needs a page from `browser.newContext()`, not `browser.newPage()`; Sonner toasts are list items, so scope `listitem` queries to their region; Postgres rejects constant `ORDER BY`; Drizzle errors carry the pg error in `cause`; Next's route announcer is a second `role="alert"`; Testing Library needs explicit `cleanup` (done in `vitest.setup.ts`); Intl joins currency codes with a non-breaking space.

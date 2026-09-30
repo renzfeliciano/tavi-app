@@ -9,6 +9,9 @@ const SCREENS = [
   "/customers",
   "/catalog",
   "/settings",
+  "/settings/business",
+  "/settings/tax-rates",
+  "/settings/numbering",
   "/settings/security",
 ];
 

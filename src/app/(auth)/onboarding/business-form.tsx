@@ -5,28 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
+import { CURRENCIES } from "@/config/currencies";
 import { createBusiness, type CreateBusinessState } from "./actions";
-
-// PHP first: Philippines-first launch (D2). More currencies arrive with settings.
-const CURRENCIES = [
-  ["PHP", "Philippine peso (₱)"],
-  ["USD", "US dollar ($)"],
-  ["EUR", "Euro (€)"],
-  ["GBP", "British pound (£)"],
-  ["SGD", "Singapore dollar"],
-  ["AUD", "Australian dollar"],
-  ["CAD", "Canadian dollar"],
-  ["HKD", "Hong Kong dollar"],
-  ["JPY", "Japanese yen (¥)"],
-  ["AED", "UAE dirham"],
-] as const;
 
 export function BusinessForm() {
   const [state, formAction, pending] = useActionState<CreateBusinessState, FormData>(createBusiness, {});
   const errors = state.fieldErrors ?? {};
 
   return (
-    <form action={formAction} className="grid gap-5">
+    <form key={state.submission} action={formAction} className="grid gap-5">
       <Field data-invalid={errors.name ? "true" : undefined}>
         <FieldLabel htmlFor="name">Business name</FieldLabel>
         <Input

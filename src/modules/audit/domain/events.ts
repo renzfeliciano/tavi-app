@@ -8,6 +8,15 @@ export const AUDIT_ACTIONS = [
   "auth.password_reset",
   "auth.session_revoked",
   "organization.created",
+  "organization.updated",
+  "organization.logo_updated",
+  "organization.logo_removed",
+  "tax_rate.created",
+  "tax_rate.updated",
+  "tax_rate.archived",
+  "tax_rate.restored",
+  "tax_rate.default_changed",
+  "numbering.updated",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

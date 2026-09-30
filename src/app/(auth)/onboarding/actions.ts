@@ -7,6 +7,8 @@ import { createOrganizationForUser } from "@/modules/organizations";
 export type CreateBusinessState = {
   fieldErrors?: { name?: string[]; currency?: string[] };
   values?: { name: string; currency: string };
+  /** New on every response, so the form re-mounts its fields with the returned values. */
+  submission?: number;
 };
 
 /** Onboarding: create the user's business and make it their active one. */
@@ -21,7 +23,7 @@ export async function createBusiness(
   };
 
   const result = await createOrganizationForUser(user.id, values);
-  if (!result.ok) return { fieldErrors: result.fieldErrors, values };
+  if (!result.ok) return { fieldErrors: result.fieldErrors, values, submission: Date.now() };
 
   await activateOrganization(session.id, result.organization.id);
   redirect("/dashboard");

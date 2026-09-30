@@ -1,16 +1,28 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
-import { BuildingIcon, ChevronRightIcon, type LucideIcon, ShieldCheckIcon } from "lucide-react";
+import { BuildingIcon, ChevronRightIcon, HashIcon, type LucideIcon, PercentIcon, ShieldCheckIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 
 export const metadata: Metadata = { title: "Settings" };
 
 const sections: { href: Route | null; title: string; description: string; icon: LucideIcon }[] = [
   {
-    href: null,
+    href: "/settings/business",
     title: "Business profile",
-    description: "Logo, address, tax details and payment instructions.",
+    description: "Logo, address, TIN, payment instructions and document defaults.",
     icon: BuildingIcon,
+  },
+  {
+    href: "/settings/tax-rates",
+    title: "Tax rates",
+    description: "VAT and any other taxes you charge.",
+    icon: PercentIcon,
+  },
+  {
+    href: "/settings/numbering",
+    title: "Document numbers",
+    description: "How your quotation and billing statement numbers look.",
+    icon: HashIcon,
   },
   {
     href: "/settings/security",

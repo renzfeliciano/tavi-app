@@ -1,5 +1,6 @@
 export {
   type Actor,
+  type OrgActor,
   assertCan,
   can,
   CAPABILITIES,

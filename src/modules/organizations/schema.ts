@@ -1,12 +1,13 @@
 import { sql } from "drizzle-orm";
-import { char, check, index, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { char, check, index, integer, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "@/db/columns";
 import { users } from "@/modules/identity/schema";
 import { ROLES } from "@/modules/authz";
 
 // The tenant. Every tenant-owned row references an organization (§8).
-// Business profile columns (legal name, address, tax ID, logo, defaults) are
-// added with onboarding in Phase 1.1.
+// It also holds the business profile printed on documents and the defaults new
+// quotes and invoices start from (Phase 1.1). The logo lives in the files
+// module (purpose 'logo'), so this table has no reference to it.
 export const organizations = pgTable(
   "organizations",
   {
@@ -18,12 +19,28 @@ export const organizations = pgTable(
     taxMode: text("tax_mode", { enum: ["inclusive", "exclusive"] })
       .notNull()
       .default("inclusive"),
+    legalName: text("legal_name"),
+    taxId: text("tax_id"),
+    email: text("email"),
+    phone: text("phone"),
+    addressLine1: text("address_line1"),
+    addressLine2: text("address_line2"),
+    city: text("city"),
+    province: text("province"),
+    postalCode: text("postal_code"),
+    quoteValidityDays: integer("quote_validity_days").notNull().default(30),
+    paymentTermsDays: integer("payment_terms_days").notNull().default(15),
+    defaultNotes: text("default_notes"),
+    defaultTerms: text("default_terms"),
+    paymentInstructions: text("payment_instructions"),
     ...timestamps(),
   },
   (t) => [
     check("organizations_name_not_blank", sql`length(btrim(${t.name})) > 0`),
     check("organizations_currency_iso", sql`${t.defaultCurrency} ~ '^[A-Z]{3}$'`),
     check("organizations_tax_mode", sql`${t.taxMode} in ('inclusive', 'exclusive')`),
+    check("organizations_quote_validity_days", sql`${t.quoteValidityDays} between 1 and 365`),
+    check("organizations_payment_terms_days", sql`${t.paymentTermsDays} between 0 and 365`),
   ],
 );
 

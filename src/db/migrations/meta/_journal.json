@@ -43,6 +43,13 @@
       "when": 1790743339497,
       "tag": "0005_request_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790761051314,
+      "tag": "0006_business_settings",
+      "breakpoints": true
     }
   ]
 }
