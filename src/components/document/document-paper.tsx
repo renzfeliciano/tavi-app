@@ -8,7 +8,7 @@ import type { DocumentParty, DocumentView } from "./document-view";
 // preview, the saved document and the customer's page render identically.
 // Notes and terms are plain text (§I: no HTML), kept with pre-wrap.
 
-function Party({ label, party }: { label: string; party: DocumentParty }) {
+export function Party({ label, party }: { label: string; party: DocumentParty }) {
   return (
     <div className="grid content-start gap-0.5 text-sm">
       <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>

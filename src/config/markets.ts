@@ -6,6 +6,10 @@
 
 export type TaxMode = "inclusive" | "exclusive";
 
+/** How a payment was made (stored); each market names them in its own words. */
+export const PAYMENT_METHODS = ["bank_transfer", "ewallet", "cash", "card", "cheque", "other"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
 export type MarketProfile = {
   /** ISO 3166-1 alpha-2. */
   country: string;
@@ -37,6 +41,14 @@ export type MarketProfile = {
   };
   /** How customers here usually pay, in running text. */
   paymentMethods: string;
+  /** The name of each payment method, in this market's words. */
+  paymentMethodLabels: Record<PaymentMethod, string>;
+  /**
+   * Tax a customer may withhold from a payment and settle with the tax
+   * authority (PH: creditable withholding tax, BIR Form 2307), or null.
+   * It counts toward the balance, so the invoice closes.
+   */
+  taxWithheld: { label: string; hint: string } | null;
   paymentInstructionsHint: string;
   paymentInstructionsPlaceholder: string;
   /** Where people paste a document link, in running text. */
@@ -87,6 +99,18 @@ export const MARKETS = {
       localityFormat: "{city}, {region} {postalCode}",
     },
     paymentMethods: "bank transfer, GCash, Maya, cash or card",
+    paymentMethodLabels: {
+      bank_transfer: "Bank transfer",
+      ewallet: "GCash or Maya",
+      cash: "Cash",
+      card: "Card",
+      cheque: "Cheque",
+      other: "Other",
+    },
+    taxWithheld: {
+      label: "Tax withheld (BIR Form 2307)",
+      hint: "If your customer withheld creditable tax, enter it here. It counts toward the balance; keep their Form 2307.",
+    },
     paymentInstructionsHint: "Bank account, GCash or Maya number.",
     paymentInstructionsPlaceholder: "e.g. GCash 0917 123 4567 (Juan Dela Cruz)",
     shareChannels: "Messenger or Viber",

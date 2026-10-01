@@ -7,11 +7,14 @@ import { DocumentPaper } from "@/components/document/document-paper";
 import { StatusBadge } from "@/components/status/status-badge";
 import { can } from "@/modules/authz";
 import { requireOrgContext } from "@/modules/identity";
-import { getInvoice } from "@/modules/invoices";
+import { getInvoice, isPayable } from "@/modules/invoices";
+import { listInvoicePayments } from "@/modules/payments";
+import { todayIn } from "@/shared/dates/calendar";
 import { customerForDocumentAction } from "../../_documents/actions";
 import { DocumentEditor } from "../../_documents/document-editor";
 import { documentBusiness, editorContext } from "../../_documents/editor-props";
 import { deleteDraftInvoiceAction, saveInvoiceDraftAction, sendInvoiceAction } from "../actions";
+import { InvoicePayments } from "../_components/invoice-payments";
 import { SentInvoiceActions } from "../_components/sent-invoice-actions";
 import { toEditorState } from "../_lib/editor-state";
 import { invoiceDocumentView } from "../_lib/invoice-view";
@@ -115,6 +118,33 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
         <p role="status" className="mt-4 max-w-3xl rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
           {closedNote}
         </p>
+      )}
+      {invoice.status !== "VOID" && invoice.status !== "CANCELLED" && (
+        <InvoicePayments
+          invoiceId={invoice.id}
+          name={name}
+          currency={invoice.currency}
+          locale={ctx.locale}
+          today={todayIn(ctx.timezone)}
+          balanceMinor={invoice.totalMinor - invoice.amountPaidMinor}
+          payable={isPayable(invoice.status)}
+          canRecord={can(ctx, "payments.record")}
+          canVoid={can(ctx, "payments.void")}
+          customerEmail={invoice.customerSnapshot?.email ?? null}
+          methodLabels={ctx.market.paymentMethodLabels}
+          taxWithheld={ctx.market.taxWithheld}
+          receiptTitle={ctx.market.documents.receipt.singular}
+          payments={(await listInvoicePayments(ctx, invoice.id)).map((p) => ({
+            id: p.id,
+            receiptNumber: p.receiptNumber,
+            paidOn: p.paidOn,
+            method: p.method,
+            reference: p.reference,
+            amountMinor: p.amountMinor,
+            withheldMinor: p.withheldMinor,
+            voidReason: p.voidReason,
+          }))}
+        />
       )}
       <div className="mt-6 max-w-3xl">
         <DocumentPaper view={view} />

@@ -43,6 +43,21 @@ export async function revokeShareLinks(executor: Executor, document: SharedDocum
   return rows.length;
 }
 
+/** Moves the end date of every open link to a document (e.g. 90 days after an invoice is paid). */
+export async function setShareLinksExpiry(executor: Executor, document: SharedDocument, expiresAt: Date): Promise<void> {
+  await executor
+    .update(shareLinks)
+    .set({ expiresAt })
+    .where(
+      and(
+        eq(shareLinks.organizationId, document.organizationId),
+        eq(shareLinks.documentKind, document.documentKind),
+        eq(shareLinks.documentId, document.documentId),
+        isNull(shareLinks.revokedAt),
+      ),
+    );
+}
+
 /** The document a token opens, or null if it's unknown, revoked or expired. */
 export async function resolveShareLink(executor: Executor, token: string): Promise<SharedDocument | null> {
   if (!TOKEN_PATTERN.test(token)) return null;

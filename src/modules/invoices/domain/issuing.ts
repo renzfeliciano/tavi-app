@@ -3,15 +3,19 @@ import type { InvoiceStatus } from "./status";
 
 // Issuing an invoice, and the one status rule for issued invoices (§B.4).
 
-/**
- * How long a customer's invoice link stays open after the due date. Interim
- * until payments (1.8) close links 90 days after an invoice is paid (§I).
- */
+/** How long a customer's link to an unpaid invoice stays open after its due date. */
 export const INVOICE_LINK_DAYS_AFTER_DUE = 365;
 
-/** The end of the link's life: midnight UTC after the last day. */
-export function invoiceLinkExpiresAt(dueDate: CalendarDate): Date {
-  return new Date(`${addDays(dueDate, INVOICE_LINK_DAYS_AFTER_DUE + 1)}T00:00:00.000Z`);
+/** How long the link stays open once the invoice is paid (§I). */
+export const INVOICE_LINK_DAYS_AFTER_PAID = 90;
+
+/**
+ * The end of the link's life (midnight UTC after the last day): a while after
+ * the due date while money is owed, then 90 days after it's paid in full.
+ */
+export function invoiceLinkExpiresAt(dueDate: CalendarDate, paid?: { paidOn: CalendarDate }): Date {
+  const last = paid ? addDays(paid.paidOn, INVOICE_LINK_DAYS_AFTER_PAID) : addDays(dueDate, INVOICE_LINK_DAYS_AFTER_DUE);
+  return new Date(`${addDays(last, 1)}T00:00:00.000Z`);
 }
 
 export type IssuedInvoiceStatus = Extract<InvoiceStatus, "SENT" | "PARTIALLY_PAID" | "PAID" | "OVERDUE">;
@@ -37,4 +41,9 @@ export function readinessToIssue(invoice: { customerId: string | null; lineCount
   if (!invoice.customerId) problems.customerId = "Choose a customer before sending.";
   if (invoice.lineCount === 0) problems.lines = "Add at least one item before sending.";
   return problems;
+}
+
+/** Whether an invoice takes payments: issued, not void or cancelled, and something still owed. */
+export function isPayable(status: InvoiceStatus): boolean {
+  return status === "SENT" || status === "PARTIALLY_PAID" || status === "OVERDUE";
 }

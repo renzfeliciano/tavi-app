@@ -17,15 +17,17 @@ import { readLogoForSharedDocument } from "@/modules/files";
 import { getCurrentSession } from "@/modules/identity";
 import { getSharedInvoice, recordSharedInvoiceOpen } from "@/modules/invoices";
 import { resolveMembership } from "@/modules/organizations";
+import { listPaymentsForSharedInvoice } from "@/modules/payments";
 import { consumeRateLimit } from "@/modules/system";
 import { formatCalendarDate } from "@/shared/dates/calendar";
+import { formatMoney } from "@/shared/money";
 import { clientIp } from "@/shared/http/client-ip";
 import { invoiceDocumentView } from "../../(app)/invoices/_lib/invoice-view";
 
 // The customer's view of an invoice, opened from its link (§G.4): the balance
 // due up front, with the business's payment instructions beside it. No
 // account, no third-party scripts; the portal headers keep the token out of
-// referrers, caches and search engines (§I). Payments arrive in 1.8.
+// referrers, caches and search engines (§I). Payments received are listed.
 
 const loadInvoice = cache(async (token: string) => getSharedInvoice(token));
 
@@ -69,6 +71,7 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
   const contact = [business.email, business.phone].filter(Boolean).join(" · ");
   const balanceMinor = invoice.totalMinor - invoice.amountPaidMinor;
   const closed = invoice.status === "VOID" || invoice.status === "CANCELLED";
+  const received = closed ? [] : await listPaymentsForSharedInvoice(shared.organizationId, invoice.id);
   // A sent invoice edited before payment keeps its link; say so (D7).
   const updatedOn = invoice.editedAt
     ? new Intl.DateTimeFormat(shared.locale, { dateStyle: "long", timeZone: business.timezone }).format(invoice.editedAt)
@@ -129,6 +132,26 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
         <p className="mb-4 text-sm text-muted-foreground">
           Updated {updatedOn}. This is the latest version.
         </p>
+      )}
+
+      {received.length > 0 && (
+        <section aria-label="Payments received" className="mb-6 rounded-xl border border-border bg-card p-5 text-sm shadow-xs">
+          <p className="font-medium">Payments received</p>
+          <ul className="mt-2 divide-y divide-border">
+            {received.map((payment) => (
+              <li key={payment.receiptNumber} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span className="text-muted-foreground">
+                  {formatCalendarDate(payment.paidOn, shared.locale)} · {market.paymentMethodLabels[payment.method]} ·{" "}
+                  {market.documents.receipt.singular} {payment.receiptNumber}
+                  {payment.withheldMinor > 0 && market.taxWithheld
+                    ? ` · ${market.taxWithheld.label} ${formatMoney(payment.withheldMinor, payment.currency, { locale: shared.locale })}`
+                    : ""}
+                </span>
+                <MoneyAmount amountMinor={payment.amountMinor} currency={payment.currency} locale={shared.locale} className="font-medium" />
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <DocumentPaper view={view} />

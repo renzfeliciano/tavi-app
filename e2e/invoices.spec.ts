@@ -172,3 +172,69 @@ test("void and duplicate asks for a reason, voids it, and opens a corrected draf
   await expect(page.getByText(/^Voided .*: Wrong unit price$/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Void and duplicate" })).toHaveCount(0);
 });
+
+test("recording payments part-pays, then pays in full with tax withheld, and the customer sees them", async ({ browser }) => {
+  await page.goto("/invoices");
+  await page.getByRole("link", { name: /INV-000002/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Billing statement INV-000002" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Record payment" }).click();
+  let dialog = page.getByRole("dialog", { name: "Record a payment" });
+  await expect(dialog.getByLabel("Amount received (PHP)")).toHaveValue("2,000.00");
+  await dialog.getByLabel("Amount received (PHP)").fill("500");
+  await dialog.getByLabel("Method").selectOption({ label: "GCash or Maya" });
+  await dialog.getByLabel(/^Reference/).fill("GC-123");
+  await expect(dialog.getByRole("checkbox", { name: /Email a payment acknowledgement to juan@example.com/ })).toBeChecked();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await dialog.getByRole("button", { name: "Record payment" }).click();
+  await expect(toast("Payment recorded on Billing statement INV-000002.")).toBeVisible();
+  await expect(page.getByText("Partially paid", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
+
+  // Overpaying is refused next to the field.
+  await page.getByRole("button", { name: "Record payment" }).click();
+  dialog = page.getByRole("dialog", { name: "Record a payment" });
+  await dialog.getByLabel("Amount received (PHP)").fill("1,600");
+  await dialog.getByRole("button", { name: "Record payment" }).click();
+  await expect(dialog.getByText("That's more than the balance due. Record at most the balance.")).toBeVisible();
+  await dialog.getByLabel("Amount received (PHP)").fill("1,470");
+  await dialog.getByLabel("Tax withheld (BIR Form 2307)").fill("30");
+  await dialog.getByRole("button", { name: "Record payment" }).click();
+  await expect(toast("Payment recorded on Billing statement INV-000002.")).toBeVisible();
+  await expect(page.getByText("Paid", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Payments" }).or(page.getByText("Paid in full.")).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(toast("Link copied.")).toBeVisible();
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  const customer = await (await browser.newContext()).newPage();
+  await customer.goto(link);
+  await expect(customer.getByText("Paid in full. Thank you!")).toBeVisible();
+  const history = customer.getByRole("region", { name: "Payments received" });
+  await expect(history).toContainText("REC-000001");
+  await expect(history).toContainText("Tax withheld (BIR Form 2307)");
+  await customer.context().close();
+});
+
+test("a payment acknowledgement carries the notice, and voiding a payment reopens the balance", async () => {
+  await page.goto("/invoices");
+  await page.getByRole("link", { name: /INV-000002/ }).click();
+  await page.getByRole("link", { name: "Payment acknowledgement REC-000001" }).click();
+  const paper = page.getByRole("article", { name: "Payment acknowledgement REC-000001" });
+  await expect(paper).toContainText("₱500.00");
+  await expect(paper).toContainText("THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.");
+  await expect(paper).toContainText("Not a BIR official receipt.");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  await page.goBack();
+  await page.getByRole("button", { name: "Void" }).last().click();
+  const dialog = page.getByRole("dialog", { name: "Void payment REC-000002?" });
+  await dialog.getByLabel("Reason").fill("Transfer bounced");
+  await dialog.getByRole("button", { name: "Void payment" }).click();
+  await expect(toast("Payment REC-000002 voided.")).toBeVisible();
+  await expect(page.getByText("Partially paid", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Voided: Transfer bounced")).toBeVisible();
+
+  await page.goto("/payments");
+  await expect(page.getByRole("region", { name: "Payment list" }).getByRole("listitem")).toHaveCount(2);
+});

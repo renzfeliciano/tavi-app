@@ -3,3 +3,4 @@ export { type InvoiceDraft, type InvoiceDraftResult, parseInvoiceDraft, type Raw
 export { INVOICE_STATUSES, type InvoiceStatus } from "./domain/status";
 export { EDITABLE_INVOICE_STATUSES, INVOICE_EVENTS, type InvoiceEvent, transitionInvoice } from "./domain/transitions";
 export { INVOICE_REASON_MAX, issuedEditProblems, parseInvoiceReason } from "./domain/corrections";
+export { isPayable } from "./domain/issuing";

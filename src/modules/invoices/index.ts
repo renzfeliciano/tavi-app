@@ -34,7 +34,13 @@ export {
   type SharedInvoice,
 } from "./application/issuing";
 export { type InvoiceDraft, parseInvoiceDraft, type RawInvoiceDraft } from "./domain/invoice-draft";
-export { INVOICE_LINK_DAYS_AFTER_DUE, issuedInvoiceStatus } from "./domain/issuing";
+export { lockInvoiceForPayment, settleInvoice } from "./application/settlement";
+export {
+  INVOICE_LINK_DAYS_AFTER_DUE,
+  INVOICE_LINK_DAYS_AFTER_PAID,
+  isPayable,
+  issuedInvoiceStatus,
+} from "./domain/issuing";
 export { INVOICE_STATUSES, type InvoiceStatus } from "./domain/status";
 export { EDITABLE_INVOICE_STATUSES, INVOICE_EVENTS, type InvoiceEvent, transitionInvoice } from "./domain/transitions";
 export { INVOICE_REASON_MAX } from "./domain/corrections";

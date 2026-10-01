@@ -72,9 +72,10 @@ export const newActions: readonly NewAction[] = [
     icon: UserPlusIcon,
   },
   {
-    href: "/payments/new",
+    // Payments are recorded on the invoice they pay (it knows the balance).
+    href: "/invoices",
     label: "Record payment",
-    description: "Mark money you've received",
+    description: "Open the invoice it pays",
     icon: BanknoteIcon,
   },
 ];

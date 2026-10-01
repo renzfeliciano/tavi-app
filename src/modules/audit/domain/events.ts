@@ -48,6 +48,8 @@ export const AUDIT_ACTIONS = [
   "invoice.edited",
   "invoice.voided",
   "invoice.cancelled",
+  "payment.recorded",
+  "payment.voided",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

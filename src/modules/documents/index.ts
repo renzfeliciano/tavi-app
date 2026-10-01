@@ -51,6 +51,7 @@ export {
   recordShareLinkView,
   resolveShareLink,
   revokeShareLinks,
+  setShareLinksExpiry,
   type ShareableKind,
   type SharedDocument,
 } from "./infra/share-links";

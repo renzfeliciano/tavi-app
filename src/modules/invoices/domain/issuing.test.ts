@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { INVOICE_LINK_DAYS_AFTER_DUE, invoiceLinkExpiresAt, issuedInvoiceStatus, readinessToIssue } from "./issuing";
+import {
+  INVOICE_LINK_DAYS_AFTER_DUE,
+  INVOICE_LINK_DAYS_AFTER_PAID,
+  invoiceLinkExpiresAt,
+  issuedInvoiceStatus,
+  isPayable,
+  readinessToIssue,
+} from "./issuing";
 
 describe("issuedInvoiceStatus", () => {
   const today = "2026-10-01";
@@ -39,5 +46,18 @@ describe("readinessToIssue", () => {
 describe("invoiceLinkExpiresAt", () => {
   it(`keeps the customer's link open ${INVOICE_LINK_DAYS_AFTER_DUE} days after the due date`, () => {
     expect(invoiceLinkExpiresAt("2026-10-15").toISOString()).toBe("2027-10-16T00:00:00.000Z");
+  });
+});
+
+describe("invoiceLinkExpiresAt once paid", () => {
+  it(`closes the link ${INVOICE_LINK_DAYS_AFTER_PAID} days after the invoice is paid`, () => {
+    expect(invoiceLinkExpiresAt("2026-10-15", { paidOn: "2026-10-01" }).toISOString()).toBe("2026-12-31T00:00:00.000Z");
+  });
+});
+
+describe("isPayable", () => {
+  it("takes payments on sent, part-paid and overdue invoices only", () => {
+    expect(["SENT", "PARTIALLY_PAID", "OVERDUE"].every((s) => isPayable(s as never))).toBe(true);
+    expect(["DRAFT", "PAID", "VOID", "CANCELLED"].some((s) => isPayable(s as never))).toBe(false);
   });
 });

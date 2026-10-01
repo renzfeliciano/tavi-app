@@ -8,6 +8,7 @@ import {
   MARKET_CODES,
   MARKETS,
   marketFor,
+  PAYMENT_METHODS,
 } from "./markets";
 
 describe("market profiles", () => {
@@ -28,6 +29,10 @@ describe("market profiles", () => {
       expect(() => new Intl.NumberFormat(market.locale)).not.toThrow();
       expect(Intl.getCanonicalLocales(market.locale)).toEqual([market.locale]);
       expect(() => new Intl.DateTimeFormat("en", { timeZone: market.timezone })).not.toThrow();
+    });
+
+    it("names every payment method", () => {
+      for (const code of PAYMENT_METHODS) expect(market.paymentMethodLabels[code].trim()).not.toBe("");
     });
 
     it("has a tax-ID example that its own pattern accepts", () => {
