@@ -84,7 +84,7 @@ function SheetLinkList({
 export function MobileTopBar({ organizationName }: { organizationName: string }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-sm lg:hidden">
-      <Link href="/dashboard" className="shrink-0 rounded-sm">
+      <Link href="/dashboard" className="flex h-11 shrink-0 items-center rounded-sm">
         <Wordmark size={18} />
       </Link>
       <span className="truncate text-sm text-muted-foreground">{organizationName}</span>

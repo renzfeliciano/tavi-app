@@ -113,6 +113,7 @@ export function AsyncCombobox<T>({
           {label}
         </label>
         <Combobox.InputGroup
+          data-slot="combobox-field"
           className={cn(
             "relative flex h-9 items-center rounded-md border border-input bg-card shadow-xs transition-[border-color,box-shadow] duration-(--duration-fast) focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/35 hover:border-border-strong pointer-coarse:h-11",
             invalid && "border-destructive ring-3 ring-destructive/20",
@@ -123,21 +124,21 @@ export function AsyncCombobox<T>({
             placeholder={placeholder}
             aria-invalid={invalid || undefined}
             aria-describedby={describedBy}
-            className="h-full w-full min-w-0 rounded-md bg-transparent pr-16 pl-3 text-base outline-none placeholder:text-muted-foreground md:text-sm"
+            className="h-full w-full min-w-0 rounded-md bg-transparent pr-16 pl-3 text-base outline-none placeholder:text-muted-foreground pointer-coarse:pr-22 md:text-sm"
           />
           <div className="absolute right-1 flex items-center gap-0.5 text-muted-foreground">
             {pending && <LoaderCircleIcon aria-hidden="true" className="size-4 animate-spin" />}
             {!resetAfterSelect && value && (
               <Combobox.Clear
                 aria-label={`Clear ${label.toLowerCase()}`}
-                className="grid size-7 place-items-center rounded-sm hover:text-foreground"
+                className="grid size-7 place-items-center rounded-sm hover:text-foreground pointer-coarse:size-10"
               >
                 <XIcon aria-hidden="true" className="size-4" />
               </Combobox.Clear>
             )}
             <Combobox.Trigger
               aria-label={`Show ${label.toLowerCase()} options`}
-              className="grid size-7 place-items-center rounded-sm hover:text-foreground"
+              className="grid size-7 place-items-center rounded-sm hover:text-foreground pointer-coarse:size-10"
             >
               <ChevronDownIcon aria-hidden="true" className="size-4" />
             </Combobox.Trigger>

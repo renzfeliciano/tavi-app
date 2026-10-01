@@ -41,7 +41,7 @@ description: How TAVI is tested — the test pyramid and commands, the test-firs
 
 ## E2E patterns
 
-- The `setup` project signs up one owner and saves `e2e/.auth/owner.json`; other tests reuse it. Signed-out tests: `test.use({ storageState: { cookies: [], origins: [] } })`.
+- The `setup` project signs up one owner (email confirmed) and saves `e2e/.auth/owner.json`; other tests reuse it. `critical-path.spec.ts` uses it on both projects, so it never adds sign-ups; find its documents by its own customer's name, never by number (desktop and mobile share the business). Signed-out tests: `test.use({ storageState: { cookies: [], origins: [] } })`.
 - Account-creating specs run on desktop only (production sign-up rate limit: 10/min/IP): list them in `ACCOUNT_CREATING_SPECS` in `playwright.config.ts`. A file-level `test.skip(isMobile)` is not enough, because the spec's `beforeAll` still signs up. Budget: keep a full run under 10 sign-ups.
 - Helpers in `e2e/helpers.ts` (`uniqueEmail`, `strongPassword`, `signUp`, `createBusiness`).
 - Screenshots for visual review: a throwaway `e2e/zz-*.spec.ts` writing to the scratchpad with **Windows-style** `C:/…` paths, deleted afterwards.

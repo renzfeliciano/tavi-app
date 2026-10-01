@@ -65,7 +65,7 @@ Only for destructive, financial, or many-at-once actions: void invoice, void pay
 
 ## Mobile
 
-No horizontal scroll anywhere (E2E asserts it). Tables become stacked rows. Menus become bottom sheets. Primary action reachable with a thumb (sticky bar on long forms). Targets ≥ 44px on touch. Test at Pixel 7 in Playwright.
+No horizontal scroll anywhere (E2E asserts it). Tables become stacked rows. Menus become bottom sheets. Primary action reachable with a thumb (sticky bar on long forms). Targets ≥ 44px on touch (`pointer-coarse:` sizes; inline links in a sentence are exempt). Test at Pixel 7 in Playwright; `e2e/device-matrix.spec.ts` checks every screen in `e2e/screens.ts` at 320, 430 and 768px for sideways scroll and small targets, so add new screens there.
 
 ## Verify before calling it done
 

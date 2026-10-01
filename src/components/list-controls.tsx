@@ -67,7 +67,7 @@ export function ListViews({
           href={view.href}
           aria-current={view.current ? "page" : undefined}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground pointer-coarse:py-2.5",
+            "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground pointer-coarse:py-3",
             view.current && "bg-card text-foreground shadow-xs ring-1 ring-border",
           )}
         >

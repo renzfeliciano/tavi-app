@@ -316,9 +316,12 @@ export default async function DashboardPage() {
           ) : (
             <ul className="mt-3 grid gap-2 text-sm">
               {activity.map(({ event, described }) => (
-                <li key={event.id} className="flex flex-wrap justify-between gap-x-4">
+                <li key={event.id} className="flex flex-wrap items-center justify-between gap-x-4">
                   {described.href ? (
-                    <Link href={described.href} className="underline-offset-4 hover:underline">
+                    <Link
+                      href={described.href}
+                      className="underline-offset-4 hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+                    >
                       {described.text}
                     </Link>
                   ) : (

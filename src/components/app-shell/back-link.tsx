@@ -7,7 +7,7 @@ export function BackLink({ href, children }: { href: Route; children: string }) 
   return (
     <Link
       href={href}
-      className="-ml-1 mb-3 inline-flex items-center gap-1 rounded-md px-1 py-1 text-sm text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground pointer-coarse:py-2.5"
+      className="-ml-1 mb-3 inline-flex items-center gap-1 rounded-md px-1 py-1 text-sm text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground pointer-coarse:py-3"
     >
       <ChevronLeftIcon aria-hidden="true" className="size-4" />
       {children}
