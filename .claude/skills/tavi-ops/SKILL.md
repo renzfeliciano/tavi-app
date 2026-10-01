@@ -40,6 +40,10 @@ Never paste values into chat or commit them. `.env.local` is gitignored; `.env.e
 - `GET /api/cron/daily` — `Authorization: Bearer $CRON_SECRET`; the status job: for each business, in its own time zone, lapsed SENT/VIEWED quotes → EXPIRED and late SENT/PARTIALLY_PAID invoices → OVERDUE (audited as `system`, idempotent, one business's failure doesn't stop the rest). Scheduled in `vercel.json` at 16:05 UTC (just after midnight in Manila); add a run per time zone when a market far from UTC+8 launches.
 - `GET /api/cron/outbox` — `Authorization: Bearer $CRON_SECRET`; sends due emails, prunes rate-limit counters, logs backlog (warns if any failed or oldest pending > 15 min). Vercel Hobby allows only daily crons; use Pro (or an external scheduler) for every-5-minutes delivery retries. Immediate delivery happens via `flushOutboxAfterResponse()` regardless.
 
+## Beta funnel
+
+`FUNNEL_DATABASE_URL=<production direct> npm run funnel` prints how many businesses reached each step of the critical path, the median time to first sent quote and where each business stopped (view `business_funnel`, from the audit log). Read-only; run it weekly during the beta.
+
 ## Logs and errors
 
 - JSON lines in production via `logger` (`src/shared/logger`); search by `requestId` (`x-request-id` response header).

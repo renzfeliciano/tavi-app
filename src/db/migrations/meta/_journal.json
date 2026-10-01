@@ -127,6 +127,13 @@
       "when": 1790877861671,
       "tag": "0017_invoice_registrations",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790883747015,
+      "tag": "0018_business_funnel",
+      "breakpoints": true
     }
   ]
 }
