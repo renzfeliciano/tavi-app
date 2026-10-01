@@ -83,7 +83,12 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
         <h1 className="text-sm font-normal text-muted-foreground">
           {market.documents.invoice.singular} from <span className="font-medium text-foreground">{business.name}</span>
         </h1>
-        <StatusBadge kind="invoice" status={invoice.status} />
+        <div className="flex items-center gap-3">
+          <StatusBadge kind="invoice" status={invoice.status} />
+          <a href={`/i/${token}/pdf`} download className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+            Download PDF
+          </a>
+        </div>
       </header>
 
       {!closed && invoice.status !== "PAID" && (
@@ -147,7 +152,17 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
                     ? ` · ${market.taxWithheld.label} ${formatMoney(payment.withheldMinor, payment.currency, { locale: shared.locale })}`
                     : ""}
                 </span>
-                <MoneyAmount amountMinor={payment.amountMinor} currency={payment.currency} locale={shared.locale} className="font-medium" />
+                <span className="flex items-center gap-3">
+                  <MoneyAmount amountMinor={payment.amountMinor} currency={payment.currency} locale={shared.locale} className="font-medium" />
+                  <a
+                    href={`/i/${token}/receipts/${encodeURIComponent(payment.receiptNumber)}/pdf`}
+                    download
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                    aria-label={`Download ${market.documents.receipt.singular} ${payment.receiptNumber} as PDF`}
+                  >
+                    PDF
+                  </a>
+                </span>
               </li>
             ))}
           </ul>

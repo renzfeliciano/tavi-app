@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ban, CopyPlusIcon, FileXIcon, LinkIcon, PencilIcon } from "lucide-react";
+import { Ban, CopyPlusIcon, DownloadIcon, FileXIcon, LinkIcon, PencilIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -75,7 +75,7 @@ export function SentInvoiceActions({ id, status, name, amountPaidMinor, canVoid,
   const unpaid = amountPaidMinor === 0;
   const canEdit = transitionInvoice(status, "edit").ok && unpaid;
   const canClose = canVoid && transitionInvoice(status, "void").ok && unpaid;
-  if (status === "VOID" || status === "CANCELLED") return null;
+  const closed = status === "VOID" || status === "CANCELLED";
 
   async function copyLink() {
     setLinking(true);
@@ -131,10 +131,16 @@ export function SentInvoiceActions({ id, status, name, amountPaidMinor, canVoid,
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button type="button" variant="outline" pending={linking} pendingLabel="Copying…" onClick={() => void copyLink()}>
-        <LinkIcon aria-hidden="true" />
-        Copy link
-      </Button>
+      <a href={`/invoices/${id}/pdf`} download className={buttonVariants({ variant: "outline" })}>
+        <DownloadIcon aria-hidden="true" />
+        Download PDF
+      </a>
+      {!closed && (
+        <Button type="button" variant="outline" pending={linking} pendingLabel="Copying…" onClick={() => void copyLink()}>
+          <LinkIcon aria-hidden="true" />
+          Copy link
+        </Button>
+      )}
       {canEdit && (
         <Link href={`/invoices/${id}/edit`} className={buttonVariants({ variant: "outline" })}>
           <PencilIcon aria-hidden="true" />

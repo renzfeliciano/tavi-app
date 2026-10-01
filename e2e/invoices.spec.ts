@@ -238,3 +238,36 @@ test("a payment acknowledgement carries the notice, and voiding a payment reopen
   await page.goto("/payments");
   await expect(page.getByRole("region", { name: "Payment list" }).getByRole("listitem")).toHaveCount(2);
 });
+
+test("PDFs download for the business and, through the link, for the customer", async ({ browser }) => {
+  const readPdf = async (download: import("@playwright/test").Download) => {
+    const path = await download.path();
+    const { readFile } = await import("node:fs/promises");
+    return readFile(path);
+  };
+
+  await page.goto("/invoices");
+  await page.getByRole("link", { name: /INV-000002/ }).click();
+  const [statement] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Download PDF" }).click()]);
+  expect(statement.suggestedFilename()).toBe("Billing-statement-INV-000002.pdf");
+  expect((await readPdf(statement)).subarray(0, 5).toString()).toBe("%PDF-");
+
+  await page.getByRole("link", { name: "Payment acknowledgement REC-000001" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Payment acknowledgement REC-000001" })).toBeVisible();
+  const [receipt] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Download PDF" }).click()]);
+  expect(receipt.suggestedFilename()).toBe("Payment-acknowledgement-REC-000001.pdf");
+
+  await page.goBack();
+  await expect(page.getByRole("heading", { level: 1, name: "Billing statement INV-000002" })).toBeVisible();
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(toast("Link copied.")).toBeVisible();
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  const customer = await browser.newContext();
+  const response = await customer.request.get(`${link}/pdf`);
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toBe("application/pdf");
+  expect(response.headers()["cache-control"]).toContain("no-store");
+  expect((await response.body()).subarray(0, 5).toString()).toBe("%PDF-");
+  expect((await customer.request.get(`${link.replace(/.{4}$/, "xxxx")}/pdf`)).status()).toBe(404);
+  await customer.close();
+});

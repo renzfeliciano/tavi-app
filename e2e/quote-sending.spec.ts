@@ -92,6 +92,9 @@ test("the customer sees the quotation with the business's letterhead, and no one
   await expect(paper).toContainText("Juan Dela Cruz");
   await expect(paper).toContainText("THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.");
   expect((await new AxeBuilder({ page: customer }).analyze()).violations).toEqual([]);
+  const pdf = await customer.context().request.get(`${customerLink}/pdf`);
+  expect(pdf.headers()["content-type"]).toBe("application/pdf");
+  expect(pdf.headers()["content-disposition"]).toContain('filename="Quotation-QUO-000001.pdf"');
 
   await customer.goto(customerLink.replace(/.{4}$/, "xxxx"));
   await expect(customer.getByRole("heading", { name: "This link isn't available" })).toBeVisible();

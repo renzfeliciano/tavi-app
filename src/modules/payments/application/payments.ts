@@ -306,7 +306,7 @@ export async function listPaymentsForSharedInvoice(
   organizationId: string,
   invoiceId: string,
   db: Database = getDb(),
-): Promise<Pick<Payment, "paidOn" | "amountMinor" | "withheldMinor" | "currency" | "method" | "receiptNumber">[]> {
+): Promise<Pick<Payment, "paidOn" | "amountMinor" | "withheldMinor" | "currency" | "method" | "reference" | "receiptNumber">[]> {
   return db
     .select({
       paidOn: payments.paidOn,
@@ -314,6 +314,7 @@ export async function listPaymentsForSharedInvoice(
       withheldMinor: payments.withheldMinor,
       currency: payments.currency,
       method: payments.method,
+      reference: payments.reference,
       receiptNumber: payments.receiptNumber,
     })
     .from(payments)

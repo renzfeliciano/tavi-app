@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   // Dev-only badge; bottom-left would cover Settings and the Home tab.
   devIndicators: { position: "top-right" },
+  // PDF routes read the embedded font from disk; make sure deploys ship it.
+  outputFileTracingIncludes: {
+    "/**/pdf": ["./src/components/document/pdf/fonts/*.ttf"],
+  },
   experimental: {
     // Logo uploads are up to 2 MB (the files module rejects anything larger).
     serverActions: { bodySizeLimit: "3mb" },

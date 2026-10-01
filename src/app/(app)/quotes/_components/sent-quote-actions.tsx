@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ban, LinkIcon, PencilIcon, ReceiptTextIcon } from "lucide-react";
+import { Ban, DownloadIcon, LinkIcon, PencilIcon, ReceiptTextIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -110,6 +110,10 @@ export function SentQuoteActions({ id, status, name, shareChannels, convertedInv
           View {invoiceNoun}
         </Link>
       )}
+      <a href={`/quotes/${id}/pdf`} download className={buttonVariants({ variant: "outline" })}>
+        <DownloadIcon aria-hidden="true" />
+        Download PDF
+      </a>
       {canLink && (
         <Button type="button" variant="outline" pending={pending && confirm === null} pendingLabel="Copying…" onClick={() => void copyLink()}>
           <LinkIcon aria-hidden="true" />
