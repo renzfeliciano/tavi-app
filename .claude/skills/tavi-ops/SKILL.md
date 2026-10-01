@@ -5,7 +5,7 @@ description: Running TAVI — environment variables, Neon branches, migrations i
 
 # TAVI operations
 
-Hosting plan: Vercel Hobby (app) + Neon Postgres 18 (Singapore) (D1, D9), free tier only for the initial release (D11). ⚠️ Vercel Hobby is non-commercial: move to Pro or another host before charging businesses (risk 14). Proposal §K.
+Hosting plan: Vercel Hobby (app) + Neon Postgres 18 (Singapore) (D1, D9), free tier only for the initial release (D11). Functions run in `sin1` (`vercel.json` `regions`, next to the database); never remove it — Vercel's default is Washington. ⚠️ Vercel Hobby is non-commercial: move to Pro or another host before charging businesses (risk 14). Proposal §K.
 
 ## Environment variables (all validated in `src/shared/env/parse-env.ts`)
 
