@@ -165,6 +165,21 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
             {note}
           </p>
         ))}
+        {view.sales && (
+          <section aria-label="Sales breakdown" className="w-full max-w-xs border-t border-border pt-2 text-sm">
+            {view.sales.statement && <p className="text-right font-bold tracking-wide">{view.sales.statement}</p>}
+            {view.sales.rows.length > 0 && (
+              <dl className="grid gap-1">
+                {view.sales.rows.map((row) => (
+                  <div key={row.label} className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">{row.label}</dt>
+                    <dd className="text-right whitespace-nowrap tabular-nums">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </section>
+        )}
       </div>
 
       {view.paymentInstructions && (

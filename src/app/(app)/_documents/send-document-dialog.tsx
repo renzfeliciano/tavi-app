@@ -33,6 +33,8 @@ type SendDocumentDialogProps = {
   shareChannels: string;
   /** Sending needs the sender's own email confirmed (§D). */
   emailVerified: boolean;
+  /** Something to check before sending, e.g. the buyer's TIN on a registered invoice. */
+  reminder?: string | null;
   onSend: (delivery: Delivery) => Promise<DeliveryOutcome>;
 };
 
@@ -102,6 +104,11 @@ export function SendDocumentDialog(props: SendDocumentDialogProps) {
         ) : (
           <div className="grid gap-4">
             <FormAlert message={error} />
+            {props.reminder && (
+              <p role="note" className="rounded-md border border-border bg-surface-sunken px-3 py-2.5 text-sm text-pretty">
+                {props.reminder}
+              </p>
+            )}
             <fieldset className="grid gap-2 sm:grid-cols-2">
               <legend className="sr-only">How to send</legend>
               {choice("email", MailIcon, "Email it", "We email the link from you.")}

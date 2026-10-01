@@ -1,6 +1,6 @@
 import type { MarketProfile } from "@/config/markets";
 import type { DocumentView } from "@/components/document/document-view";
-import { type InvoiceDetail, invoiceTitle, registrationFooter } from "@/modules/invoices";
+import { type InvoiceDetail, invoiceTitle, registrationFooter, salesBreakdownRows } from "@/modules/invoices";
 import { storedDocumentView } from "../../_documents/stored-document-view";
 
 /** A saved invoice as a document (the business's page and the customer's). */
@@ -23,5 +23,7 @@ export function invoiceDocumentView(
     // D13); a registered invoice prints its system registration instead (B.21).
     notice: registration ? null : market.supplementaryDocumentNotice,
     registration: registration ? registrationFooter(registration, market, locale) : null,
+    // B.13–B.17, as computed when it was issued.
+    sales: registration?.sales && market.invoiceRegistration ? salesBreakdownRows(registration.sales, market.invoiceRegistration.sales) : null,
   });
 }

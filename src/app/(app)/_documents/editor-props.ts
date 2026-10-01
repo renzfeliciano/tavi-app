@@ -50,6 +50,7 @@ export async function editorContext(ctx: OrgContext, kind: DocumentKind, currenc
     registration: registration
       ? registrationFooter({ ...registration, serial: registration.nextSerial }, ctx.market, ctx.locale)
       : null,
+    buyerTaxIdRule: registration ? (ctx.market.invoiceRegistration?.buyerTaxId ?? null) : null,
     // Invoices show how to pay; the instructions are snapshotted when sent.
     paymentInstructions: kind === "invoice" ? profile.paymentInstructions : null,
     defaultUnit: ctx.market.units.service,

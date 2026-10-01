@@ -15,7 +15,10 @@ const lines: DocumentViewLineInput[] = [
   },
 ];
 
-function view(taxMode: TaxMode, overrides: { notice?: string | null; registration?: string | null } = {}) {
+function view(
+  taxMode: TaxMode,
+  overrides: { notice?: string | null; registration?: string | null; sales?: Parameters<typeof buildDocumentView>[0]["sales"] } = {},
+) {
   return buildDocumentView({
     title: "Quotation",
     number: null,
@@ -61,5 +64,25 @@ describe("buildDocumentView", () => {
   it("carries a registered invoice's registration line to the foot", () => {
     const v = view("inclusive", { notice: null, registration: "Acknowledgement Certificate / PTU No. 1" });
     expect(v).toMatchObject({ notice: null, registration: "Acknowledgement Certificate / PTU No. 1" });
+  });
+
+  it("prints a registered invoice's sales breakdown and marks exempt lines (B.13–B.14)", () => {
+    const v = view("inclusive", {
+      notice: null,
+      sales: {
+        rows: [{ label: "VATable Sales", amountMinor: 89286 }, { label: "VAT Amount", amountMinor: 10714 }],
+        lineTax: lines.map((_, i) => (i === 0 ? null : "VAT-exempt sale")),
+        statement: null,
+      },
+    });
+    expect(v.sales).toEqual({
+      rows: [
+        { label: "VATable Sales", value: "₱892.86" },
+        { label: "VAT Amount", value: "₱107.14" },
+      ],
+      statement: null,
+    });
+    expect(v.lines.slice(1).every((l) => l.tax === "VAT-exempt sale")).toBe(true);
+    expect(v.lines[0]?.tax).toMatch(/^VAT 12/);
   });
 });

@@ -3,7 +3,7 @@ import type { MarketProfile } from "@/config/markets";
 import { type Database, type Executor, getDb } from "@/db";
 import { recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
-import { getDocumentSettings } from "@/modules/organizations";
+import { getBusinessProfile, getDocumentSettings } from "@/modules/organizations";
 import { todayIn } from "@/shared/dates/calendar";
 import { type InvoiceRegistration, type InvoiceRegistrationSnapshot, parseInvoiceRegistration } from "../domain/registration";
 import { invoiceRegistrations } from "../schema";
@@ -55,7 +55,11 @@ export async function saveInvoiceRegistration(
   db: Database = getDb(),
 ): Promise<SaveInvoiceRegistrationResult> {
   assertCan(actor, "organization.manage");
-  const settings = await getDocumentSettings(actor, db);
+  const [settings, profile] = await Promise.all([getDocumentSettings(actor, db), getBusinessProfile(actor, db)]);
+  // The sales breakdown and the "VAT Reg TIN" line depend on it (B.2, B.13–B.17).
+  if (!market.taxRegistrations.some((r) => r.code === profile.taxRegistration)) {
+    return { ok: false, errors: { form: "First set how you're registered for tax in Business profile. Registered invoices print it." } };
+  }
   return db.transaction(async (tx): Promise<SaveInvoiceRegistrationResult> => {
     const [current] = await tx
       .select(columns)

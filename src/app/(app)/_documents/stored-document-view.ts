@@ -1,5 +1,5 @@
 import type { MarketProfile } from "@/config/markets";
-import { buildDocumentView, type DocumentView, type DocumentViewLineInput } from "@/components/document/document-view";
+import { buildDocumentView, type DocumentSalesInput, type DocumentView, type DocumentViewLineInput } from "@/components/document/document-view";
 import { calculateDocument, type LineDiscount, type TaxMode } from "@/modules/documents/client";
 import type { CustomerSnapshot } from "@/modules/quotes";
 import type { CalendarDate } from "@/shared/dates/calendar";
@@ -48,6 +48,7 @@ export function storedDocumentView(
     locale: string;
     notice: string | null;
     registration?: string | null;
+    sales?: DocumentSalesInput | null;
     paymentInstructions?: string | null;
   },
 ): DocumentView {
@@ -86,5 +87,6 @@ export function storedDocumentView(
     paymentInstructions: options.paymentInstructions ?? null,
     notice: options.notice,
     registration: options.registration ?? null,
+    sales: options.sales ?? null,
   });
 }

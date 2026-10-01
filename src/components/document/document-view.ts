@@ -47,6 +47,15 @@ export type DocumentView = {
   notice: string | null;
   /** Registered invoices only: the system registration at the foot (RR 7-2024 Sec. 6 B.21). */
   registration?: string | null;
+  /** Registered invoices only: the sales breakdown (B.13, B.17) and the seller's statement, e.g. "EXEMPT" (B.16). */
+  sales?: { rows: { label: string; value: string }[]; statement: string | null } | null;
+};
+
+/** A registered invoice's sales breakdown, in minor units, with each line's sale wording (B.14). */
+export type DocumentSalesInput = {
+  rows: { label: string; amountMinor: number }[];
+  lineTax: (string | null)[];
+  statement: string | null;
 };
 
 export type DocumentViewLineInput = {
@@ -75,6 +84,7 @@ export type DocumentViewInput = {
   paymentInstructions?: string | null;
   notice: string | null;
   registration?: string | null;
+  sales?: DocumentSalesInput | null;
 };
 
 export function buildDocumentView(input: DocumentViewInput): DocumentView {
@@ -94,7 +104,8 @@ export function buildDocumentView(input: DocumentViewInput): DocumentView {
           : line.discount.kind === "percent"
             ? `−${formatRate(line.discount.bps, locale)}`
             : `−${money(a.discountMinor)}`,
-      tax: line.tax ? `${line.tax.name} ${formatRate(line.tax.rateBps, locale)}` : null,
+      // A registered invoice names zero-rated and exempt sales on the line (B.14).
+      tax: input.sales?.lineTax[i] ?? (line.tax ? `${line.tax.name} ${formatRate(line.tax.rateBps, locale)}` : null),
       amount: money(a ? a.netMinor : 0),
     };
   });
@@ -124,5 +135,8 @@ export function buildDocumentView(input: DocumentViewInput): DocumentView {
     paymentInstructions: input.paymentInstructions ?? null,
     notice: input.notice,
     registration: input.registration ?? null,
+    sales: input.sales
+      ? { rows: input.sales.rows.map((r) => ({ label: r.label, value: money(r.amountMinor) })), statement: input.sales.statement }
+      : null,
   };
 }

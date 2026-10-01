@@ -31,7 +31,10 @@ export async function saveRegistrationAction(
   };
   if (!can(ctx, "organization.manage")) return { values, error: NOT_ALLOWED };
   const result = await saveInvoiceRegistration(ctx, values, { market: ctx.market });
-  if (!result.ok) return { values, errors: result.errors };
+  if (!result.ok) {
+    const { form, ...errors } = result.errors;
+    return { values, errors, error: form };
+  }
   revalidatePath("/settings/invoicing");
   revalidatePath("/invoices", "layout");
   return { values, savedAt: Date.now() };

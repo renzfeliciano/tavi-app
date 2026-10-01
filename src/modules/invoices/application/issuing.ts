@@ -29,6 +29,7 @@ import { formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { formatMoney } from "@/shared/money";
 import { invoiceLinkExpiresAt, issuedInvoiceStatus, readinessToIssue } from "../domain/issuing";
 import { formatSerial, invoiceTitle } from "../domain/registration";
+import { salesBreakdown } from "../domain/sales-breakdown";
 import { transitionInvoice } from "../domain/transitions";
 import { invoices } from "../schema";
 import { audit, headerColumns, type InvoiceDetail, loadHeader, loadLines } from "./invoices";
@@ -114,8 +115,14 @@ export async function issueInvoice(
     if (!locked || locked.status !== "DRAFT") return null;
     // Invoice mode (D13, 1.12): a registered invoice takes the next serial of
     // the approved series instead of a billing-statement number.
-    const registered = await claimRegisteredSerial(tx, actor.organizationId);
-    if (registered && "exhausted" in registered) return registered;
+    const claimed = await claimRegisteredSerial(tx, actor.organizationId);
+    if (claimed && "exhausted" in claimed) return claimed;
+    // The sales breakdown as printed (RR 7-2024 Sec. 6 B.13–B.17), from the
+    // lines as locked and the seller's tax registration.
+    const seller = market.taxRegistrations.find((r) => r.code === profile.taxRegistration)?.invoiceSales;
+    const registered = claimed
+      ? { ...claimed, ...(seller ? { sales: salesBreakdown(seller, (await loadLines(tx, locked.id)).map((l) => ({ rateBps: l.taxRateBps, taxMinor: l.taxMinor, totalMinor: l.totalMinor }))) } : {}) }
+      : null;
     const number = registered
       ? formatSerial(registered.serial, registered.seriesEnd)
       : (locked.number ?? (await allocateDocumentNumber(tx, actor.organizationId, "invoice")).number);

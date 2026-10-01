@@ -70,3 +70,5 @@ export {
   registrationFooter,
 } from "./domain/registration";
 export { canEditIssued, REGISTERED_INVOICE_LOCKED } from "./domain/corrections";
+export { type SalesBreakdown, salesBreakdown, salesBreakdownRows } from "./domain/sales-breakdown";
+export { buyerTaxIdReminder } from "./domain/registration";

@@ -169,6 +169,17 @@ export function DocumentPdf({ view }: { view: DocumentView }) {
               {note}
             </Text>
           ))}
+          {view.sales && (
+            <View style={{ marginTop: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: "#e2e1ea" }}>
+              {view.sales.statement && <Text style={{ textAlign: "right", fontWeight: 600 }}>{view.sales.statement}</Text>}
+              {view.sales.rows.map((row) => (
+                <View key={row.label} style={s.totalRow}>
+                  <Text style={s.muted}>{row.label}</Text>
+                  <Text>{row.value}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {view.paymentInstructions && (

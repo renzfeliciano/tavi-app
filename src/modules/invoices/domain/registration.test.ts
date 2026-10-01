@@ -4,6 +4,7 @@ import { tooLong } from "@/shared/validation/messages";
 import {
   formatSerial,
   INVOICE_REGISTRATION_LIMITS,
+  buyerTaxIdReminder,
   invoiceTitle,
   parseInvoiceRegistration,
   registrationFooter,
@@ -97,3 +98,20 @@ describe("serials and wording", () => {
     expect(invoiceTitle({ registration: { title: "Service Invoice" } }, market)).toBe("Service Invoice");
   });
 });
+
+describe("buyerTaxIdReminder (RR 7-2024 Sec. 3 B.4)", () => {
+  const rule = market.invoiceRegistration.buyerTaxId;
+  const reminder = rule.reminder;
+
+  it("reminds at ₱1,000 or more when the customer has no TIN", () => {
+    expect(buyerTaxIdReminder(rule, { currency: "PHP", totalMinor: 100_000, buyerHasTaxId: false })).toBe(reminder);
+    expect(buyerTaxIdReminder(rule, { currency: "PHP", totalMinor: 99_999, buyerHasTaxId: false })).toBeNull();
+    expect(buyerTaxIdReminder(rule, { currency: "PHP", totalMinor: 500_000, buyerHasTaxId: true })).toBeNull();
+  });
+
+  it("only applies in the rule's currency, and not at all outside invoice mode", () => {
+    expect(buyerTaxIdReminder(rule, { currency: "USD", totalMinor: 500_000, buyerHasTaxId: false })).toBeNull();
+    expect(buyerTaxIdReminder(null, { currency: "PHP", totalMinor: 500_000, buyerHasTaxId: false })).toBeNull();
+  });
+});
+

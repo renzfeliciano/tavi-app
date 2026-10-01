@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { MarketProfile } from "@/config/markets";
 import { type CalendarDate, compareDates, formatCalendarDate, isCalendarDate } from "@/shared/dates/calendar";
 import { tooLong } from "@/shared/validation/messages";
+import type { SalesBreakdown } from "./sales-breakdown";
 
 // Invoice mode (D13, D14, proposal §B.7, 1.12): a business that has
 // registered its invoicing system with the tax authority (PH: the RDO's
@@ -20,8 +21,12 @@ export type InvoiceRegistration = {
   title: string;
 };
 
-/** What an issued registered invoice keeps: the registration as printed, and its serial. */
-export type InvoiceRegistrationSnapshot = InvoiceRegistration & { serial: number };
+/**
+ * What an issued registered invoice keeps: the registration as printed, its
+ * serial and its sales breakdown (B.13–B.17), so later changes to the
+ * registration or to the business's tax status never alter it.
+ */
+export type InvoiceRegistrationSnapshot = InvoiceRegistration & { serial: number; sales?: SalesBreakdown };
 
 export type InvoiceRegistrationResult =
   | { ok: true; registration: InvoiceRegistration }
@@ -112,3 +117,20 @@ export function invoiceTitle(
 ): string {
   return invoice.registration?.title ?? market.documents.invoice.singular;
 }
+
+type BuyerTaxIdRule = NonNullable<MarketProfile["invoiceRegistration"]>["buyerTaxId"];
+
+/**
+ * The reminder to add the buyer's tax ID before sending a registered invoice
+ * at or above the market's threshold (PH: ₱1,000 to a VAT-registered buyer,
+ * RR 7-2024 Sec. 3 B.4), or null. Only a reminder: TAVI can't tell whether a
+ * buyer is VAT-registered, and sales to consumers don't need it.
+ */
+export function buyerTaxIdReminder(
+  rule: BuyerTaxIdRule | null,
+  invoice: { currency: string; totalMinor: number; buyerHasTaxId: boolean },
+): string | null {
+  if (!rule || invoice.buyerHasTaxId || invoice.currency !== rule.currency) return null;
+  return invoice.totalMinor >= rule.thresholdMinor ? rule.reminder : null;
+}
+

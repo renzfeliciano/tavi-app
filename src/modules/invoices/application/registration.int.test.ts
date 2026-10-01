@@ -9,7 +9,7 @@ const market = MARKETS.PH;
 const form = { number: "0412-123-00045", issuedOn: "2026-09-15", seriesStart: "1", seriesEnd: "3", title: "Service Invoice" };
 
 async function actorFor(role: Role = "owner"): Promise<OrgActor> {
-  const org = await createTestOrganization(testDb(), { name: "Santos Aircon" });
+  const org = await createTestOrganization(testDb(), { name: "Santos Aircon", taxRegistration: "vat" });
   const user = await createTestUser(testDb(), { email: `${crypto.randomUUID()}@example.com` });
   await addTestMembership(testDb(), { organizationId: org.id, userId: user.id, role });
   return { organizationId: org.id, userId: user.id, role };
@@ -94,6 +94,16 @@ describe("invoice registration", () => {
     await save(actor);
     expect(await claim(actor)).toMatchObject({ serial: 2 });
     expect((await listAllAuditEvents(testDb())).map((e) => e.action)).toContain("invoice.registration_turned_off");
+  });
+
+  it("needs the business's tax registration first, since invoices print it", async () => {
+    const org = await createTestOrganization(testDb());
+    const user = await createTestUser(testDb(), { email: `${crypto.randomUUID()}@example.com` });
+    await addTestMembership(testDb(), { organizationId: org.id, userId: user.id, role: "owner" });
+    expect(await save({ organizationId: org.id, userId: user.id, role: "owner" })).toEqual({
+      ok: false,
+      errors: { form: "First set how you're registered for tax in Business profile. Registered invoices print it." },
+    });
   });
 
   it("keeps each business's registration to itself", async () => {

@@ -64,7 +64,14 @@ export type MarketProfile = {
    * TIN on every document (PH: "VAT Reg TIN 123-456-789-00000", RR 7-2024
    * Sec. 6 B.2); only statuses with `suggestsTaxes` see the suggested rates.
    */
-  taxRegistrations: readonly { code: string; label: string; statement: string; suggestsTaxes: boolean }[];
+  taxRegistrations: readonly {
+    code: string;
+    label: string;
+    statement: string;
+    suggestsTaxes: boolean;
+    /** How a registered invoice from this seller breaks down its sales (B.13–B.17). */
+    invoiceSales: "vat" | "percentage_tax" | "exempt";
+  }[];
   /** Where a business finds its tax registration status. */
   taxRegistrationHint: string;
   /**
@@ -84,6 +91,25 @@ export type MarketProfile = {
     titles: readonly string[];
     /** Printed at the foot of each registered invoice: {number} {date} {start} {end}. */
     footer: string;
+    /** How a registered invoice names its sales breakdown (PH: RR 7-2024 Sec. 6 B.13–B.17). */
+    sales: {
+      vatable: string;
+      vat: string;
+      zeroRated: string;
+      exempt: string;
+      percentageTax: string;
+      /** Printed alone by sellers exempt from VAT and percentage tax (B.16). */
+      exemptSeller: string;
+      /** Shown in a line's tax column (B.14). */
+      zeroRatedLine: string;
+      exemptLine: string;
+    };
+    /**
+     * When the buyer's tax ID must be on the invoice (PH: sales of ₱1,000 or
+     * more to a VAT-registered buyer, RR 7-2024 Sec. 3 B.4). TAVI can't know
+     * whether a buyer is VAT-registered, so it reminds rather than blocks.
+     */
+    buyerTaxId: { currency: string; thresholdMinor: number; reminder: string };
   } | null;
   /** Printed in bold on documents that aren't registered invoices (PH: RR 7-2024 Sec. 6 B.15), or null. */
   supplementaryDocumentNotice: string | null;
@@ -142,18 +168,20 @@ export const MARKETS = {
       },
     },
     taxRegistrations: [
-      { code: "vat", label: "VAT-registered", statement: "VAT Reg TIN", suggestsTaxes: true },
+      { code: "vat", label: "VAT-registered", statement: "VAT Reg TIN", suggestsTaxes: true, invoiceSales: "vat" },
       {
         code: "non_vat",
         label: "Non-VAT, subject to percentage tax",
         statement: "Non-VAT Reg TIN",
         suggestsTaxes: false,
+        invoiceSales: "percentage_tax",
       },
       {
         code: "non_vat_exempt",
         label: "Non-VAT, exempt from VAT and percentage tax",
         statement: "Non-VAT Reg TIN",
         suggestsTaxes: false,
+        invoiceSales: "exempt",
       },
     ],
     taxRegistrationHint: "As on your BIR Certificate of Registration. Printed before your TIN.",
@@ -164,6 +192,21 @@ export const MARKETS = {
       seriesHint: "The serial numbers your RDO approved for your invoices.",
       titles: ["Invoice", "Service Invoice", "Sales Invoice", "Billing Invoice", "Commercial Invoice"],
       footer: "Acknowledgement Certificate / PTU No. {number} · Date issued {date} · Approved series {start} to {end}",
+      sales: {
+        vatable: "VATable Sales",
+        vat: "VAT Amount",
+        zeroRated: "Zero-Rated Sales",
+        exempt: "VAT-Exempt Sales",
+        percentageTax: "Sales Subject to Percentage Tax",
+        exemptSeller: "EXEMPT",
+        zeroRatedLine: "Zero-rated sale",
+        exemptLine: "VAT-exempt sale",
+      },
+      buyerTaxId: {
+        currency: "PHP",
+        thresholdMinor: 100_000,
+        reminder: "If this customer is VAT-registered, add their TIN to their details first: the BIR requires it on invoices of ₱1,000 or more.",
+      },
     },
     supplementaryDocumentNotice: "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.",
     units: { product: "pc", service: "hour" },

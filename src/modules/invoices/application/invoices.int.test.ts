@@ -12,6 +12,7 @@ import {
 } from "@/db/testing";
 import { MARKETS } from "@/config/markets";
 import type { OrgActor, Role } from "@/modules/authz";
+import { createTaxRate } from "@/modules/catalog";
 import { createCustomer } from "@/modules/customers";
 import { blankLine } from "@/modules/documents";
 import { DOCUMENT_EMAIL_LIMIT, documentEmailLimitMessage } from "@/modules/notifications";
@@ -34,8 +35,9 @@ const APP_URL = "https://tavi.example";
 const NOW = new Date("2026-10-01T02:00:00Z"); // 1 Oct in Manila
 const VERIFIED = { emailVerified: true };
 
-async function setup(role: Role = "owner") {
+async function setup(role: Role = "owner", org_: { taxRegistration?: string } = {}) {
   const org = await createTestOrganization(testDb(), {
+    ...org_,
     name: "Santos Aircon",
     email: "billing@santos.example",
     paymentInstructions: "GCash 0917 123 4567",
@@ -337,9 +339,10 @@ describe("invoice mode (registered invoices, 1.12)", () => {
   const registration = { number: "0412-123-00045", issuedOn: "2026-09-15", seriesStart: "1", seriesEnd: "2", title: "Service Invoice" };
   const register = (actor: OrgActor, raw = registration) =>
     saveInvoiceRegistration(actor, raw, { market: MARKETS.PH, now: NOW }, testDb());
+  const VAT = { taxRegistration: "vat" };
 
   it("numbers bills inside the approved series, titles them and keeps the registration as printed", async () => {
-    const { actor, customerId } = await setup();
+    const { actor, customerId } = await setup("owner", VAT);
     await register(actor);
     const first = await draftInvoice(actor, customerId);
     const result = await issueInvoice(actor, first.id, issueOptions({ email: { to: "juan@example.com", message: "" } }), testDb());
@@ -361,7 +364,7 @@ describe("invoice mode (registered invoices, 1.12)", () => {
   });
 
   it("pads serials to the series width, and refuses to issue past the end of the series", async () => {
-    const { actor, customerId } = await setup();
+    const { actor, customerId } = await setup("owner", VAT);
     await register(actor, { ...registration, seriesStart: "9", seriesEnd: "10" });
     const a = await draftInvoice(actor, customerId);
     const b = await draftInvoice(actor, customerId);
@@ -376,7 +379,7 @@ describe("invoice mode (registered invoices, 1.12)", () => {
   });
 
   it("locks a registered invoice once issued; void & duplicate is the correction (D14)", async () => {
-    const { actor, customerId } = await setup();
+    const { actor, customerId } = await setup("owner", VAT);
     await register(actor);
     const draft = await draftInvoice(actor, customerId);
     await issueInvoice(actor, draft.id, issueOptions(), testDb());
@@ -391,8 +394,40 @@ describe("invoice mode (registered invoices, 1.12)", () => {
     expect(await getInvoice(actor, draft.id, testDb())).toMatchObject({ status: "VOID", number: "1" });
   });
 
+  it("keeps the sales breakdown as printed, by the seller's tax registration (B.13–B.17)", async () => {
+    const { actor, customerId } = await setup("owner", VAT);
+    await register(actor);
+    const rate = await createTaxRate(actor, { name: "VAT", rate: "12" }, { locale: "en-PH" }, testDb());
+    if (!rate.ok) throw new Error("rate");
+    const vatRate = rate.taxRate.id;
+    const draft = await draftInvoice(actor, customerId, {
+      lines: [
+        { ...blankLine(), description: "Aircon cleaning", quantity: "1", unitLabel: "unit", unitPrice: "1,000", taxRateId: vatRate },
+        { ...blankLine(), description: "Parts (exempt)", quantity: "1", unitLabel: "pc", unitPrice: "200" },
+      ],
+    });
+    await issueInvoice(actor, draft.id, issueOptions(), testDb());
+    expect((await getInvoice(actor, draft.id, testDb()))?.registration?.sales).toEqual({
+      kind: "vat",
+      vatableMinor: 89286,
+      vatMinor: 10714,
+      zeroRatedMinor: 0,
+      exemptMinor: 20000,
+      lines: ["vatable", "exempt"],
+    });
+
+    const other = await setup("owner", { taxRegistration: "non_vat" });
+    await register(other.actor);
+    const statement = await draftInvoice(other.actor, other.customerId);
+    await issueInvoice(other.actor, statement.id, issueOptions(), testDb());
+    expect((await getInvoice(other.actor, statement.id, testDb()))?.registration?.sales).toEqual({
+      kind: "percentage_tax",
+      amountMinor: 300000,
+    });
+  });
+
   it("leaves billing statements as they were, and returns to them when invoice mode is off", async () => {
-    const { actor, customerId } = await setup();
+    const { actor, customerId } = await setup("owner", VAT);
     const statement = await draftInvoice(actor, customerId);
     await issueInvoice(actor, statement.id, issueOptions(), testDb());
     await register(actor);

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AsyncCombobox } from "@/components/async-combobox";
+import { buyerTaxIdReminder } from "@/modules/invoices/client";
 import { DocumentPaper } from "@/components/document/document-paper";
 import { buildDocumentView, type DocumentView, type DocumentViewLineInput } from "@/components/document/document-view";
 import { FormAlert } from "@/components/form-alert";
@@ -104,6 +105,8 @@ type DocumentEditorProps = {
   notice: string | null;
   /** Invoice mode: the registration line a registered invoice will carry at its foot. */
   registration?: string | null;
+  /** Invoice mode: when to remind about the buyer's tax ID (Sec. 3 B.4). */
+  buyerTaxIdRule?: { currency: string; thresholdMinor: number; reminder: string } | null;
   /** The market's usual unit for new free-text lines. */
   defaultUnit: string;
   customerCopy: CustomerFormCopy;
@@ -270,7 +273,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
       notice: props.notice,
       registration: props.registration ?? null,
     });
-    return { view, lineAmounts, total: formatMoney(amounts.totalMinor, state.currency, { locale }) };
+    return { view, lineAmounts, totalMinor: amounts.totalMinor, total: formatMoney(amounts.totalMinor, state.currency, { locale }) };
   }, [state, customer, locale, taxMode, ratesById, kind.endLabel, props.title, props.number, props.revision, props.business, props.notice, props.registration, props.paymentInstructions]);
 
   // Show a field's problem once the person has left it, or once the server reported it.
@@ -752,6 +755,11 @@ export function DocumentEditor(props: DocumentEditorProps) {
         businessName={props.business.name}
         shareChannels={props.shareChannels}
         emailVerified={props.emailVerified}
+        reminder={buyerTaxIdReminder(props.buyerTaxIdRule ?? null, {
+          currency: state.currency,
+          totalMinor: preview.totalMinor,
+          buyerHasTaxId: Boolean(customer?.party.taxId),
+        })}
         onSend={send}
       />
 

@@ -311,9 +311,17 @@ test("entering the BIR registration turns invoice mode on, with each problem exp
   await expect(page.getByRole("heading", { level: 2, name: "Off: new bills are billing statements" })).toBeVisible();
   expect((await registeredAxe(page)).violations).toEqual([]);
 
+  // Registered invoices print the seller's tax status, so it comes first.
+  await page.getByRole("button", { name: "Save and turn on invoice mode" }).click();
+  await expect(page.getByText("First set how you're registered for tax in Business profile.", { exact: false })).toBeVisible();
+  await page.goto("/settings/business");
+  await page.getByLabel("Tax registration").selectOption({ label: "VAT-registered" });
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(toast("Business profile saved.")).toBeVisible();
+
+  await page.goto("/settings/invoicing");
   await page.getByRole("button", { name: "Save and turn on invoice mode" }).click();
   await expect(page.getByText("Enter the Acknowledgement Certificate or PTU number.")).toBeVisible();
-
   await page.getByLabel("Acknowledgement Certificate or PTU number").fill("0412-123-00045");
   await page.getByLabel("Date issued").fill("2026-09-15");
   await page.getByLabel("Title on your bills").selectOption("Service Invoice");
@@ -350,6 +358,9 @@ test("the next bill is a Service Invoice numbered inside the series, with the re
   const paper = page.getByRole("article", { name: "Service Invoice 001" });
   await expect(paper).toContainText(FOOTER);
   await expect(paper).not.toContainText(NOTICE);
+  // A line with no tax is a VAT-exempt sale (RR 7-2024 Sec. 6 B.13–B.14).
+  await expect(paper.getByRole("region", { name: "Sales breakdown" })).toContainText("VAT-Exempt Sales₱1,500.00");
+  await expect(paper).toContainText("VAT-exempt sale");
   // Registered invoices are locked once issued (RMC 98-2026 Sec. IV.8, D14).
   await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Void and duplicate" })).toBeVisible();
