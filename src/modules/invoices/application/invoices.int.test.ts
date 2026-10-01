@@ -27,6 +27,8 @@ import {
 import { convertQuoteToInvoice } from "./conversion";
 import { deleteDraftInvoice, getInvoice, listInvoices, saveInvoiceDraft } from "./invoices";
 import { createInvoiceLink, getSharedInvoice, issueInvoice, recordSharedInvoiceOpen } from "./issuing";
+import { editIssuedInvoice, voidAndDuplicateInvoice } from "./corrections";
+import { saveInvoiceRegistration } from "./registration";
 
 const APP_URL = "https://tavi.example";
 const NOW = new Date("2026-10-01T02:00:00Z"); // 1 Oct in Manila
@@ -330,3 +332,72 @@ describe("customer links", () => {
     expect(link.ok && (await getSharedInvoice(tokenOf(link.url), testDb()))?.invoice.id).toBe(draft.id);
   });
 });
+
+describe("invoice mode (registered invoices, 1.12)", () => {
+  const registration = { number: "0412-123-00045", issuedOn: "2026-09-15", seriesStart: "1", seriesEnd: "2", title: "Service Invoice" };
+  const register = (actor: OrgActor, raw = registration) =>
+    saveInvoiceRegistration(actor, raw, { market: MARKETS.PH, now: NOW }, testDb());
+
+  it("numbers bills inside the approved series, titles them and keeps the registration as printed", async () => {
+    const { actor, customerId } = await setup();
+    await register(actor);
+    const first = await draftInvoice(actor, customerId);
+    const result = await issueInvoice(actor, first.id, issueOptions({ email: { to: "juan@example.com", message: "" } }), testDb());
+    expect(result).toMatchObject({ ok: true, number: "1" });
+    expect(await getInvoice(actor, first.id, testDb())).toMatchObject({
+      number: "1",
+      registration: { number: "0412-123-00045", title: "Service Invoice", seriesStart: 1, seriesEnd: 2, serial: 1 },
+    });
+    const [message] = await listAllOutboxMessages(testDb());
+    expect(message?.payload).toMatchObject({ subject: "Service Invoice 1 from Santos Aircon" });
+    expect((await listAllAuditEvents(testDb())).find((e) => e.action === "invoice.sent")?.metadata).toMatchObject({
+      title: "Service Invoice",
+      registeredSerial: 1,
+    });
+
+    // Changing the registration later never changes what was printed.
+    await register(actor, { ...registration, title: "Invoice", seriesEnd: "20" });
+    expect((await getInvoice(actor, first.id, testDb()))?.registration).toMatchObject({ title: "Service Invoice", seriesEnd: 2 });
+  });
+
+  it("pads serials to the series width, and refuses to issue past the end of the series", async () => {
+    const { actor, customerId } = await setup();
+    await register(actor, { ...registration, seriesStart: "9", seriesEnd: "10" });
+    const a = await draftInvoice(actor, customerId);
+    const b = await draftInvoice(actor, customerId);
+    const c = await draftInvoice(actor, customerId);
+    expect(await issueInvoice(actor, a.id, issueOptions(), testDb())).toMatchObject({ number: "09" });
+    expect(await issueInvoice(actor, b.id, issueOptions(), testDb())).toMatchObject({ number: "10" });
+    expect(await issueInvoice(actor, c.id, issueOptions(), testDb())).toEqual({
+      ok: false,
+      error: "Your approved series ends at serial 10, and it's used up. Enter your new series in Settings, then send this again.",
+    });
+    expect((await getInvoice(actor, c.id, testDb()))?.status).toBe("DRAFT");
+  });
+
+  it("locks a registered invoice once issued; void & duplicate is the correction (D14)", async () => {
+    const { actor, customerId } = await setup();
+    await register(actor);
+    const draft = await draftInvoice(actor, customerId);
+    await issueInvoice(actor, draft.id, issueOptions(), testDb());
+    expect(await editIssuedInvoice(actor, draft.id, draftInput(customerId, { notes: "Changed" }), { locale: "en-PH" }, testDb())).toEqual({
+      ok: false,
+      error: "A registered invoice can't be changed once issued. Use void & duplicate to issue a corrected one.",
+    });
+    const duplicated = await voidAndDuplicateInvoice(actor, draft.id, "Wrong amount", testDb());
+    expect(duplicated).toMatchObject({ ok: true });
+    if (!duplicated.ok) return;
+    expect(await issueInvoice(actor, duplicated.duplicateId, issueOptions(), testDb())).toMatchObject({ ok: true, number: "2" });
+    expect(await getInvoice(actor, draft.id, testDb())).toMatchObject({ status: "VOID", number: "1" });
+  });
+
+  it("leaves billing statements as they were, and returns to them when invoice mode is off", async () => {
+    const { actor, customerId } = await setup();
+    const statement = await draftInvoice(actor, customerId);
+    await issueInvoice(actor, statement.id, issueOptions(), testDb());
+    await register(actor);
+    expect(await getInvoice(actor, statement.id, testDb())).toMatchObject({ number: "INV-000001", registration: null });
+    expect(await editIssuedInvoice(actor, statement.id, draftInput(customerId, { notes: "Still editable" }), { locale: "en-PH" }, testDb())).toMatchObject({ ok: true });
+  });
+});
+

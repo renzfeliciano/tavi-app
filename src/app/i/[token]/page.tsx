@@ -15,7 +15,7 @@ import { Wordmark } from "@/components/brand/wordmark";
 import { marketFor } from "@/config/markets";
 import { readLogoForSharedDocument } from "@/modules/files";
 import { getCurrentSession } from "@/modules/identity";
-import { getSharedInvoice, recordSharedInvoiceOpen } from "@/modules/invoices";
+import { getSharedInvoice, recordSharedInvoiceOpen, invoiceTitle } from "@/modules/invoices";
 import { resolveMembership } from "@/modules/organizations";
 import { listPaymentsForSharedInvoice } from "@/modules/payments";
 import { consumeRateLimit } from "@/modules/system";
@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: PageProps<"/i/[token]">): Pro
   if (!shared) return { title: "Link not available", robots };
   const market = marketFor(shared.countryCode);
   return {
-    title: `${market.documents.invoice.singular} ${shared.invoice.number ?? ""} from ${shared.business.name}`,
+    title: `${invoiceTitle(shared.invoice, market)} ${shared.invoice.number ?? ""} from ${shared.business.name}`,
     robots,
   };
 }
@@ -81,7 +81,7 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-sm font-normal text-muted-foreground">
-          {market.documents.invoice.singular} from <span className="font-medium text-foreground">{business.name}</span>
+          {invoiceTitle(invoice, market)} from <span className="font-medium text-foreground">{business.name}</span>
         </h1>
         <div className="flex items-center gap-3">
           <StatusBadge kind="invoice" status={invoice.status} />
@@ -129,7 +129,7 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
       {closed && (
         <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
           {business.name} {invoice.status === "VOID" ? "voided" : "cancelled"} this{" "}
-          {market.documents.invoice.singular.toLowerCase()}. Nothing is owed on it. Contact them if you have questions.
+          {invoiceTitle(invoice, market).toLowerCase()}. Nothing is owed on it. Contact them if you have questions.
         </p>
       )}
 

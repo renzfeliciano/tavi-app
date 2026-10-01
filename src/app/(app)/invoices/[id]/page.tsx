@@ -7,7 +7,7 @@ import { DocumentPaper } from "@/components/document/document-paper";
 import { StatusBadge } from "@/components/status/status-badge";
 import { can } from "@/modules/authz";
 import { requireOrgContext } from "@/modules/identity";
-import { getInvoice, isPayable } from "@/modules/invoices";
+import { getInvoice, invoiceTitle, isPayable } from "@/modules/invoices";
 import { listInvoicePayments } from "@/modules/payments";
 import { todayIn } from "@/shared/dates/calendar";
 import { customerForDocumentAction } from "../../_documents/actions";
@@ -26,7 +26,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
   const { id } = await params;
   const invoice = await getInvoice(ctx, id);
   if (!invoice) notFound();
-  const { singular, plural } = ctx.market.documents.invoice;
+  const { plural } = ctx.market.documents.invoice;
   const fromQuote = invoice.sourceQuoteId ? (
     <Link href={`/quotes/${invoice.sourceQuoteId}`} className="underline underline-offset-4">
       From an approved quote
@@ -42,7 +42,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
       <>
         <BackLink href="/invoices">{plural}</BackLink>
         <PageHeader
-          title={`Draft ${singular.toLowerCase()}`}
+          title={`Draft ${editor.title.toLowerCase()}`}
           description={
             <span className="inline-flex flex-wrap items-center gap-2">
               <span>Changes save as you go.</span>
@@ -73,7 +73,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
     market: ctx.market,
     locale: ctx.locale,
   });
-  const name = `${singular} ${invoice.number ?? ""}`.trim();
+  const name = `${invoiceTitle(invoice, ctx.market)} ${invoice.number ?? ""}`.trim();
   const when = (date: Date | null) =>
     date ? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeZone: ctx.timezone }).format(date) : null;
   const sentOn = when(invoice.sentAt);
@@ -109,6 +109,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
             status={invoice.status}
             name={name}
             amountPaidMinor={invoice.amountPaidMinor}
+            registered={invoice.registration !== null}
             canVoid={can(ctx, "invoices.void")}
             shareChannels={ctx.market.shareChannels}
           />

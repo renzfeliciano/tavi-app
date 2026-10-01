@@ -293,3 +293,93 @@ test("the dashboard shows money, what needs attention, and recent activity", asy
   await expect(activity.getByRole("link", { name: "Payment REC-000002 voided on Billing statement INV-000002" })).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+// Invoice mode (D13, D14, 1.12), last because it changes this business for
+// good: it enters its BIR registration; the next bill is a registered invoice
+// with a serial inside the approved series, the registration at the foot, no
+// supplementary-document notice, and no way to edit it once sent.
+const NOTICE = "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.";
+const FOOTER = "Acknowledgement Certificate / PTU No. 0412-123-00045 · Date issued Sep 15, 2026 · Approved series 001 to 500";
+const registeredAxe = (p: Page) =>
+  new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).exclude("[data-sonner-toaster]").analyze();
+let registeredUrl: string;
+let registeredLink: string;
+
+test("entering the BIR registration turns invoice mode on, with each problem explained", async () => {
+  await page.goto("/settings");
+  await page.getByRole("link", { name: /Invoice registration/ }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Off: new bills are billing statements" })).toBeVisible();
+  expect((await registeredAxe(page)).violations).toEqual([]);
+
+  await page.getByRole("button", { name: "Save and turn on invoice mode" }).click();
+  await expect(page.getByText("Enter the Acknowledgement Certificate or PTU number.")).toBeVisible();
+
+  await page.getByLabel("Acknowledgement Certificate or PTU number").fill("0412-123-00045");
+  await page.getByLabel("Date issued").fill("2026-09-15");
+  await page.getByLabel("Title on your bills").selectOption("Service Invoice");
+  await page.getByLabel("First serial number").fill("1");
+  await page.getByLabel("Last serial number").fill("500");
+  await page.getByRole("button", { name: "Save and turn on invoice mode" }).click();
+  await expect(toast("Invoice registration saved. New bills are issued as “Service Invoice”.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "On: new bills are issued as “Service Invoice”" })).toBeVisible();
+  await expect(page.getByText(/next serial 001/)).toBeVisible();
+});
+
+test("the next bill is a Service Invoice numbered inside the series, with the registration at its foot", async () => {
+  await page.goto("/invoices/new");
+  await expect(page.getByRole("heading", { level: 1, name: "New service invoice" })).toBeVisible();
+  await page.getByRole("combobox", { name: "Customer", exact: true }).fill("Juan");
+  await page.getByRole("option", { name: /Juan Dela Cruz/ }).click();
+  await page.getByRole("button", { name: "Add a line" }).click();
+  await page.getByLabel("Line 1 description").fill("Aircon cleaning");
+  await page.getByLabel("Price (PHP)").first().fill("1,500");
+  await expect(page).toHaveURL(/\/invoices\/[0-9a-f-]{36}$/);
+  // The editor swaps the URL in place after the first save; the draft's own page names it too.
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Draft service invoice" })).toBeVisible();
+  registeredUrl = page.url();
+
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: /^Send / });
+  await dialog.getByLabel("Copy link").check();
+  await dialog.getByRole("button", { name: "Mark as sent and copy link" }).click();
+  await expect(toast("Service Invoice 001 is ready. Link copied.")).toBeVisible();
+  registeredLink = await page.evaluate(() => navigator.clipboard.readText());
+
+  await expect(page.getByRole("heading", { level: 1, name: "Service Invoice 001" })).toBeVisible();
+  const paper = page.getByRole("article", { name: "Service Invoice 001" });
+  await expect(paper).toContainText(FOOTER);
+  await expect(paper).not.toContainText(NOTICE);
+  // Registered invoices are locked once issued (RMC 98-2026 Sec. IV.8, D14).
+  await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Void and duplicate" })).toBeVisible();
+  expect((await registeredAxe(page)).violations).toEqual([]);
+
+  await page.goto(`${registeredUrl}/edit`);
+  await expect(page).toHaveURL(registeredUrl);
+});
+
+test("the customer sees the registered invoice and can download it", async ({ browser }) => {
+  const customer = await (await browser.newContext()).newPage();
+  await customer.goto(registeredLink);
+  const paper = customer.getByRole("article", { name: "Service Invoice 001" });
+  await expect(paper).toContainText(FOOTER);
+  await expect(paper).not.toContainText(NOTICE);
+  expect((await registeredAxe(customer)).violations).toEqual([]);
+  const pdf = await customer.context().request.get(`${registeredLink}/pdf`);
+  expect(pdf.headers()["content-type"]).toBe("application/pdf");
+  expect(pdf.headers()["content-disposition"]).toContain('filename="Service-Invoice-001.pdf"');
+  await customer.context().close();
+});
+
+test("turning invoice mode off asks first, and the next bill is a billing statement again", async () => {
+  await page.goto("/settings/invoicing");
+  await page.getByRole("button", { name: "Turn off invoice mode" }).click();
+  const dialog = page.getByRole("dialog", { name: "Turn off invoice mode?" });
+  await dialog.getByRole("button", { name: "Turn off", exact: true }).click();
+  await expect(toast("Invoice mode is off. New bills are billing statements again.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Off: new bills are billing statements" })).toBeVisible();
+
+  await page.goto("/invoices/new");
+  await expect(page.getByRole("heading", { level: 1, name: "New billing statement" })).toBeVisible();
+});

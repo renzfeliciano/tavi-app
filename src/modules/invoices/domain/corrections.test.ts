@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { tooLong } from "@/shared/validation/messages";
-import { INVOICE_REASON_MAX, issuedEditProblems, parseInvoiceReason } from "./corrections";
+import { canEditIssued, INVOICE_REASON_MAX, issuedEditProblems, parseInvoiceReason, REGISTERED_INVOICE_LOCKED } from "./corrections";
 
 describe("parseInvoiceReason", () => {
   it("needs a reason, trimmed", () => {
@@ -17,7 +17,20 @@ describe("parseInvoiceReason", () => {
 });
 
 describe("issuedEditProblems", () => {
-  const current = { customerId: "c1", currency: "PHP", amountPaidMinor: 0 };
+  const current = { customerId: "c1", currency: "PHP", amountPaidMinor: 0, registration: null };
+
+  it("never edits a registered invoice once issued (RMC 98-2026 Sec. IV.8, D14)", () => {
+    const registered = { ...current, registration: { title: "Invoice" } };
+    expect(issuedEditProblems(registered, { customerId: "c1", currency: "PHP", lineCount: 1 })).toEqual({
+      form: REGISTERED_INVOICE_LOCKED,
+    });
+    expect(REGISTERED_INVOICE_LOCKED).toBe(
+      "A registered invoice can't be changed once issued. Use void & duplicate to issue a corrected one.",
+    );
+    expect(canEditIssued(registered)).toBe(false);
+    expect(canEditIssued(current)).toBe(true);
+    expect(canEditIssued({ ...current, amountPaidMinor: 1 })).toBe(false);
+  });
 
   it("allows changing lines, dates, notes and terms of an unpaid invoice", () => {
     expect(issuedEditProblems(current, { customerId: "c1", currency: "PHP", lineCount: 2 })).toEqual({});

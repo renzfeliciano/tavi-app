@@ -15,12 +15,12 @@ export default async function NewInvoicePage() {
   const ctx = await requireOrgContext();
   const defaults = await newInvoiceDefaults(ctx);
   const editor = await editorContext(ctx, "invoice", defaults.currency);
-  const { singular, plural } = ctx.market.documents.invoice;
+  const { plural } = ctx.market.documents.invoice;
 
   return (
     <>
       <BackLink href="/invoices">{plural}</BackLink>
-      <PageHeader title={`New ${singular.toLowerCase()}`} description="Changes save as you go." />
+      <PageHeader title={`New ${editor.title.toLowerCase()}`} description="Changes save as you go." />
       <DocumentEditor
         {...editor}
         kind="invoice"

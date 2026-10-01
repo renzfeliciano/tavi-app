@@ -1,6 +1,6 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
-import { BuildingIcon, ChevronRightIcon, HashIcon, type LucideIcon, PercentIcon, ShieldCheckIcon } from "lucide-react";
+import { BuildingIcon, ChevronRightIcon, FileBadgeIcon, HashIcon, type LucideIcon, PercentIcon, ShieldCheckIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { documentWording, type MarketProfile } from "@/config/markets";
 import { requireOrgContext } from "@/modules/identity";
@@ -31,6 +31,16 @@ function sectionsFor(market: MarketProfile): Section[] {
       description: `How your ${documentWording(market).quoteAndInvoice} numbers look.`,
       icon: HashIcon,
     },
+    ...(market.invoiceRegistration
+      ? [
+          {
+            href: "/settings/invoicing" as Route,
+            title: "Invoice registration",
+            description: `Turn your ${market.documents.invoice.plural.toLowerCase()} into registered invoices once your RDO has registered your system.`,
+            icon: FileBadgeIcon,
+          },
+        ]
+      : []),
     {
       href: "/settings/security",
       title: "Security",

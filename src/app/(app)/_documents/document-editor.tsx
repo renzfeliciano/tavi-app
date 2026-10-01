@@ -102,6 +102,8 @@ type DocumentEditorProps = {
   paymentInstructions: string | null;
   /** Bold notice for supplementary documents (PH: not valid for claim of input tax), or null. */
   notice: string | null;
+  /** Invoice mode: the registration line a registered invoice will carry at its foot. */
+  registration?: string | null;
   /** The market's usual unit for new free-text lines. */
   defaultUnit: string;
   customerCopy: CustomerFormCopy;
@@ -266,9 +268,10 @@ export function DocumentEditor(props: DocumentEditorProps) {
       terms: state.terms.trim() || null,
       paymentInstructions: props.paymentInstructions,
       notice: props.notice,
+      registration: props.registration ?? null,
     });
     return { view, lineAmounts, total: formatMoney(amounts.totalMinor, state.currency, { locale }) };
-  }, [state, customer, locale, taxMode, ratesById, kind.endLabel, props.title, props.number, props.revision, props.business, props.notice, props.paymentInstructions]);
+  }, [state, customer, locale, taxMode, ratesById, kind.endLabel, props.title, props.number, props.revision, props.business, props.notice, props.registration, props.paymentInstructions]);
 
   // Show a field's problem once the person has left it, or once the server reported it.
   const visibleErrors = useMemo(() => {

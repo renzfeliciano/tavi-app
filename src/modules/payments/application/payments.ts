@@ -5,7 +5,7 @@ import { type Database, type Executor, getDb } from "@/db";
 import { recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import { allocateDocumentNumber } from "@/modules/documents";
-import { isPayable, lockInvoiceForPayment, settleInvoice } from "@/modules/invoices";
+import { isPayable, lockInvoiceForPayment, settleInvoice, invoiceTitle } from "@/modules/invoices";
 import {
   documentEmailLimitMessage,
   documentEmailsAllowed,
@@ -182,7 +182,7 @@ export async function recordPayment(
           businessEmail: profile.email,
           receiptTitle: market.documents.receipt.singular,
           receiptNumber,
-          documentName: `${market.documents.invoice.singular} ${invoice.number ?? ""}`.trim(),
+          documentName: `${invoiceTitle(invoice, market)} ${invoice.number ?? ""}`.trim(),
           received: money(input.amountMinor),
           withheld:
             input.withheldMinor > 0 && market.taxWithheld

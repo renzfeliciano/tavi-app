@@ -3,7 +3,7 @@ import { PORTAL_RATE_LIMIT } from "@/components/portal/portal-unavailable";
 import { AcknowledgementPdf } from "@/components/document/pdf/document-pdf";
 import { pdfResponse } from "@/components/document/pdf/pdf-response";
 import { marketFor } from "@/config/markets";
-import { getSharedInvoice } from "@/modules/invoices";
+import { getSharedInvoice, invoiceTitle } from "@/modules/invoices";
 import { listPaymentsForSharedInvoice } from "@/modules/payments";
 import { consumeRateLimit } from "@/modules/system";
 import { clientIp } from "@/shared/http/client-ip";
@@ -25,7 +25,7 @@ export async function GET(_request: Request, context: RouteContext<"/i/[token]/r
   if (!payment) return new Response("Not found", { status: 404 });
   const market = marketFor(shared.countryCode);
   const view = acknowledgementView(payment, {
-    invoiceName: `${market.documents.invoice.singular} ${shared.invoice.number ?? ""}`.trim(),
+    invoiceName: `${invoiceTitle(shared.invoice, market)} ${shared.invoice.number ?? ""}`.trim(),
     customer: shared.invoice.customerSnapshot,
     business: await pdfLetterhead(shared.organizationId, shared.business, market),
     market,

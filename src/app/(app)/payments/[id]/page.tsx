@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/app-shell/page-header";
 import { AcknowledgementPaper } from "@/components/document/acknowledgement-paper";
 import { buttonVariants } from "@/components/ui/button";
 import { requireOrgContext } from "@/modules/identity";
-import { getInvoice } from "@/modules/invoices";
+import { getInvoice, invoiceTitle } from "@/modules/invoices";
 import { getPayment } from "@/modules/payments";
 import { documentBusiness } from "../../_documents/editor-props";
 import { acknowledgementView } from "../_lib/acknowledgement-view";
@@ -22,7 +22,7 @@ export default async function PaymentPage({ params }: PageProps<"/payments/[id]"
   const invoice = await getInvoice(ctx, payment.invoiceId);
   if (!invoice) notFound();
 
-  const invoiceName = `${ctx.market.documents.invoice.singular} ${invoice.number ?? ""}`.trim();
+  const invoiceName = `${invoiceTitle(invoice, ctx.market)} ${invoice.number ?? ""}`.trim();
   const view = acknowledgementView(payment, {
     invoiceName,
     customer: invoice.customerSnapshot,

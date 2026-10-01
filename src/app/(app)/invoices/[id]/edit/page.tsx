@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { BackLink } from "@/components/app-shell/back-link";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { requireOrgContext } from "@/modules/identity";
-import { getInvoice, transitionInvoice } from "@/modules/invoices";
+import { getInvoice, transitionInvoice, canEditIssued, invoiceTitle } from "@/modules/invoices";
 import { customerForDocumentAction } from "../../../_documents/actions";
 import { DocumentEditor } from "../../../_documents/document-editor";
 import { editorContext } from "../../../_documents/editor-props";
@@ -25,13 +25,14 @@ export default async function EditInvoicePage({ params }: PageProps<"/invoices/[
   const { id } = await params;
   const invoice = await getInvoice(ctx, id);
   if (!invoice) notFound();
-  if (!transitionInvoice(invoice.status, "edit").ok || invoice.amountPaidMinor > 0) redirect(`/invoices/${invoice.id}`);
+  // Billing statements only: a registered invoice is locked once issued (D14).
+  if (!transitionInvoice(invoice.status, "edit").ok || !canEditIssued(invoice)) redirect(`/invoices/${invoice.id}`);
 
   const [editor, customer] = await Promise.all([
     editorContext(ctx, "invoice", invoice.currency),
     invoice.customerId ? customerForDocumentAction(invoice.customerId) : Promise.resolve(null),
   ]);
-  const name = `${ctx.market.documents.invoice.singular} ${invoice.number ?? ""}`.trim();
+  const name = `${invoiceTitle(invoice, ctx.market)} ${invoice.number ?? ""}`.trim();
 
   return (
     <>

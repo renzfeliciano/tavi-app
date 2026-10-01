@@ -28,9 +28,11 @@ import type { CustomerSnapshot } from "@/modules/quotes";
 import { formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { formatMoney } from "@/shared/money";
 import { invoiceLinkExpiresAt, issuedInvoiceStatus, readinessToIssue } from "../domain/issuing";
+import { formatSerial, invoiceTitle } from "../domain/registration";
 import { transitionInvoice } from "../domain/transitions";
 import { invoices } from "../schema";
 import { audit, headerColumns, type InvoiceDetail, loadHeader, loadLines } from "./invoices";
+import { claimRegisteredSerial } from "./registration";
 
 // Issuing an invoice and its customer link (§B.4): numbering, the customer
 // and payment-instruction snapshots, the link (and optional email), and
@@ -110,7 +112,14 @@ export async function issueInvoice(
   const outcome = await db.transaction(async (tx) => {
     const locked = await loadHeader(tx, actor, id, true);
     if (!locked || locked.status !== "DRAFT") return null;
-    const number = locked.number ?? (await allocateDocumentNumber(tx, actor.organizationId, "invoice")).number;
+    // Invoice mode (D13, 1.12): a registered invoice takes the next serial of
+    // the approved series instead of a billing-statement number.
+    const registered = await claimRegisteredSerial(tx, actor.organizationId);
+    if (registered && "exhausted" in registered) return registered;
+    const number = registered
+      ? formatSerial(registered.serial, registered.seriesEnd)
+      : (locked.number ?? (await allocateDocumentNumber(tx, actor.organizationId, "invoice")).number);
+    const title = invoiceTitle({ registration: registered }, market);
     const status = issuedInvoiceStatus(
       { totalMinor: locked.totalMinor, paidMinor: locked.amountPaidMinor, dueDate: locked.dueDate },
       today,
@@ -122,6 +131,7 @@ export async function issueInvoice(
         number,
         customerSnapshot: snapshot,
         paymentInstructions: profile.paymentInstructions,
+        registration: registered,
         sentAt: sql`now()`,
       })
       .where(eq(invoices.id, locked.id));
@@ -134,6 +144,8 @@ export async function issueInvoice(
     const url = linkUrl(appUrl, token);
     await audit(tx, actor, "invoice.sent", locked.id, {
       number,
+      title,
+      registeredSerial: registered?.serial ?? null,
       totalMinor: locked.totalMinor,
       currency: locked.currency,
       status,
@@ -146,13 +158,13 @@ export async function issueInvoice(
           to: emailTo,
           businessName: profile.name,
           businessEmail: profile.email,
-          title: market.documents.invoice.singular,
+          title,
           number,
           total: formatMoney(locked.totalMinor, locked.currency, { locale: settings.locale }),
           dueLine: `Due ${formatCalendarDate(locked.dueDate, settings.locale)}`,
           message: email.message,
           url,
-          action: `View the ${market.documents.invoice.singular.toLowerCase()}`,
+          action: `View the ${title.toLowerCase()}`,
         }),
         { organizationId: actor.organizationId },
       );
@@ -161,6 +173,12 @@ export async function issueInvoice(
   });
 
   if (!outcome) return { ok: false, error: ALREADY_SENT };
+  if ("exhausted" in outcome) {
+    return {
+      ok: false,
+      error: `Your approved series ends at serial ${outcome.seriesEnd}, and it's used up. Enter your new series in Settings, then send this again.`,
+    };
+  }
   return { ok: true, ...outcome };
 }
 

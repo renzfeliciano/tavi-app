@@ -15,7 +15,7 @@ const lines: DocumentViewLineInput[] = [
   },
 ];
 
-function view(taxMode: TaxMode) {
+function view(taxMode: TaxMode, overrides: { notice?: string | null; registration?: string | null } = {}) {
   return buildDocumentView({
     title: "Quotation",
     number: null,
@@ -31,6 +31,7 @@ function view(taxMode: TaxMode) {
     notes: null,
     terms: null,
     notice: "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.",
+    ...overrides,
   });
 }
 
@@ -54,5 +55,11 @@ describe("buildDocumentView", () => {
     expect(v.taxNotes).toEqual(["Includes VAT 12%: ₱369.64"]);
     expect(v.dates).toEqual([{ label: "Date", value: "Oct 1, 2026" }]);
     expect(v.notice).toBe("THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.");
+    expect(v.registration).toBeNull();
+  });
+
+  it("carries a registered invoice's registration line to the foot", () => {
+    const v = view("inclusive", { notice: null, registration: "Acknowledgement Certificate / PTU No. 1" });
+    expect(v).toMatchObject({ notice: null, registration: "Acknowledgement Certificate / PTU No. 1" });
   });
 });

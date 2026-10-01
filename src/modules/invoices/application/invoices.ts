@@ -22,6 +22,7 @@ import { type InvoiceDraft, parseInvoiceDraft } from "../domain/invoice-draft";
 import type { InvoiceStatus } from "../domain/status";
 import { transitionInvoice } from "../domain/transitions";
 import { invoiceLines, invoices } from "../schema";
+import type { InvoiceRegistrationSnapshot } from "../domain/registration";
 
 // Invoice drafts (§B.4): created blank or from an approved quote, autosaved
 // like quotes, deleted only while never issued.
@@ -44,6 +45,8 @@ export type InvoiceHeader = {
   terms: string | null;
   customerSnapshot: CustomerSnapshot | null;
   paymentInstructions: string | null;
+  /** Set on registered invoices (invoice mode, 1.12); null on billing statements. */
+  registration: InvoiceRegistrationSnapshot | null;
   subtotalMinor: number;
   discountTotalMinor: number;
   taxTotalMinor: number;
@@ -126,6 +129,7 @@ export const headerColumns = {
   terms: invoices.terms,
   customerSnapshot: invoices.customerSnapshot,
   paymentInstructions: invoices.paymentInstructions,
+  registration: invoices.registration,
   subtotalMinor: invoices.subtotalMinor,
   discountTotalMinor: invoices.discountTotalMinor,
   taxTotalMinor: invoices.taxTotalMinor,

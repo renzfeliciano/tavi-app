@@ -30,6 +30,8 @@ type SentInvoiceActionsProps = {
   /** e.g. "Billing statement INV-000001". */
   name: string;
   amountPaidMinor: number;
+  /** A registered invoice can't be edited once issued (D14); void & duplicate is the correction. */
+  registered: boolean;
   /** Void and cancel need the invoices.void capability (checked again on the server). */
   canVoid: boolean;
   shareChannels: string;
@@ -63,7 +65,7 @@ const COPY: Record<Correction, { title: string; body: string; button: string; pe
  * until a payment (D7); void, cancel and void & duplicate ask for a reason,
  * because they can't be undone.
  */
-export function SentInvoiceActions({ id, status, name, amountPaidMinor, canVoid, shareChannels }: SentInvoiceActionsProps) {
+export function SentInvoiceActions({ id, status, name, amountPaidMinor, registered, canVoid, shareChannels }: SentInvoiceActionsProps) {
   const router = useRouter();
   const [linking, setLinking] = useState(false);
   const [open, setOpen] = useState<Correction | null>(null);
@@ -73,7 +75,7 @@ export function SentInvoiceActions({ id, status, name, amountPaidMinor, canVoid,
   const reasonId = useId();
 
   const unpaid = amountPaidMinor === 0;
-  const canEdit = transitionInvoice(status, "edit").ok && unpaid;
+  const canEdit = transitionInvoice(status, "edit").ok && unpaid && !registered;
   const canClose = canVoid && transitionInvoice(status, "void").ok && unpaid;
   const closed = status === "VOID" || status === "CANCELLED";
 

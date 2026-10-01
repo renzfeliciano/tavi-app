@@ -20,6 +20,7 @@ import { customers } from "@/modules/customers/schema";
 import { users } from "@/modules/identity/schema";
 import { organizations } from "@/modules/organizations/schema";
 import { type CustomerSnapshot, quotes } from "@/modules/quotes/schema";
+import type { InvoiceRegistrationSnapshot } from "./domain/registration";
 import { INVOICE_STATUSES } from "./domain/status";
 
 const money = (name: string) => bigint(name, { mode: "number" }).notNull().default(0);
@@ -58,6 +59,12 @@ export const invoices = pgTable(
     amountPaidMinor: money("amount_paid_minor"),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     viewedAt: timestamp("viewed_at", { withTimezone: true }),
+    /**
+     * Set when issued as a registered invoice (invoice mode, 1.12): the
+     * registration as printed and the serial. Null for billing statements.
+     * A registered invoice can't be edited once issued (D14).
+     */
+    registration: jsonb("registration").$type<InvoiceRegistrationSnapshot>(),
     /** Last edit after sending (D7); the customer's page shows "Updated …". */
     editedAt: timestamp("edited_at", { withTimezone: true }),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
@@ -153,3 +160,32 @@ export const invoiceLines = pgTable(
     ),
   ],
 );
+
+// A business's registered invoicing system (invoice mode, D13, 1.12): the
+// certificate, its approved serial range and the next serial to issue. One
+// row per business; turning invoice mode off keeps the row (and the counter),
+// so serials are never reissued. The counter moves inside the issuing
+// transaction, under a row lock, so serials stay gapless like §B.6 numbers.
+export const invoiceRegistrations = pgTable(
+  "invoice_registrations",
+  {
+    organizationId: uuid("organization_id")
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    number: text("number").notNull(),
+    issuedOn: date("issued_on", { mode: "string" }).notNull(),
+    seriesStart: bigint("series_start", { mode: "number" }).notNull(),
+    seriesEnd: bigint("series_end", { mode: "number" }).notNull(),
+    /** The serial the next registered invoice gets; seriesEnd + 1 when the series is used up. */
+    nextSerial: bigint("next_serial", { mode: "number" }).notNull(),
+    title: text("title").notNull(),
+    /** Invoice mode is on while this is null. */
+    turnedOffAt: timestamp("turned_off_at", { withTimezone: true }),
+    ...timestamps(),
+  },
+  (t) => [
+    check("invoice_registrations_series", sql`${t.seriesStart} >= 1 and ${t.seriesEnd} >= ${t.seriesStart}`),
+    check("invoice_registrations_next_serial", sql`${t.nextSerial} between ${t.seriesStart} and ${t.seriesEnd} + 1`),
+  ],
+);
+

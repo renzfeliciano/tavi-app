@@ -194,6 +194,9 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
       {view.notice && (
         <p className="mt-8 border-t border-border pt-4 text-center text-sm font-bold tracking-wide">{view.notice}</p>
       )}
+      {view.registration && (
+        <p className="mt-8 border-t border-border pt-4 text-center text-xs text-muted-foreground">{view.registration}</p>
+      )}
     </article>
   );
 }

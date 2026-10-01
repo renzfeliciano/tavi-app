@@ -51,3 +51,22 @@ export {
 export { INVOICE_STATUSES, type InvoiceStatus } from "./domain/status";
 export { EDITABLE_INVOICE_STATUSES, INVOICE_EVENTS, type InvoiceEvent, transitionInvoice } from "./domain/transitions";
 export { INVOICE_REASON_MAX } from "./domain/corrections";
+export {
+  claimRegisteredSerial,
+  getInvoiceRegistration,
+  type InvoiceRegistrationView,
+  invoiceModeOn,
+  type SaveInvoiceRegistrationResult,
+  saveInvoiceRegistration,
+  turnOffInvoiceRegistration,
+} from "./application/registration";
+export {
+  formatSerial,
+  INVOICE_REGISTRATION_LIMITS,
+  type InvoiceRegistration,
+  type InvoiceRegistrationSnapshot,
+  invoiceTitle,
+  parseInvoiceRegistration,
+  registrationFooter,
+} from "./domain/registration";
+export { canEditIssued, REGISTERED_INVOICE_LOCKED } from "./domain/corrections";

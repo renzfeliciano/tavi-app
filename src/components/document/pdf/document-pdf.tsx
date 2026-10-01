@@ -50,6 +50,7 @@ const s = StyleSheet.create({
   grand: { borderTopWidth: 1, borderTopColor: C.ink, marginTop: 4, paddingTop: 4, fontSize: 12, fontWeight: 600 },
   box: { marginTop: 18, padding: 10, borderWidth: 1, borderColor: "#e2e1ea", borderRadius: 4 },
   notice: { marginTop: 18, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#e2e1ea", textAlign: "center", fontWeight: 600 },
+  registration: { marginTop: 18, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#e2e1ea", textAlign: "center", fontSize: 8, color: C.muted },
   footer: { position: "absolute", bottom: 20, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between", fontSize: 8, color: C.muted },
 });
 
@@ -189,6 +190,7 @@ export function DocumentPdf({ view }: { view: DocumentView }) {
           </View>
         )}
         {view.notice && <Text style={s.notice}>{view.notice}</Text>}
+        {view.registration && <Text style={s.registration}>{view.registration}</Text>}
         <PageFooter label={name} />
       </Page>
     </Document>

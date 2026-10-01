@@ -67,6 +67,24 @@ export type MarketProfile = {
   taxRegistrations: readonly { code: string; label: string; statement: string; suggestsTaxes: boolean }[];
   /** Where a business finds its tax registration status. */
   taxRegistrationHint: string;
+  /**
+   * Registering a business's invoicing system with the tax authority, or null
+   * where TAVI bills are never registered invoices. PH: the RDO's
+   * Acknowledgement Certificate / Permit to Use for a computerized system,
+   * with its approved serial range (RR 7-2024 Sec. 6 B.21, D13). Once a
+   * business enters it, its bills are titled invoices and numbered inside
+   * the series (proposal §B.7, 1.12).
+   */
+  invoiceRegistration: {
+    numberLabel: string;
+    numberHint: string;
+    dateLabel: string;
+    seriesHint: string;
+    /** Titles the business may print (A.3: the word "Invoice", prominent). */
+    titles: readonly string[];
+    /** Printed at the foot of each registered invoice: {number} {date} {start} {end}. */
+    footer: string;
+  } | null;
   /** Printed in bold on documents that aren't registered invoices (PH: RR 7-2024 Sec. 6 B.15), or null. */
   supplementaryDocumentNotice: string | null;
   /** Default unit names for new catalog items, in the market's language. */
@@ -139,6 +157,14 @@ export const MARKETS = {
       },
     ],
     taxRegistrationHint: "As on your BIR Certificate of Registration. Printed before your TIN.",
+    invoiceRegistration: {
+      numberLabel: "Acknowledgement Certificate or PTU number",
+      numberHint: "Issued by your RDO when it registered your computerized invoicing system.",
+      dateLabel: "Date issued",
+      seriesHint: "The serial numbers your RDO approved for your invoices.",
+      titles: ["Invoice", "Service Invoice", "Sales Invoice", "Billing Invoice", "Commercial Invoice"],
+      footer: "Acknowledgement Certificate / PTU No. {number} · Date issued {date} · Approved series {start} to {end}",
+    },
     supplementaryDocumentNotice: "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.",
     units: { product: "pc", service: "hour" },
     quoteValidityDays: 30,

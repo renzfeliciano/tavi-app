@@ -32,6 +32,9 @@ describe("describeActivity", () => {
 
   it("describes invoices and payments", () => {
     expect(describeActivity(event("invoice.sent", { number: "INV-000003" }), market)?.text).toBe("Billing statement INV-000003 sent");
+    expect(describeActivity(event("invoice.sent", { number: "0007", title: "Service Invoice" }), market)?.text).toBe(
+      "Service Invoice 0007 sent",
+    );
     expect(describeActivity(event("invoice.voided", { number: "INV-000003" }), market)?.text).toBe(
       "Billing statement INV-000003 voided",
     );

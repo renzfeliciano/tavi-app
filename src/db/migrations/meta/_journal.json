@@ -120,6 +120,13 @@
       "when": 1790872190048,
       "tag": "0016_outbox_organization_created_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790877861671,
+      "tag": "0017_invoice_registrations",
+      "breakpoints": true
     }
   ]
 }

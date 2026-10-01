@@ -45,6 +45,8 @@ export type DocumentView = {
   paymentInstructions: string | null;
   /** Printed in bold at the foot, e.g. "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX." */
   notice: string | null;
+  /** Registered invoices only: the system registration at the foot (RR 7-2024 Sec. 6 B.21). */
+  registration?: string | null;
 };
 
 export type DocumentViewLineInput = {
@@ -72,6 +74,7 @@ export type DocumentViewInput = {
   terms: string | null;
   paymentInstructions?: string | null;
   notice: string | null;
+  registration?: string | null;
 };
 
 export function buildDocumentView(input: DocumentViewInput): DocumentView {
@@ -120,5 +123,6 @@ export function buildDocumentView(input: DocumentViewInput): DocumentView {
     terms: input.terms,
     paymentInstructions: input.paymentInstructions ?? null,
     notice: input.notice,
+    registration: input.registration ?? null,
   };
 }

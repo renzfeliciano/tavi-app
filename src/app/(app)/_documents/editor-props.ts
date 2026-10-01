@@ -5,6 +5,7 @@ import { currencyOptions } from "@/config/currencies";
 import { formatRate, listTaxRates } from "@/modules/catalog";
 import { getOrganizationLogo } from "@/modules/files";
 import type { OrgContext } from "@/modules/identity";
+import { getInvoiceRegistration, registrationFooter } from "@/modules/invoices";
 import { getBusinessProfile } from "@/modules/organizations";
 import { customerFormCopy } from "../customers/_components/customer-copy";
 import type { DocumentKind, TaxRateChoice } from "./editor-types";
@@ -21,7 +22,14 @@ export async function documentBusiness(ctx: OrgContext): Promise<DocumentView["b
 
 /** Everything the editor needs besides the document itself. */
 export async function editorContext(ctx: OrgContext, kind: DocumentKind, currency: string) {
-  const [business, rates, profile] = await Promise.all([documentBusiness(ctx), listTaxRates(ctx), getBusinessProfile(ctx)]);
+  const [business, rates, profile, registered] = await Promise.all([
+    documentBusiness(ctx),
+    listTaxRates(ctx),
+    getBusinessProfile(ctx),
+    kind === "invoice" ? getInvoiceRegistration(ctx) : Promise.resolve(null),
+  ]);
+  // Invoice mode (1.12): new bills will be issued as registered invoices.
+  const registration = registered?.active ? registered : null;
   const taxRates: TaxRateChoice[] = rates.map((rate) => ({
     id: rate.id,
     name: rate.name,
@@ -35,10 +43,13 @@ export async function editorContext(ctx: OrgContext, kind: DocumentKind, currenc
     defaultTaxRateId: rates.find((r) => r.isDefault && r.archivedAt === null)?.id ?? null,
     currencies: currencyOptions({ locale: ctx.locale, first: currency }),
     customerCopy: customerFormCopy(ctx),
-    title: ctx.market.documents[kind].singular,
+    title: registration?.title ?? ctx.market.documents[kind].singular,
     // Quotations and billing statements are supplementary documents (RR 7-2024
-    // Sec. 6 B.15, D13). Registered invoices (invoice mode, 1.7c) drop it.
-    notice: ctx.market.supplementaryDocumentNotice,
+    // Sec. 6 B.15, D13); registered invoices print their registration instead (B.21).
+    notice: registration ? null : ctx.market.supplementaryDocumentNotice,
+    registration: registration
+      ? registrationFooter({ ...registration, serial: registration.nextSerial }, ctx.market, ctx.locale)
+      : null,
     // Invoices show how to pay; the instructions are snapshotted when sent.
     paymentInstructions: kind === "invoice" ? profile.paymentInstructions : null,
     defaultUnit: ctx.market.units.service,

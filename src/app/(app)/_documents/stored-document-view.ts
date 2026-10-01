@@ -47,6 +47,7 @@ export function storedDocumentView(
     market: MarketProfile;
     locale: string;
     notice: string | null;
+    registration?: string | null;
     paymentInstructions?: string | null;
   },
 ): DocumentView {
@@ -84,5 +85,6 @@ export function storedDocumentView(
     terms: doc.terms,
     paymentInstructions: options.paymentInstructions ?? null,
     notice: options.notice,
+    registration: options.registration ?? null,
   });
 }

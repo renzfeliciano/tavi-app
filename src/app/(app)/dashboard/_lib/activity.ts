@@ -36,7 +36,8 @@ export function describeActivity(event: ActivityEvent, market: Pick<MarketProfil
     case "quote.cancelled":
       return { text: `${quote} cancelled`, href: at("/quotes") };
     case "invoice.sent":
-      return { text: `${invoice(m.number)} sent`, href: at("/invoices") };
+      // Registered invoices (1.12) carry their printed title in the audit.
+      return { text: `${str(m.title) ? `${str(m.title)} ${str(m.number) ?? ""}`.trim() : invoice(m.number)} sent`, href: at("/invoices") };
     case "invoice.viewed":
       return { text: `Customer opened ${invoice(m.number)}`, href: at("/invoices") };
     case "invoice.edited":
