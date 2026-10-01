@@ -27,6 +27,12 @@ export {
   sendQuote,
 } from "./application/sending";
 export {
+  type AttentionQuote,
+  type QuotesAttention,
+  quoteProgress,
+  quotesNeedingAttention,
+} from "./application/attention";
+export {
   type ApprovedQuote,
   clearQuoteConversion,
   lockApprovedQuoteForConversion,

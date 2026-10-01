@@ -59,6 +59,12 @@ async function sendByLink(): Promise<string> {
 }
 
 test("an approved quote becomes a draft billing statement with the same items", async ({ browser }) => {
+  // First run: the checklist ticks off what's done from the business's own data.
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { level: 1, name: "Welcome to Tavi" })).toBeVisible();
+  await expect(page.getByText("Step 1 (done):")).toBeAttached();
+  await expect(page.getByRole("link", { name: "New quote" })).toBeVisible();
+
   await page.goto("/quotes/new");
   await fillDraft("1,500");
   await expect(page).toHaveURL(/\/quotes\/[0-9a-f-]{36}$/);
@@ -270,4 +276,17 @@ test("PDFs download for the business and, through the link, for the customer", a
   expect((await response.body()).subarray(0, 5).toString()).toBe("%PDF-");
   expect((await customer.request.get(`${link.replace(/.{4}$/, "xxxx")}/pdf`)).status()).toBe(404);
   await customer.close();
+});
+
+test("the dashboard shows money, what needs attention, and recent activity", async () => {
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
+  const money = page.getByRole("region", { name: "Money" });
+  await expect(money.getByText("Outstanding")).toBeVisible();
+  await expect(money).toContainText("₱1,500.00");
+  await expect(money.getByText("Paid in the last 30 days")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Needs your attention" })).toBeVisible();
+  const activity = page.getByRole("heading", { name: "Recent activity" }).locator("..");
+  await expect(activity.getByRole("link", { name: "Payment REC-000002 voided on Billing statement INV-000002" })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

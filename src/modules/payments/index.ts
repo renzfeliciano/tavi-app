@@ -4,6 +4,7 @@ export {
   listPayments,
   listPaymentsForSharedInvoice,
   PAYMENT_PAGE_SIZE,
+  paymentsReceivedSince,
   type Payment,
   type PaymentList,
   type RecordPaymentOptions,

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { MarketProfile, PaymentMethod } from "@/config/markets";
 import { type Database, type Executor, getDb } from "@/db";
@@ -320,4 +320,22 @@ export async function listPaymentsForSharedInvoice(
     .from(payments)
     .where(and(eq(payments.organizationId, organizationId), eq(payments.invoiceId, invoiceId), isNull(payments.voidedAt)))
     .orderBy(payments.paidOn, payments.createdAt);
+}
+
+/** Money received (active payments, not tax withheld) on or after a date, per currency: the money strip (§G.2). */
+export async function paymentsReceivedSince(
+  actor: OrgActor,
+  since: CalendarDate,
+  db: Database = getDb(),
+): Promise<{ currency: string; receivedMinor: number }[]> {
+  assertCan(actor, "payments.read");
+  return db
+    .select({
+      currency: payments.currency,
+      receivedMinor: sql<number>`coalesce(sum(${payments.amountMinor}), 0)::bigint`.mapWith(Number),
+    })
+    .from(payments)
+    .where(and(eq(payments.organizationId, actor.organizationId), isNull(payments.voidedAt), gte(payments.paidOn, since)))
+    .groupBy(payments.currency)
+    .orderBy(payments.currency);
 }
