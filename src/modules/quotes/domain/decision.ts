@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { type CalendarDate, compareDates } from "@/shared/dates/calendar";
 import { tooLong } from "@/shared/validation/messages";
 import type { QuoteStatus } from "./status";
@@ -16,9 +17,21 @@ export type QuoteDecision = { kind: "approve"; name: string } | { kind: "reject"
 
 export type QuoteDecisionResult =
   | { ok: true; decision: QuoteDecision }
-  | { ok: false; errors: Record<string, string> };
+  | { ok: false; errors: Record<string, string> }
+  | { ok: false; malformed: true };
 
-export function parseQuoteDecision(raw: RawQuoteDecision): QuoteDecisionResult {
+// The shape the quote page posts. Anyone with the link can post anything, so
+// it's checked here rather than assumed (§I); the terms box counts only when
+// it is literally `true`.
+const rawDecisionSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("approve"), name: z.string(), accepted: z.boolean() }),
+  z.object({ kind: z.literal("reject"), reason: z.string() }),
+]);
+
+export function parseQuoteDecision(input: unknown): QuoteDecisionResult {
+  const shape = rawDecisionSchema.safeParse(input);
+  if (!shape.success) return { ok: false, malformed: true };
+  const raw: RawQuoteDecision = shape.data;
   if (raw.kind === "reject") {
     const reason = raw.reason.trim();
     if (reason.length > QUOTE_DECISION_LIMITS.reason) {

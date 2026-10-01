@@ -37,6 +37,20 @@ describe("parseQuoteDecision", () => {
     const result = parseQuoteDecision({ kind: "reject", reason: "x".repeat(QUOTE_DECISION_LIMITS.reason + 1) });
     expect(result).toEqual({ ok: false, errors: { reason: tooLong(QUOTE_DECISION_LIMITS.reason) } });
   });
+
+  // Anyone with the link can post anything to this action (§I): a malformed
+  // decision is refused as such, never thrown on, and the terms box counts
+  // only when it is literally ticked.
+  it.each([
+    ["nothing", undefined],
+    ["null", null],
+    ["an unknown kind", { kind: "maybe" }],
+    ["a name that isn't text", { kind: "approve", name: 42, accepted: true }],
+    ['"true" as text for the terms box', { kind: "approve", name: "Juan", accepted: "true" }],
+    ["a reason that isn't text", { kind: "reject", reason: ["Too expensive"] }],
+  ])("refuses %s as malformed", (_label, raw) => {
+    expect(parseQuoteDecision(raw)).toEqual({ ok: false, malformed: true });
+  });
 });
 
 describe("quoteDecisionCheck", () => {

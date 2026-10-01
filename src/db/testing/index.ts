@@ -79,6 +79,18 @@ export async function listAllAuditEvents(db: Database = testDb()) {
 }
 
 /** Every queued outbox message in insertion order (tests only). */
+/** Queues `count` placeholder emails for a business, e.g. to reach its email limit. */
+export async function fillTestOutbox(organizationId: string, count: number, db: Database = testDb()) {
+  if (count <= 0) return;
+  await db.insert(outboxMessages).values(
+    Array.from({ length: count }, (_, i) => ({
+      kind: "email" as const,
+      organizationId,
+      payload: { to: `customer${i}@example.com`, subject: "Earlier email", text: "…" },
+    })),
+  );
+}
+
 export async function listAllOutboxMessages(db: Database = testDb()) {
   return db.select().from(outboxMessages).orderBy(asc(outboxMessages.createdAt), asc(outboxMessages.id));
 }

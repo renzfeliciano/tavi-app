@@ -10,7 +10,7 @@ import { listVerifiedEmails } from "@/modules/identity";
 import { getLetterheadForSharedDocument, listMembers } from "@/modules/organizations";
 import { type CalendarDate, todayIn } from "@/shared/dates/calendar";
 import { formatMoney } from "@/shared/money";
-import { canonicalQuoteContent, parseQuoteDecision, quoteDecisionCheck, type RawQuoteDecision } from "../domain/decision";
+import { canonicalQuoteContent, parseQuoteDecision, quoteDecisionCheck } from "../domain/decision";
 import { transitionQuote } from "../domain/transitions";
 import { quotes } from "../schema";
 import { loadHeader, loadLines, type QuoteHeader, type QuoteLine } from "./quotes";
@@ -105,20 +105,20 @@ export type DecideSharedQuoteOptions = {
 export type DecideSharedQuoteResult =
   | { ok: true; status: "APPROVED" | "REJECTED" }
   | { ok: false; errors: Record<string, string> }
-  | { ok: false; reason: "expired"; validUntil: CalendarDate }
-  | { ok: false; reason: "closed" | "changed" | "unavailable" };
+  | { ok: false; reason: "expired"; validUntil: CalendarDate; locale: string; businessName: string }
+  | { ok: false; reason: "closed" | "changed" | "unavailable" | "malformed" };
 
 const MAX_USER_AGENT = 500;
 
 /** The customer approves or declines a quote from its link (§B.3, §G.4). */
 export async function decideSharedQuote(
   token: string,
-  raw: RawQuoteDecision,
+  raw: unknown,
   { contentHash, ipAddress, userAgent, appUrl, now = new Date() }: DecideSharedQuoteOptions,
   db: Database = getDb(),
 ): Promise<DecideSharedQuoteResult> {
   const parsed = parseQuoteDecision(raw);
-  if (!parsed.ok) return parsed;
+  if (!parsed.ok) return "malformed" in parsed ? { ok: false, reason: "malformed" } : parsed;
   const { decision } = parsed;
   const event = decision.kind;
   const visitor = { ipAddress, userAgent: userAgent?.slice(0, MAX_USER_AGENT) ?? null };
@@ -138,7 +138,7 @@ export async function decideSharedQuote(
         ...customerEvent(link, "quote.expired", { number: quote.number, validUntil: quote.validUntil }),
         actorType: "system",
       });
-      return { ok: false, reason: "expired", validUntil: quote.validUntil };
+      return { ok: false, reason: "expired", validUntil: quote.validUntil, locale: business.locale, businessName: business.name };
     }
     if (!check.ok) return { ok: false, reason: "closed" };
 

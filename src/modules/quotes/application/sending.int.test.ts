@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   closeTestDb,
   createTestOrganization,
+  fillTestOutbox,
   createTestUser,
   listAllAuditEvents,
   listAllOutboxMessages,
@@ -12,6 +13,7 @@ import { MARKETS } from "@/config/markets";
 import type { OrgActor, Role } from "@/modules/authz";
 import { createCustomer } from "@/modules/customers";
 import { blankLine } from "@/modules/documents";
+import { DOCUMENT_EMAIL_LIMIT, documentEmailLimitMessage } from "@/modules/notifications";
 import type { RawQuoteDraft } from "../domain/quote-draft";
 import { getQuote, saveQuoteDraft } from "./quotes";
 import { cancelQuote, createQuoteLink, getSharedQuote, reviseQuote, sendQuote } from "./sending";
@@ -123,6 +125,20 @@ describe("sendQuote", () => {
     });
     expect(String(message?.payload.text)).toContain(result.ok ? result.url : "");
     expect((await listAllAuditEvents(testDb())).at(-1)?.metadata).toMatchObject({ channel: "email" });
+  });
+
+  it("won't email past the business's hourly limit, but still sends by link", async () => {
+    const actor = await actorFor();
+    const draft = await draftQuote(actor);
+    await fillTestOutbox(actor.organizationId, DOCUMENT_EMAIL_LIMIT.max);
+
+    expect(
+      await sendQuote(actor, draft.id, options({ email: { to: "juan@example.com", message: "" } }), testDb()),
+    ).toEqual({ ok: false, error: documentEmailLimitMessage() });
+    expect((await getQuote(actor, draft.id, testDb()))?.status).toBe("DRAFT");
+    expect(await listAllOutboxMessages(testDb())).toHaveLength(DOCUMENT_EMAIL_LIMIT.max);
+
+    expect(await sendQuote(actor, draft.id, options(), testDb())).toMatchObject({ ok: true });
   });
 
   it("won't send until the sender's own email is confirmed", async () => {

@@ -196,6 +196,9 @@ test("recording payments part-pays, then pays in full with tax withheld, and the
   await expect(toast("Payment recorded on Billing statement INV-000002.")).toBeVisible();
   await expect(page.getByText("Partially paid", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
+  // The closing dialog keeps its own "Record payment" button until its exit
+  // animation ends (production build), so wait before opening it again.
+  await expect(dialog).toBeHidden();
 
   // Overpaying is refused next to the field.
   await page.getByRole("button", { name: "Record payment" }).click();

@@ -4,6 +4,7 @@ import {
   closeTestDb,
   createTestOrganization,
   createTestUser,
+  fillTestOutbox,
   listAllAuditEvents,
   listAllOutboxMessages,
   resetTables,
@@ -13,6 +14,7 @@ import { MARKETS } from "@/config/markets";
 import type { OrgActor, Role } from "@/modules/authz";
 import { createCustomer } from "@/modules/customers";
 import { blankLine } from "@/modules/documents";
+import { DOCUMENT_EMAIL_LIMIT, documentEmailLimitMessage } from "@/modules/notifications";
 import { editIssuedInvoice, getInvoice, getSharedInvoice, issueInvoice, saveInvoiceDraft, voidInvoice } from "@/modules/invoices";
 import { listInvoicePayments, listPayments, listPaymentsForSharedInvoice, recordPayment, voidPayment } from "./payments";
 
@@ -68,6 +70,18 @@ afterAll(async () => {
 });
 
 describe("recordPayment", () => {
+  it("won't email an acknowledgement past the business's hourly limit, and records nothing", async () => {
+    const { actor, id } = await sentInvoice();
+    await fillTestOutbox(actor.organizationId, DOCUMENT_EMAIL_LIMIT.max);
+
+    expect(await record(actor, id, pay(), true)).toEqual({
+      ok: false,
+      error: documentEmailLimitMessage("Record it without emailing the acknowledgement"),
+    });
+    expect(await listPayments(actor, {}, testDb())).toMatchObject({ payments: [] });
+    expect(await record(actor, id, pay(), false)).toMatchObject({ ok: true });
+  });
+
   it("numbers an acknowledgement, part-pays the invoice and audits it", async () => {
     const { actor, id } = await sentInvoice();
     expect(await record(actor, id)).toMatchObject({

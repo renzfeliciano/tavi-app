@@ -12,7 +12,12 @@ import {
   resolveShareLink,
   revokeShareLinks,
 } from "@/modules/documents";
-import { documentLinkEmail, enqueueEmail } from "@/modules/notifications";
+import {
+  documentEmailLimitMessage,
+  documentEmailsAllowed,
+  documentLinkEmail,
+  enqueueEmail,
+} from "@/modules/notifications";
 import {
   type DocumentLetterhead,
   getBusinessProfile,
@@ -85,6 +90,10 @@ export async function issueInvoice(
   if (Object.keys(problems).length > 0) return { ok: false, errors: problems };
   const customer = current.customerId ? await getCustomer(actor, current.customerId, db) : null;
   if (!customer) return { ok: false, errors: { customerId: "Choose a customer before sending." } };
+  // Checked before anything changes, so a refusal leaves the draft as it was (§I).
+  if (email && !(await documentEmailsAllowed(db, actor.organizationId, now))) {
+    return { ok: false, error: documentEmailLimitMessage() };
+  }
 
   // The customer as they are now, kept with the invoice: later edits to the
   // customer never change what was issued (§B.1).

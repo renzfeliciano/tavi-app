@@ -19,13 +19,12 @@ export type DecisionResponse =
 /**
  * The customer's approve or decline, posted from the quote's page. The token
  * is the only authorization; the content hash ties the decision to what the
- * page showed. Locale for the expiry date comes from the page (the business's).
+ * page showed. Nothing else is taken from the browser.
  */
 export async function decideQuoteAction(
   token: string,
   decision: RawQuoteDecision,
   contentHash: string,
-  locale: string,
 ): Promise<DecisionResponse> {
   const requestHeaders = await headers();
   const ipAddress = clientIp(requestHeaders);
@@ -44,17 +43,16 @@ export async function decideQuoteAction(
   }
   if ("errors" in result) return result;
   switch (result.reason) {
-    case "expired": {
-      let date: string = result.validUntil;
-      try {
-        date = formatCalendarDate(result.validUntil, locale);
-      } catch {
-        // An unexpected locale from the page falls back to the ISO date.
-      }
-      return { ok: false, error: `This quote expired on ${date}. Ask the business for an updated quote.` };
-    }
+    case "expired":
+      // §B.3: "This quote expired on 14 Oct. Ask Acme Repairs for an updated quote."
+      return {
+        ok: false,
+        error: `This quote expired on ${formatCalendarDate(result.validUntil, result.locale)}. Ask ${result.businessName} for an updated quote.`,
+      };
     case "changed":
       return { ok: false, error: "This quote has changed since you opened it. Reload the page to see the latest version." };
+    case "malformed":
+      return { ok: false, error: "Your answer didn't come through. Reload the page and try again." };
     case "closed":
       return { ok: false, error: "This quote has already been answered or is no longer open. Reload the page to see where it stands." };
     default:

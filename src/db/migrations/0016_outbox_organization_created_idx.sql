@@ -1,0 +1,1 @@
+CREATE INDEX "outbox_messages_organization_created_idx" ON "outbox_messages" USING btree ("organization_id","created_at");

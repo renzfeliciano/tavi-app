@@ -39,12 +39,17 @@ Nonce CSP per request (`src/shared/security/headers.ts`, applied in `src/proxy.t
 ## Public links (Phase 1.6)
 
 256-bit random token, **store only its SHA-256**, one document per token, revocable, expiring, rate-limited with `consumeRateLimit` (`@/modules/system`), `Referrer-Policy: no-referrer`, `Cache-Control: private, no-store`, `X-Robots-Tag: noindex`. Approvals store name, content hash, IP, user agent, and audit + notify.
+- Every token route is rate-limited, including the logo routes (`portal-logo:` bucket). Formatting (locale, names) comes from the business's row, never from the browser.
+- Action arguments that aren't `FormData` are `unknown` until parsed (e.g. `parseDelivery` for the send dialog): TypeScript types don't reach the server.
 
 ## Secrets, env, logs
 
 - All env vars declared and validated in `src/shared/env/parse-env.ts`; errors never echo values. Add new ones there with tests and to `.env.example`.
 - Never log bodies, headers, cookies or URLs with query strings. Use `logger` (redacts keys like password/token/secret/cookie and scrubs `scheme://user:pass@`).
 - Cron routes: `isAuthorizedCronRequest` (constant-time) with `CRON_SECRET`.
+- Client-supplied IDs that reach logs (`x-request-id`) go through `acceptRequestId`.
+- Request paths in logs go through `loggablePath` (customer-link tokens are in the path, reset tokens in the query).
+- Any new command that emails a customer checks `documentEmailsAllowed` (50/hour per business) **before** it changes anything.
 - Never paste real credentials into chat or commit them; `.env.local` is gitignored.
 
 ## Uploads (logo, Phase 1.1)

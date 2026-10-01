@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { parseDelivery } from "@/modules/documents";
 import { requireOrgContext } from "@/modules/identity";
 import {
   cancelInvoice,
@@ -15,7 +16,7 @@ import {
 } from "@/modules/invoices";
 import { flushOutboxAfterResponse } from "@/modules/notifications";
 import { env } from "@/shared/env";
-import type { Delivery, SaveDraftResponse, SaveIssuedResponse, SendDocumentResponse } from "../_documents/editor-types";
+import type { SaveDraftResponse, SaveIssuedResponse, SendDocumentResponse } from "../_documents/editor-types";
 
 const GONE = "This invoice no longer exists.";
 
@@ -44,21 +45,23 @@ export async function deleteDraftInvoiceAction(id: string): Promise<{ ok: true }
 }
 
 /**
- * Saves the editor's latest content, then issues it: by email, or by marking
+ * Checks the delivery, saves the editor's latest content, then issues it: by email, or by marking
  * it sent and returning the link to paste. Emails go out after the response.
  */
 export async function sendInvoiceAction(
   id: string | null,
   draft: unknown,
-  delivery: Delivery,
+  delivery: unknown,
 ): Promise<SendDocumentResponse> {
   const ctx = await requireOrgContext();
+  const parsedDelivery = parseDelivery(delivery);
+  if (!parsedDelivery.ok) return parsedDelivery;
+  const { email } = parsedDelivery;
   const saved = await saveInvoiceDraft(ctx, id, draft, { locale: ctx.locale });
   if (!saved.ok) {
     if ("errors" in saved) return { ok: false, errors: saved.errors };
     return { ok: false, error: "notEditable" in saved ? "This invoice was already sent." : GONE };
   }
-  const email = delivery.mode === "email" ? { to: delivery.to, message: delivery.message } : null;
   const sent = await issueInvoice(ctx, saved.invoice.id, {
     sender: { emailVerified: ctx.emailVerified },
     market: ctx.market,
@@ -76,7 +79,7 @@ export async function sendInvoiceAction(
     id: saved.invoice.id,
     number: sent.number,
     url: sent.url,
-    emailedTo: email?.to.trim().toLowerCase() ?? null,
+    emailedTo: email?.to ?? null,
   };
 }
 

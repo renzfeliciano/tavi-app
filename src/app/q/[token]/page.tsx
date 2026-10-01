@@ -130,7 +130,6 @@ export default async function SharedQuotePage({ params }: PageProps<"/q/[token]"
           contentHash={sharedQuoteContentHash(quote)}
           name={name}
           businessName={business.name}
-          locale={shared.locale}
         />
       )}
 

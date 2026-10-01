@@ -1,4 +1,5 @@
 import type { DocumentParty } from "@/components/document/document-view";
+import type { RawDelivery } from "@/modules/documents/client";
 
 // Shapes passed between the quote and invoice pages, their server actions and the editor.
 
@@ -23,7 +24,8 @@ export type EditorCustomer = { id: string; currency: string | null; email: strin
 
 export type DocumentKind = "quote" | "invoice";
 
-export type Delivery = { mode: "email"; to: string; message: string } | { mode: "link" };
+/** The send dialog's choice; the server re-checks it with `parseDelivery`. */
+export type Delivery = RawDelivery;
 
 export type SaveDraftResponse =
   | { ok: true; id: string; savedAt: number }

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { parseDelivery } from "@/modules/documents";
 import { requireOrgContext } from "@/modules/identity";
 import { flushOutboxAfterResponse } from "@/modules/notifications";
 import {
@@ -12,7 +13,7 @@ import {
   sendQuote,
 } from "@/modules/quotes";
 import { env } from "@/shared/env";
-import type { Delivery, SaveDraftResponse, SendDocumentResponse } from "../_documents/editor-types";
+import type { SaveDraftResponse, SendDocumentResponse } from "../_documents/editor-types";
 
 
 /** Autosave: creates the draft on the first save, then updates it. */
@@ -38,21 +39,23 @@ export async function deleteDraftQuoteAction(id: string): Promise<{ ok: true } |
 }
 
 /**
- * Saves the editor's latest content, then sends it: by email, or by marking it
+ * Checks the delivery, saves the editor's latest content, then sends it: by email, or by marking it
  * sent and returning the link to paste. Emails go out after the response.
  */
 export async function sendQuoteAction(
   id: string | null,
   draft: unknown,
-  delivery: Delivery,
+  delivery: unknown,
 ): Promise<SendDocumentResponse> {
   const ctx = await requireOrgContext();
+  const parsedDelivery = parseDelivery(delivery);
+  if (!parsedDelivery.ok) return parsedDelivery;
+  const { email } = parsedDelivery;
   const saved = await saveQuoteDraft(ctx, id, draft, { locale: ctx.locale });
   if (!saved.ok) {
     if ("errors" in saved) return { ok: false, errors: saved.errors };
     return { ok: false, error: "notEditable" in saved ? "This quote was already sent." : "This quote no longer exists." };
   }
-  const email = delivery.mode === "email" ? { to: delivery.to, message: delivery.message } : null;
   const sent = await sendQuote(ctx, saved.quote.id, {
     sender: { emailVerified: ctx.emailVerified },
     market: ctx.market,
@@ -65,7 +68,7 @@ export async function sendQuoteAction(
     return { ok: false, error: "error" in sent ? sent.error : "This quote no longer exists." };
   }
   if (email) flushOutboxAfterResponse();
-  return { ok: true, id: saved.quote.id, number: sent.number, url: sent.url, emailedTo: email?.to.trim().toLowerCase() ?? null };
+  return { ok: true, id: saved.quote.id, number: sent.number, url: sent.url, emailedTo: email?.to ?? null };
 }
 
 type LinkResponse = { ok: true; url: string } | { ok: false; error: string };

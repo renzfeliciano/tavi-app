@@ -6,7 +6,12 @@ import { recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import { allocateDocumentNumber } from "@/modules/documents";
 import { isPayable, lockInvoiceForPayment, settleInvoice } from "@/modules/invoices";
-import { enqueueEmail, paymentAcknowledgementEmail } from "@/modules/notifications";
+import {
+  documentEmailLimitMessage,
+  documentEmailsAllowed,
+  enqueueEmail,
+  paymentAcknowledgementEmail,
+} from "@/modules/notifications";
 import { getBusinessProfile, getDocumentSettings } from "@/modules/organizations";
 import { type CalendarDate, formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { formatMoney } from "@/shared/money";
@@ -104,6 +109,10 @@ export async function recordPayment(
   if (!isUuid(invoiceId)) return { ok: false, notFound: true };
   const [settings, profile] = await Promise.all([getDocumentSettings(actor, db), getBusinessProfile(actor, db)]);
   const today = todayIn(settings.timezone, now);
+  // Checked before anything is recorded, so the person can retry without the email (§I).
+  if (acknowledge && !(await documentEmailsAllowed(db, actor.organizationId, now))) {
+    return { ok: false, error: documentEmailLimitMessage("Record it without emailing the acknowledgement") };
+  }
 
   return db.transaction(async (tx): Promise<RecordPaymentResult> => {
     const invoice = await lockInvoiceForPayment(tx, actor, invoiceId);

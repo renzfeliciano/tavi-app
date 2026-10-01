@@ -75,3 +75,17 @@ export function isProtectedPath(pathname: string): boolean {
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
+
+/** Longest incoming `x-request-id` we keep (UUIDs and Vercel IDs are far shorter). */
+export const REQUEST_ID_MAX_LENGTH = 128;
+const REQUEST_ID = new RegExp(`^[A-Za-z0-9._:-]{1,${REQUEST_ID_MAX_LENGTH}}$`);
+
+/**
+ * An incoming `x-request-id` if it's a short, plain ID; null otherwise (the
+ * caller then makes its own). The header comes from the client and is copied
+ * into logs and the response, so anything else (line breaks, quotes, markup,
+ * kilobytes of text) is dropped rather than trusted (§I, §K).
+ */
+export function acceptRequestId(value: string | null | undefined): string | null {
+  return value && REQUEST_ID.test(value) ? value : null;
+}

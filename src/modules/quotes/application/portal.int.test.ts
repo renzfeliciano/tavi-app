@@ -161,10 +161,23 @@ describe("decideSharedQuote", () => {
       ok: false,
       reason: "expired",
       validUntil: "2026-10-02",
+      // Formatting comes from the business, never from the browser (§I).
+      locale: "en-PH",
+      businessName: "Santos Aircon",
     });
     expect((await getQuote(actor, id, testDb()))?.status).toBe("EXPIRED");
     expect((await listAllAuditEvents(testDb())).at(-1)).toMatchObject({ action: "quote.expired", actorType: "system" });
     expect(await listAllOutboxMessages(testDb())).toEqual([]);
+  });
+
+  it("refuses a malformed decision without touching the quote", async () => {
+    const { actor, id, token } = await sentQuote("2026-10-02");
+    const contentHash = await hashOf(token);
+
+    expect(
+      await decideSharedQuote(token, { kind: "approve", name: "Juan", accepted: "true" }, options(contentHash), testDb()),
+    ).toEqual({ ok: false, reason: "malformed" });
+    expect((await getQuote(actor, id, testDb()))?.status).toBe("SENT");
   });
 
   it("refuses content that changed since the customer loaded it", async () => {

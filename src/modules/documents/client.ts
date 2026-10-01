@@ -38,3 +38,10 @@ export {
   parseDocumentDraft,
   type RawDocumentDraft,
 } from "./domain/document-draft";
+export {
+  type DeliveryEmail,
+  type DeliveryResult,
+  DELIVERY_LIMITS,
+  parseDelivery,
+  type RawDelivery,
+} from "./domain/delivery";

@@ -27,15 +27,13 @@ type QuoteDecisionProps = {
   /** e.g. "Quotation QUO-000012". */
   name: string;
   businessName: string;
-  /** The business's locale, for dates in messages. */
-  locale: string;
 };
 
 /**
  * Approve (primary, sticky at the bottom on phones) or decline (secondary),
  * each confirmed in a small dialog (§G.4).
  */
-export function QuoteDecision({ token, contentHash, name, businessName, locale }: QuoteDecisionProps) {
+export function QuoteDecision({ token, contentHash, name, businessName }: QuoteDecisionProps) {
   const router = useRouter();
   const [open, setOpen] = useState<"approve" | "reject" | null>(null);
   const [pending, setPending] = useState(false);
@@ -61,7 +59,6 @@ export function QuoteDecision({ token, contentHash, name, businessName, locale }
       token,
       open === "approve" ? { kind: "approve", name: approver, accepted } : { kind: "reject", reason },
       contentHash,
-      locale,
     );
     setPending(false);
     if (!result.ok) {

@@ -26,6 +26,8 @@ export const outboxMessages = pgTable(
   },
   (t) => [
     index("outbox_messages_due_idx").on(t.status, t.nextAttemptAt),
+    // The per-business email limit counts recent rows (document-email-limit.ts).
+    index("outbox_messages_organization_created_idx").on(t.organizationId, t.createdAt),
     check("outbox_messages_status", sql`${t.status} in ('pending', 'sent', 'failed')`),
     check("outbox_messages_kind", sql`${t.kind} in ('email')`),
   ],

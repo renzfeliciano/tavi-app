@@ -1,6 +1,6 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
-import { buildContentSecurityPolicy, isProtectedPath } from "@/shared/security/headers";
+import { acceptRequestId, buildContentSecurityPolicy, isProtectedPath } from "@/shared/security/headers";
 
 // Runs before every page request:
 // 1. Optimistic auth check (§D): no session cookie on a protected path → sign
@@ -23,7 +23,7 @@ export function proxy(request: NextRequest) {
     dev: process.env.NODE_ENV === "development",
     https: request.nextUrl.protocol === "https:",
   });
-  const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
+  const requestId = acceptRequestId(request.headers.get("x-request-id")) ?? crypto.randomUUID();
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildContentSecurityPolicy, isProtectedPath, SECURITY_HEADERS, PORTAL_HEADERS, PORTAL_PATH_PATTERNS } from "./headers";
+import {
+  acceptRequestId,
+  buildContentSecurityPolicy,
+  isProtectedPath,
+  SECURITY_HEADERS,
+  PORTAL_HEADERS,
+  PORTAL_PATH_PATTERNS,
+} from "./headers";
 
 const directives = (csp: string) =>
   Object.fromEntries(
@@ -86,4 +93,22 @@ describe("isProtectedPath", () => {
     "%s is public",
     (path) => expect(isProtectedPath(path)).toBe(false),
   );
+});
+
+// x-request-id comes from whoever sent the request; it ends up in logs and
+// response headers, so only short, plain IDs are kept (§K, §I).
+describe("acceptRequestId", () => {
+  it.each(["0b9e5c1a-7f2d-4c1e-9a7b-3d2f1e0c9b8a", "iad1::abcde-1727790000000-1a2b3c", "req_123.4"])(
+    "keeps %s",
+    (id) => expect(acceptRequestId(id)).toBe(id),
+  );
+
+  it.each([
+    ["missing", null],
+    ["empty", ""],
+    ["too long", "a".repeat(129)],
+    ["a line break (log forging)", "abc\nlevel=error msg=forged"],
+    ["spaces and quotes", 'abc" injected'],
+    ["markup", "<script>"],
+  ])("drops one that is %s", (_label, id) => expect(acceptRequestId(id)).toBeNull());
 });

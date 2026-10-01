@@ -4,6 +4,7 @@ import {
   closeTestDb,
   createTestOrganization,
   createTestUser,
+  fillTestOutbox,
   listAllAuditEvents,
   listAllOutboxMessages,
   resetTables,
@@ -13,6 +14,7 @@ import { MARKETS } from "@/config/markets";
 import type { OrgActor, Role } from "@/modules/authz";
 import { createCustomer } from "@/modules/customers";
 import { blankLine } from "@/modules/documents";
+import { DOCUMENT_EMAIL_LIMIT, documentEmailLimitMessage } from "@/modules/notifications";
 import {
   cancelQuote,
   decideSharedQuote,
@@ -187,6 +189,18 @@ describe("issueInvoice", () => {
       replyTo: "billing@santos.example",
     });
     expect(JSON.stringify(message?.payload)).toContain("Due Oct 16, 2026");
+  });
+
+  it("won't email past the business's hourly limit, leaving the invoice a draft", async () => {
+    const { actor, customerId } = await setup();
+    const draft = await draftInvoice(actor, customerId);
+    await fillTestOutbox(actor.organizationId, DOCUMENT_EMAIL_LIMIT.max);
+
+    expect(
+      await issueInvoice(actor, draft.id, issueOptions({ email: { to: "juan@example.com", message: "" } }), testDb()),
+    ).toEqual({ ok: false, error: documentEmailLimitMessage() });
+    expect((await getInvoice(actor, draft.id, testDb()))?.status).toBe("DRAFT");
+    expect(await issueInvoice(actor, draft.id, issueOptions(), testDb())).toMatchObject({ ok: true });
   });
 
   it("needs a confirmed sender, a customer and an item, and happens once", async () => {

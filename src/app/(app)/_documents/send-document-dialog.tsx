@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { DELIVERY_LIMITS } from "@/modules/documents/client";
 import type { Delivery } from "./editor-types";
 
 export type DeliveryOutcome = { ok: true } | { ok: false; error?: string; emailError?: string };
@@ -115,6 +116,7 @@ export function SendDocumentDialog(props: SendDocumentDialogProps) {
                   <Input
                     id={toId}
                     type="email"
+                    maxLength={DELIVERY_LIMITS.emailTo}
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
                     aria-invalid={emailError ? true : undefined}
@@ -130,7 +132,7 @@ export function SendDocumentDialog(props: SendDocumentDialogProps) {
                   <label htmlFor={messageId} className="text-sm font-medium">
                     Message
                   </label>
-                  <Textarea id={messageId} value={message} onChange={(e) => setMessage(e.target.value)} rows={5} maxLength={2000} />
+                  <Textarea id={messageId} value={message} onChange={(e) => setMessage(e.target.value)} rows={5} maxLength={DELIVERY_LIMITS.message} />
                 </div>
               </div>
             )}

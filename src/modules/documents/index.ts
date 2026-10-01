@@ -55,3 +55,10 @@ export {
   type ShareableKind,
   type SharedDocument,
 } from "./infra/share-links";
+export {
+  type DeliveryEmail,
+  type DeliveryResult,
+  DELIVERY_LIMITS,
+  parseDelivery,
+  type RawDelivery,
+} from "./domain/delivery";
