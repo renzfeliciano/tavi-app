@@ -37,6 +37,7 @@ Never paste values into chat or commit them. `.env.local` is gitignored; `.env.e
 
 - `GET /api/health` — liveness (no DB).
 - `GET /api/health/ready` — DB reachable → 200, else 503. Point uptime monitoring here.
+- `GET /api/cron/daily` — `Authorization: Bearer $CRON_SECRET`; the status job: for each business, in its own time zone, lapsed SENT/VIEWED quotes → EXPIRED and late SENT/PARTIALLY_PAID invoices → OVERDUE (audited as `system`, idempotent, one business's failure doesn't stop the rest). Scheduled in `vercel.json` at 16:05 UTC (just after midnight in Manila); add a run per time zone when a market far from UTC+8 launches.
 - `GET /api/cron/outbox` — `Authorization: Bearer $CRON_SECRET`; sends due emails, prunes rate-limit counters, logs backlog (warns if any failed or oldest pending > 15 min). Vercel Hobby allows only daily crons; use Pro (or an external scheduler) for every-5-minutes delivery retries. Immediate delivery happens via `flushOutboxAfterResponse()` regardless.
 
 ## Logs and errors

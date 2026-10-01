@@ -126,3 +126,11 @@ export async function listMembers(
     .where(eq(memberships.organizationId, organizationId))
     .orderBy(asc(memberships.createdAt));
 }
+
+/** Every business and its time zone, for jobs that act on each business's own "today" (§B.3–4). */
+export async function listOrganizationClocks(db: Database = getDb()): Promise<{ organizationId: string; timezone: string }[]> {
+  return db
+    .select({ organizationId: organizations.id, timezone: organizations.timezone })
+    .from(organizations)
+    .orderBy(asc(organizations.createdAt));
+}

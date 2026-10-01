@@ -26,6 +26,7 @@ export {
   type SharedQuote,
   sendQuote,
 } from "./application/sending";
+export { expireQuotesPastValidity } from "./application/expiry";
 export {
   type AttentionQuote,
   type QuotesAttention,

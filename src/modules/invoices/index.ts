@@ -6,6 +6,7 @@ export {
   voidAndDuplicateInvoice,
   voidInvoice,
 } from "./application/corrections";
+export { markOverdueInvoices } from "./application/expiry";
 export {
   type InvoiceMoney,
   invoiceMoneySummary,

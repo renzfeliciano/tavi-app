@@ -12,6 +12,7 @@ export {
   type CreateOrganizationResult,
   createOrganizationForUser,
   listMembers,
+  listOrganizationClocks,
   newOrganizationValues,
   type ResolvedMembership,
   resolveMembership,

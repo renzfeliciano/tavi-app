@@ -48,6 +48,7 @@ export const AUDIT_ACTIONS = [
   "invoice.edited",
   "invoice.voided",
   "invoice.cancelled",
+  "invoice.overdue",
   "payment.recorded",
   "payment.voided",
 ] as const;

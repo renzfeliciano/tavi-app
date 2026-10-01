@@ -19,4 +19,9 @@ test.describe("platform endpoints", () => {
     const wrong = await request.get("/api/cron/outbox", { headers: { Authorization: "Bearer nope" } });
     expect(wrong.status()).toBe(401);
   });
+
+  test("the daily status cron refuses requests without the secret", async ({ request }) => {
+    expect((await request.get("/api/cron/daily")).status()).toBe(401);
+    expect((await request.get("/api/cron/daily", { headers: { Authorization: "Bearer nope" } })).status()).toBe(401);
+  });
 });
