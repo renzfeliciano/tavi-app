@@ -5,48 +5,18 @@ import { BackLink } from "@/components/app-shell/back-link";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { DocumentPaper } from "@/components/document/document-paper";
 import { StatusBadge } from "@/components/status/status-badge";
-import { formatQuantity } from "@/modules/documents";
+import { can } from "@/modules/authz";
 import { requireOrgContext } from "@/modules/identity";
-import { getInvoice, type InvoiceDetail } from "@/modules/invoices";
-import { formatAmountForInput } from "@/shared/money";
-import { formatRateForInput } from "@/shared/numbers/percent";
+import { getInvoice } from "@/modules/invoices";
 import { customerForDocumentAction } from "../../_documents/actions";
-import { DocumentEditor, type DocumentEditorState } from "../../_documents/document-editor";
+import { DocumentEditor } from "../../_documents/document-editor";
 import { documentBusiness, editorContext } from "../../_documents/editor-props";
 import { deleteDraftInvoiceAction, saveInvoiceDraftAction, sendInvoiceAction } from "../actions";
 import { SentInvoiceActions } from "../_components/sent-invoice-actions";
+import { toEditorState } from "../_lib/editor-state";
 import { invoiceDocumentView } from "../_lib/invoice-view";
 
 export const metadata: Metadata = { title: "Invoice" };
-
-/** A saved draft back into the editor's typed form. */
-function toEditorState(invoice: InvoiceDetail, locale: string): DocumentEditorState {
-  return {
-    customerId: invoice.customerId ?? "",
-    currency: invoice.currency,
-    issueDate: invoice.issueDate,
-    endDate: invoice.dueDate,
-    notes: invoice.notes ?? "",
-    terms: invoice.terms ?? "",
-    lines: invoice.lines.map((line) => ({
-      key: `line-${line.position}`,
-      description: line.description,
-      quantity: formatQuantity(line.quantity, locale),
-      unitLabel: line.unitLabel,
-      unitPrice: formatAmountForInput(line.unitPriceMinor, invoice.currency, locale),
-      discountKind: line.discountKind ?? "none",
-      discountValue:
-        line.discountKind === "percent" && line.discountValue !== null
-          ? formatRateForInput(line.discountValue, locale)
-          : line.discountKind === "amount" && line.discountValue !== null
-            ? formatAmountForInput(line.discountValue, invoice.currency, locale)
-            : "",
-      taxRateId: line.taxRateId ?? "",
-      sourceKind: line.sourceKind ?? "",
-      sourceId: line.sourceId ?? "",
-    })),
-  };
-}
 
 export default async function InvoicePage({ params }: PageProps<"/invoices/[id]">) {
   const ctx = await requireOrgContext();
@@ -93,8 +63,8 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
     );
   }
 
-  // An issued invoice is read-only here; editing before payment (D7), void
-  // and cancel arrive in 1.7b.
+  // An issued invoice is read-only here; edits (before payment, D7) happen on
+  // its edit page, and void / cancel ask for a reason.
   const view = invoiceDocumentView(invoice, {
     business: await documentBusiness(ctx),
     market: ctx.market,
@@ -105,12 +75,19 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
     date ? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeZone: ctx.timezone }).format(date) : null;
   const sentOn = when(invoice.sentAt);
   const viewedOn = when(invoice.viewedAt);
+  const editedOn = when(invoice.editedAt);
+  const closedNote =
+    invoice.status === "VOID"
+      ? `Voided${when(invoice.voidedAt) ? ` ${when(invoice.voidedAt)}` : ""}: ${invoice.voidReason ?? ""}`
+      : invoice.status === "CANCELLED"
+        ? `Cancelled${when(invoice.cancelledAt) ? ` ${when(invoice.cancelledAt)}` : ""}: ${invoice.cancelReason ?? ""}`
+        : null;
 
   return (
     <>
       <BackLink href="/invoices">{plural}</BackLink>
       <PageHeader
-        title={name}
+        title={invoice.revision > 1 ? `${name} · Rev ${invoice.revision}` : name}
         description={
           <span className="inline-flex flex-wrap items-center gap-2">
             <StatusBadge kind="invoice" status={invoice.status} />
@@ -118,12 +95,27 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
               {invoice.customerSnapshot?.displayName}
               {sentOn ? ` · Sent ${sentOn}` : ""}
               {viewedOn ? ` · Opened by the customer ${viewedOn}` : ""}
+              {editedOn ? ` · Updated ${editedOn}` : ""}
             </span>
             {fromQuote}
           </span>
         }
-        actions={<SentInvoiceActions id={invoice.id} status={invoice.status} shareChannels={ctx.market.shareChannels} />}
+        actions={
+          <SentInvoiceActions
+            id={invoice.id}
+            status={invoice.status}
+            name={name}
+            amountPaidMinor={invoice.amountPaidMinor}
+            canVoid={can(ctx, "invoices.void")}
+            shareChannels={ctx.market.shareChannels}
+          />
+        }
       />
+      {closedNote && (
+        <p role="status" className="mt-4 max-w-3xl rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
+          {closedNote}
+        </p>
+      )}
       <div className="mt-6 max-w-3xl">
         <DocumentPaper view={view} />
       </div>

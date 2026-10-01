@@ -135,3 +135,40 @@ test("a billing statement written from scratch can be emailed, and a draft delet
   await expect(page).toHaveURL(/\/invoices$/);
   await expect(page.getByRole("region", { name: "Billing statement list" }).getByRole("listitem")).toHaveCount(2);
 });
+
+test("a sent statement can be edited before payment; the customer's link shows the update", async ({ browser }) => {
+  await page.goto(invoiceUrl);
+  await page.getByRole("link", { name: "Edit" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Edit Billing statement INV-000001" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Customer", exact: true })).toBeDisabled();
+  await page.getByLabel("Price (PHP)").first().fill("1,800");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  const confirm = page.getByRole("dialog", { name: "Update Billing statement INV-000001?" });
+  await confirm.getByRole("button", { name: "Save changes" }).click();
+  await expect(toast("Billing statement INV-000001 updated.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Billing statement INV-000001 · Rev 2" })).toBeVisible();
+
+  const customer = await (await browser.newContext()).newPage();
+  await customer.goto(customerLink);
+  await expect(customer.getByRole("region", { name: "Balance due" })).toContainText("₱1,800.00");
+  await expect(customer.getByText(/^Updated .*This is the latest version\.$/)).toBeVisible();
+  await customer.context().close();
+});
+
+test("void and duplicate asks for a reason, voids it, and opens a corrected draft", async () => {
+  await page.goto(invoiceUrl);
+  await page.getByRole("button", { name: "Void and duplicate" }).click();
+  const dialog = page.getByRole("dialog", { name: /^Void and duplicate Billing statement INV-000001\?/ });
+  await dialog.getByRole("button", { name: "Void and duplicate" }).click();
+  await expect(dialog.getByText("Give a reason. It's kept with the record.")).toBeVisible();
+  await dialog.getByLabel("Reason").fill("Wrong unit price");
+  await dialog.getByRole("button", { name: "Void and duplicate" }).click();
+  await expect(toast("Billing statement INV-000001 voided. A corrected copy is ready to edit.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Draft billing statement" })).toBeVisible();
+  await expect(page.getByLabel("Line 1 description")).toHaveValue("Aircon cleaning");
+
+  await page.goto(invoiceUrl);
+  await expect(page.getByText("Void", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/^Voided .*: Wrong unit price$/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Void and duplicate" })).toHaveCount(0);
+});

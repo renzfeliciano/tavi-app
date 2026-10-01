@@ -51,6 +51,7 @@ export type InvoiceHeader = {
   amountPaidMinor: number;
   sentAt: Date | null;
   viewedAt: Date | null;
+  editedAt: Date | null;
   voidedAt: Date | null;
   voidReason: string | null;
   cancelledAt: Date | null;
@@ -132,6 +133,7 @@ export const headerColumns = {
   amountPaidMinor: invoices.amountPaidMinor,
   sentAt: invoices.sentAt,
   viewedAt: invoices.viewedAt,
+  editedAt: invoices.editedAt,
   voidedAt: invoices.voidedAt,
   voidReason: invoices.voidReason,
   cancelledAt: invoices.cancelledAt,
@@ -250,7 +252,7 @@ type ResolvedLine = ParsedLine & { tax: { id: string; name: string; rateBps: num
  * (active, or the one already chosen) and each line's tax rate (active, or one
  * the draft already used). Returns the lines ready to calculate.
  */
-async function resolveDraft(
+export async function resolveDraft(
   actor: OrgActor,
   draft: InvoiceDraft,
   current: { customerId: string | null; taxRateIds: Set<string> },
@@ -279,7 +281,7 @@ async function resolveDraft(
   return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, lines };
 }
 
-function calculate(
+export function calculate(
   taxMode: TaxMode,
   lines: readonly LineInput[],
 ): { ok: true; amounts: DocumentAmounts } | { ok: false; errors: Record<string, string> } {

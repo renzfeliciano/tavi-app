@@ -69,6 +69,10 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
   const contact = [business.email, business.phone].filter(Boolean).join(" · ");
   const balanceMinor = invoice.totalMinor - invoice.amountPaidMinor;
   const closed = invoice.status === "VOID" || invoice.status === "CANCELLED";
+  // A sent invoice edited before payment keeps its link; say so (D7).
+  const updatedOn = invoice.editedAt
+    ? new Intl.DateTimeFormat(shared.locale, { dateStyle: "long", timeZone: business.timezone }).format(invoice.editedAt)
+    : null;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
@@ -118,6 +122,12 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
         <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
           {business.name} {invoice.status === "VOID" ? "voided" : "cancelled"} this{" "}
           {market.documents.invoice.singular.toLowerCase()}. Nothing is owed on it. Contact them if you have questions.
+        </p>
+      )}
+
+      {updatedOn && !closed && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Updated {updatedOn}. This is the latest version.
         </p>
       )}
 

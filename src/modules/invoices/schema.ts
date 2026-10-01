@@ -58,6 +58,8 @@ export const invoices = pgTable(
     amountPaidMinor: money("amount_paid_minor"),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     viewedAt: timestamp("viewed_at", { withTimezone: true }),
+    /** Last edit after sending (D7); the customer's page shows "Updated …". */
+    editedAt: timestamp("edited_at", { withTimezone: true }),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
     voidReason: text("void_reason"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),

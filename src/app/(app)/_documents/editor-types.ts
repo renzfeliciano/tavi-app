@@ -35,9 +35,16 @@ export type SendDocumentResponse =
   | { ok: false; errors: Record<string, string> }
   | { ok: false; error: string };
 
+export type SaveIssuedResponse =
+  | { ok: true; revision: number }
+  | { ok: false; errors: Record<string, string> }
+  | { ok: false; error: string };
+
 /** A draft's server actions, passed to the editor by its page. */
 export type DocumentEditorActions = {
   saveDraft: (id: string | null, draft: unknown) => Promise<SaveDraftResponse>;
   deleteDraft: (id: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   send: (id: string | null, draft: unknown, delivery: Delivery) => Promise<SendDocumentResponse>;
+  /** Saves changes to a sent document (invoices before payment, D7). */
+  saveIssued?: (id: string, draft: unknown) => Promise<SaveIssuedResponse>;
 };

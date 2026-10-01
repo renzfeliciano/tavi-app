@@ -3,15 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { requireOrgContext } from "@/modules/identity";
 import {
+  cancelInvoice,
   convertQuoteToInvoice,
   createInvoiceLink,
   deleteDraftInvoice,
+  editIssuedInvoice,
   issueInvoice,
   saveInvoiceDraft,
+  voidAndDuplicateInvoice,
+  voidInvoice,
 } from "@/modules/invoices";
 import { flushOutboxAfterResponse } from "@/modules/notifications";
 import { env } from "@/shared/env";
-import type { Delivery, SaveDraftResponse, SendDocumentResponse } from "../_documents/editor-types";
+import type { Delivery, SaveDraftResponse, SaveIssuedResponse, SendDocumentResponse } from "../_documents/editor-types";
 
 const GONE = "This invoice no longer exists.";
 
@@ -93,4 +97,48 @@ export async function convertQuoteToInvoiceAction(
   revalidatePath(`/quotes/${quoteId}`);
   if (result.ok) return result;
   return { ok: false, error: "error" in result ? result.error : "This quote no longer exists." };
+}
+
+type CorrectionResponse = { ok: true } | { ok: false; errors: Record<string, string> } | { ok: false; error: string };
+
+const closedResponse = (result: Awaited<ReturnType<typeof voidInvoice>>): CorrectionResponse => {
+  if (result.ok) return { ok: true };
+  if ("errors" in result) return { ok: false, errors: result.errors };
+  return { ok: false, error: "error" in result ? result.error : GONE };
+};
+
+/** Saves changes to a sent, unpaid invoice as its next revision (D7). */
+export async function editIssuedInvoiceAction(id: string, draft: unknown): Promise<SaveIssuedResponse> {
+  const ctx = await requireOrgContext();
+  const result = await editIssuedInvoice(ctx, id, draft, { locale: ctx.locale });
+  revalidatePath("/invoices");
+  if (result.ok) return result;
+  if ("errors" in result) return { ok: false, errors: result.errors };
+  return { ok: false, error: "error" in result ? result.error : GONE };
+}
+
+export async function voidInvoiceAction(id: string, reason: string): Promise<CorrectionResponse> {
+  const ctx = await requireOrgContext();
+  const result = closedResponse(await voidInvoice(ctx, id, reason));
+  revalidatePath("/invoices");
+  return result;
+}
+
+export async function cancelInvoiceAction(id: string, reason: string): Promise<CorrectionResponse> {
+  const ctx = await requireOrgContext();
+  const result = closedResponse(await cancelInvoice(ctx, id, reason));
+  revalidatePath("/invoices");
+  return result;
+}
+
+export async function voidAndDuplicateInvoiceAction(
+  id: string,
+  reason: string,
+): Promise<{ ok: true; duplicateId: string } | { ok: false; errors: Record<string, string> } | { ok: false; error: string }> {
+  const ctx = await requireOrgContext();
+  const result = await voidAndDuplicateInvoice(ctx, id, reason);
+  revalidatePath("/invoices");
+  if (result.ok) return result;
+  if ("errors" in result) return { ok: false, errors: result.errors };
+  return { ok: false, error: "error" in result ? result.error : GONE };
 }

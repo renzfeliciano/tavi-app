@@ -77,6 +77,11 @@ const KINDS = {
 
 type DocumentEditorProps = {
   kind: DocumentKind;
+  /**
+   * "draft" autosaves; "issued" edits a sent document (D7): customer and
+   * currency fixed, nothing saved until "Save changes" is confirmed.
+   */
+  mode?: "draft" | "issued";
   /** The saved draft, or null for a new one (created on the first change). */
   documentId: string | null;
   /** The draft's own server actions (save, delete, send). */
@@ -163,6 +168,9 @@ function StatusLine({ status }: { status: AutosaveStatus }) {
 export function DocumentEditor(props: DocumentEditorProps) {
   const { locale, taxMode, taxRates, actions } = props;
   const kind = KINDS[props.kind];
+  const issued = props.mode === "issued";
+  const [confirmSave, setConfirmSave] = useState(false);
+  const [savingIssued, setSavingIssued] = useState(false);
   const router = useRouter();
   const [documentId, setDocumentId] = useState(props.documentId);
   // The saved draft's id, updated the moment the first save returns. A save
@@ -304,7 +312,32 @@ export function DocumentEditor(props: DocumentEditorProps) {
     [actions, kind.path],
   );
 
-  const { status } = useAutosave({ value: payload, enabled: dirty, validate, save });
+  const { status } = useAutosave({ value: payload, enabled: dirty && !issued, validate, save });
+
+  // Issued documents save once, on purpose: each save is a new revision the customer sees.
+  const saveIssued = async () => {
+    if (!documentId || !actions.saveIssued) return;
+    setSavingIssued(true);
+    const result = await actions.saveIssued(documentId, payload);
+    setSavingIssued(false);
+    setConfirmSave(false);
+    if (result.ok) {
+      setDirty(false);
+      toast.success(`${props.title} ${props.number ?? ""} updated.`.replace("  ", " "), {
+        description: "The customer's link shows the new version.",
+      });
+      router.push(`${kind.path}/${documentId}`);
+      router.refresh();
+      return;
+    }
+    if ("errors" in result) {
+      setServerErrors(result.errors);
+      toast.error("Not saved: fix the highlighted parts first.");
+      return;
+    }
+    setFormError(result.error);
+    toast.error(result.error);
+  };
 
   // Saving is quiet when it works (the status line); a failure also gets a toast (one at a time).
   useEffect(() => {
@@ -441,17 +474,47 @@ export function DocumentEditor(props: DocumentEditorProps) {
     <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:items-start">
       <div className="grid min-w-0 gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <StatusLine status={status} />
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)}>
-              <Trash2Icon aria-hidden="true" />
-              {documentId ? "Delete draft" : "Discard"}
-            </Button>
-            <Button type="button" onClick={() => setSendOpen(true)}>
-              <SendIcon aria-hidden="true" />
-              Send
-            </Button>
-          </div>
+          {issued ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              {dirty ? "Unsaved changes" : "No changes yet"}
+            </p>
+          ) : (
+            <StatusLine status={status} />
+          )}
+          {issued ? (
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="ghost" onClick={() => router.push(`${kind.path}/${documentId}`)}>
+                Discard changes
+              </Button>
+              <Button
+                type="button"
+                disabled={!dirty}
+                onClick={() => {
+                  const problems = validate(payload);
+                  if (problems) {
+                    setTouched(new Set(Object.keys(clientErrors)));
+                    toast.error(problems);
+                    return;
+                  }
+                  setConfirmSave(true);
+                }}
+              >
+                <CheckIcon aria-hidden="true" />
+                Save changes
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)}>
+                <Trash2Icon aria-hidden="true" />
+                {documentId ? "Delete draft" : "Discard"}
+              </Button>
+              <Button type="button" onClick={() => setSendOpen(true)}>
+                <SendIcon aria-hidden="true" />
+                Send
+              </Button>
+            </div>
+          )}
         </div>
         <FormAlert message={formError} />
 
@@ -465,6 +528,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
             placeholder="Search your customers"
             value={customerChoice}
             onValueChange={(choice) => void chooseCustomer(choice)}
+            disabled={issued}
             search={searchCustomersAction}
             itemKey={(c) => c.id}
             itemLabel={(c) => c.displayName}
@@ -558,6 +622,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
               </label>
               <NativeSelect
                 id="doc-currency"
+                disabled={issued}
                 value={state.currency}
                 onChange={(e) => update({ currency: e.target.value }, ["currency"])}
               >
@@ -686,6 +751,23 @@ export function DocumentEditor(props: DocumentEditorProps) {
         emailVerified={props.emailVerified}
         onSend={send}
       />
+
+      <Dialog open={confirmSave} onOpenChange={(open) => !savingIssued && setConfirmSave(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{`Update ${props.title} ${props.number ?? ""}?`.replace(" ?", "?")}</DialogTitle>
+            <DialogDescription>
+              {`It becomes revision ${props.revision + 1}. The customer's link shows the new version with an "Updated" note, and the change is kept in your activity log.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button type="button" variant="outline" />}>Keep editing</DialogClose>
+            <Button type="button" pending={savingIssued} pendingLabel="Saving…" onClick={() => void saveIssued()}>
+              Save changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>

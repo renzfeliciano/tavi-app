@@ -27,6 +27,8 @@ export default defineConfig({
   // Locally the dev server compiles each page on first visit (and Neon may be
   // waking up), so allow slower first responses; CI runs a production build.
   expect: { timeout: isCI ? 5_000 : 20_000 },
+  // Same reason per test: a full local run compiles every page under parallel load.
+  timeout: isCI ? 30_000 : 60_000,
   use: {
     baseURL,
     trace: "on-first-retry",
