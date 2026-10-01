@@ -24,7 +24,7 @@ Never paste values into chat or commit them. `.env.local` is gitignored; `.env.e
 
 ## Neon branches
 
-`production` (live), `dev` (local development), `test` (wiped by every test run). Preview deployments can use Neon branch-per-preview later. Point-in-time restore is the backup; do a restore drill before beta.
+`production` (live), `dev` (local development), `test` (wiped by every test run). Preview deployments can use Neon branch-per-preview later. Point-in-time restore is the backup (Free plan keeps only 6 hours of history). Restore drill: `docs/runbooks/restore-drill.md`, using `npm run db:restore-check -- save|check <file>` (row counts + content hashes per table) against a branch restored from history, never against `production` itself. Before beta, then quarterly.
 
 ## Migrations in production
 
@@ -61,5 +61,8 @@ Never paste values into chat or commit them. `.env.local` is gitignored; `.env.e
 Run `npm audit --omit=dev` before each release. **Accepted (2026-09-30):** GHSA-67mh-4wv8-2f99 (moderate), an old `esbuild` under `drizzle-kit` (which `better-auth` also declares for its CLI). It affects esbuild's development server only, which TAVI never runs; `npm audit fix --force` would downgrade drizzle-kit and break migrations. Re-check when drizzle-kit or better-auth release updates.
 
 ## Deploy checklist
+
+First deploy, step by step: `docs/runbooks/production-deploy.md`.
+
 
 CI green · migrations applied · env vars set for the environment · `/api/health/ready` 200 after deploy · sign-up → onboarding smoke test on the live URL · logs clean for 10 minutes.

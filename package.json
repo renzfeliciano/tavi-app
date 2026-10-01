@@ -18,6 +18,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:restore-check": "node --no-warnings src/db/restore/restore-check.ts",
     "prepare": "husky"
   },
   "dependencies": {

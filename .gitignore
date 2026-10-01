@@ -52,3 +52,6 @@ __pycache__/
 
 # playwright signed-in state (contains session cookies)
 /e2e/.auth/
+
+# Restore drill snapshots (counts and hashes only, but never committed)
+/drill-*.json
