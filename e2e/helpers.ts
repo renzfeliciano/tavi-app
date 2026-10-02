@@ -6,6 +6,21 @@ export function uniqueEmail(label: string): string {
   return `${label}-${Date.now()}-${randomBytes(3).toString("hex")}@example.com`;
 }
 
+/**
+ * Options that make a spec's browsers look like one visitor of their own.
+ * Production allows 10 sign-ups a minute per client IP, which Better Auth
+ * reads from `x-forwarded-for` (Vercel sets it to the visitor's address). The
+ * E2E server has no proxy in front of it, so without this every test account
+ * would come from one shared address and the suite would trip the limit as
+ * it grows. Use it in every spec that signs up (`ACCOUNT_CREATING_SPECS`).
+ * Addresses are from TEST-NET-2 (RFC 5737), which is never routed.
+ */
+export function asVisitor(label: string): { extraHTTPHeaders: Record<string, string> } {
+  let hash = 0;
+  for (const char of label) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return { extraHTTPHeaders: { "x-forwarded-for": `198.51.100.${(hash % 254) + 1}` } };
+}
+
 /** Long and random, so the breached-password check never rejects it. */
 export function strongPassword(): string {
   return `tavi e2e ${randomBytes(12).toString("base64url")}`;

@@ -1,10 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { createBusiness, markEmailVerified, signUp, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, createBusiness, markEmailVerified, signUp, strongPassword, uniqueEmail } from "./helpers";
 
 // One fresh business sending a quote and following it through revise and
 // cancel, plus the customer's view. Desktop only (see ACCOUNT_CREATING_SPECS).
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ storageState: { cookies: [], origins: [] }, ...asVisitor("quote-sending") });
 test.describe.configure({ mode: "serial" });
 
 let context: BrowserContext;

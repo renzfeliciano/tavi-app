@@ -1,10 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { latestInvitationPath, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, latestInvitationPath, strongPassword, uniqueEmail } from "./helpers";
 
 // Team invitations (Phase 2.1, D17): the shared owner invites a new person,
 // who signs up from the link and joins; then the owner removes them.
-// Creates one account, so it runs on desktop only (ACCOUNT_CREATING_SPECS).
+// Creates one account, so it runs on desktop only (ACCOUNT_CREATING_SPECS),
+// as a visitor of its own (asVisitor), like a real invitee on another network.
+test.use(asVisitor("team"));
 
 const axe = (page: Page) =>
   new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();

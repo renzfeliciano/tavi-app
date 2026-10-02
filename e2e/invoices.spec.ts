@@ -1,11 +1,11 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { createBusiness, markEmailVerified, signUp, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, createBusiness, markEmailVerified, signUp, strongPassword, uniqueEmail } from "./helpers";
 
 // One fresh business billing its work: an approved quote becomes a billing
 // statement, which is sent as a link and opened by the customer; and a
 // statement written from scratch. Desktop only (see ACCOUNT_CREATING_SPECS).
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ storageState: { cookies: [], origins: [] }, ...asVisitor("invoices") });
 test.describe.configure({ mode: "serial" });
 // Each test walks a whole flow across two browsers (and the dev server compiles
 // each page on first visit), so give them the slow budget.

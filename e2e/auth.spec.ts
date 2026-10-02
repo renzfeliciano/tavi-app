@@ -1,9 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { createBusiness, setTermsVersion, signUp, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, createBusiness, setTermsVersion, signUp, strongPassword, uniqueEmail } from "./helpers";
 
 // These flows start signed out.
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ storageState: { cookies: [], origins: [] }, ...asVisitor("auth") });
 
 const axe = (page: import("@playwright/test").Page) =>
   new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();

@@ -1,12 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import sharp from "sharp";
-import { createBusiness, signUp, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, createBusiness, signUp, strongPassword, uniqueEmail } from "./helpers";
 
 // One fresh business, set up step by step like a new owner would. Desktop
 // only (see ACCOUNT_CREATING_SPECS in playwright.config.ts): it creates an
 // account, and sign-up is rate limited per IP.
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ storageState: { cookies: [], origins: [] }, ...asVisitor("settings") });
 test.describe.configure({ mode: "serial" });
 
 let page: Page;
