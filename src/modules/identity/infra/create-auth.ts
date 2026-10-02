@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { haveIBeenPwned } from "better-auth/plugins";
@@ -9,6 +10,7 @@ import { passwordResetEmail, sendEmail, verifyEmailEmail } from "@/modules/notif
 import { LINK_LIFETIMES, PASSWORD_POLICY, passwordResetLifetime } from "../domain/auth-policy";
 import { logger } from "@/shared/logger";
 import { SESSION_POLICY } from "../domain/session-policy";
+import { acceptedTermsVersion, TERMS_NOT_ACCEPTED, TERMS_REQUIRED_MESSAGE } from "../domain/terms";
 import { accounts, rateLimits, sessions, users, verifications } from "../schema";
 
 export type AuthConfig = {
@@ -87,6 +89,13 @@ export function createAuth(db: Database, config: AuthConfig) {
         deliver(sendEmail(verifyEmailEmail({ to: user.email, name: user.name, url })));
       },
     },
+    user: {
+      additionalFields: {
+        // Sent by the sign-up form; checked and stamped in the create hook below.
+        termsVersion: { type: "string", required: false, input: true },
+        termsAcceptedAt: { type: "date", required: false, input: false },
+      },
+    },
     session: {
       expiresIn: SESSION_POLICY.idleTimeoutSeconds,
       updateAge: SESSION_POLICY.renewAfterSeconds,
@@ -100,6 +109,16 @@ export function createAuth(db: Database, config: AuthConfig) {
     databaseHooks: {
       user: {
         create: {
+          // No account without the current Terms of Service and Privacy
+          // Notice (1.13b). The browser's checkbox is a convenience; this is
+          // the rule. The time is the server's, never the client's.
+          before: async (user) => {
+            const termsVersion = acceptedTermsVersion(user.termsVersion);
+            if (!termsVersion) {
+              throw new APIError("BAD_REQUEST", { code: TERMS_NOT_ACCEPTED, message: TERMS_REQUIRED_MESSAGE });
+            }
+            return { data: { ...user, termsVersion, termsAcceptedAt: new Date() } };
+          },
           after: async (user) => {
             await recordAuditEvent(db, {
               action: "auth.signed_up",
@@ -107,6 +126,7 @@ export function createAuth(db: Database, config: AuthConfig) {
               actorId: user.id,
               entityType: "user",
               entityId: user.id,
+              metadata: { termsVersion: user.termsVersion },
             });
           },
         },

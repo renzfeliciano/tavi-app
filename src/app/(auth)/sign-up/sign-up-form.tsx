@@ -1,30 +1,49 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { FormAlert } from "@/components/form-alert";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { LEGAL, LEGAL_PATHS } from "@/config/legal";
 import { authClient } from "@/lib/auth-client";
-import { authErrorMessage, PASSWORD_HINT, PASSWORD_POLICY } from "@/modules/identity/client";
+import {
+  authErrorMessage,
+  PASSWORD_HINT,
+  PASSWORD_POLICY,
+  TERMS_REQUIRED_MESSAGE,
+} from "@/modules/identity/client";
 
 export function SignUpForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
+  const termsRef = useRef<HTMLElement>(null);
+  const termsId = useId();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    setPending(true);
     setError(null);
+    if (!agreed) {
+      setTermsError(TERMS_REQUIRED_MESSAGE);
+      termsRef.current?.focus();
+      return;
+    }
+    setPending(true);
     const { error } = await authClient.signUp.email({
       name: String(form.get("name") ?? "").trim(),
       email: String(form.get("email") ?? "").trim(),
       password: String(form.get("password") ?? ""),
+      // The version on this page; the server refuses anything but the current one.
+      termsVersion: LEGAL.version,
     });
     if (error) {
       setError(authErrorMessage(error));
@@ -67,6 +86,28 @@ export function SignUpForm() {
         />
         <FieldDescription id="password-hint">{PASSWORD_HINT}</FieldDescription>
       </Field>
+      <Field data-invalid={termsError ? "true" : undefined}>
+        <label htmlFor={termsId} className="flex items-start gap-2.5 text-sm text-pretty">
+          <Checkbox
+            ref={termsRef}
+            id={termsId}
+            checked={agreed}
+            onCheckedChange={(checked) => {
+              setAgreed(checked === true);
+              if (checked === true) setTermsError(null);
+            }}
+            aria-invalid={termsError ? true : undefined}
+            aria-describedby={termsError ? `${termsId}-error` : undefined}
+            className="mt-0.5"
+          />
+          <span>
+            I agree to the{" "}
+            <LegalLink href={LEGAL_PATHS.terms}>Terms of Service</LegalLink> and have read the{" "}
+            <LegalLink href={LEGAL_PATHS.privacy}>Privacy Notice</LegalLink>.
+          </span>
+        </label>
+        {termsError && <FieldError id={`${termsId}-error`}>{termsError}</FieldError>}
+      </Field>
       <Button type="submit" size="lg" pending={pending} pendingLabel="Creating account…">
         Create account
       </Button>
@@ -77,5 +118,20 @@ export function SignUpForm() {
         </Link>
       </p>
     </form>
+  );
+}
+
+/** Opens in a new tab, so what's typed in the form stays put. */
+function LegalLink({ href, children }: { href: Route; children: string }) {
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-medium text-foreground underline underline-offset-4"
+    >
+      {children}
+      <span className="sr-only"> (opens in a new tab)</span>
+    </Link>
   );
 }

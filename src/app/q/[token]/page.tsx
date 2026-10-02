@@ -11,6 +11,7 @@ import {
 import { letterhead } from "@/components/document/letterhead";
 import { StatusBadge } from "@/components/status/status-badge";
 import { Wordmark } from "@/components/brand/wordmark";
+import { LegalLinks } from "@/components/legal/legal-document";
 import { marketFor } from "@/config/markets";
 import { readLogoForSharedDocument } from "@/modules/files";
 import { getCurrentSession } from "@/modules/identity";
@@ -136,6 +137,7 @@ export default async function SharedQuotePage({ params }: PageProps<"/q/[token]"
       <footer className="mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground">
         Sent with <Wordmark size={12} />
       </footer>
+      <LegalLinks className="mt-2" />
     </main>
   );
 }

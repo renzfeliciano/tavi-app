@@ -13,6 +13,10 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  // The Terms of Service / Privacy Notice version agreed to at sign-up, and
+  // when (src/config/legal.ts). Null for accounts made before 1.13b.
+  termsVersion: text("terms_version"),
+  termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
   ...timestamps(),
 });
 

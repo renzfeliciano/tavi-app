@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/brand/wordmark";
+import { LegalLinks } from "@/components/legal/legal-document";
 import { brand } from "@/config/brand";
 
 /** Centered sheet of paper for sign-in, sign-up, reset and onboarding. */
@@ -13,7 +14,10 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <main className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
         {children}
       </main>
-      <p className="mt-8 text-center text-xs text-muted-foreground">{brand.taglines.primary}</p>
+      <footer className="mt-8 grid gap-2">
+        <p className="text-center text-xs text-muted-foreground">{brand.taglines.primary}</p>
+        <LegalLinks />
+      </footer>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { brand } from "@/config/brand";
 import { PASSWORD_POLICY } from "./auth-policy";
+import { TERMS_NOT_ACCEPTED, TERMS_REQUIRED_MESSAGE } from "./terms";
 
 // Human copy for Better Auth errors (§28): what happened and what to do.
 // Internal messages are never shown.
@@ -15,6 +16,7 @@ const MESSAGES: Record<string, string> = {
     "This password has appeared in a data breach. Choose a different one.",
   INVALID_EMAIL: "Enter a valid email address.",
   INVALID_TOKEN: "This link has expired or was already used. Request a new one.",
+  [TERMS_NOT_ACCEPTED]: TERMS_REQUIRED_MESSAGE,
 };
 
 const GENERIC = "Something went wrong on our side. Please try again.";

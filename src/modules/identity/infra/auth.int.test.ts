@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
+import { LEGAL } from "@/config/legal";
 import { closeTestDb, listAllAuditEvents, resetTables, testDb } from "@/db/testing";
 import { createMemorySender, setEmailSender } from "@/modules/notifications";
 import { accounts, sessions, users } from "../schema";
@@ -18,7 +19,7 @@ const auth = createAuth(testDb(), {
 const password = "correct horse battery staple";
 
 async function signUp(email = "maria@example.com") {
-  return auth.api.signUpEmail({ body: { name: "Maria Santos", email, password } });
+  return auth.api.signUpEmail({ body: { name: "Maria Santos", email, password, termsVersion: LEGAL.version } });
 }
 
 beforeEach(async () => {
@@ -59,8 +60,47 @@ describe("sign-up", () => {
 
   it("rejects passwords shorter than 12 characters", async () => {
     await expect(
-      auth.api.signUpEmail({ body: { name: "Maria", email: "m@example.com", password: "short-pass" } }),
+      auth.api.signUpEmail({
+        body: { name: "Maria", email: "m@example.com", password: "short-pass", termsVersion: LEGAL.version },
+      }),
     ).rejects.toMatchObject({ body: { code: "PASSWORD_TOO_SHORT" } });
+  });
+
+  it("records the terms version agreed to, and when, from the server's clock", async () => {
+    const before = Date.now();
+    const { user } = await signUp();
+
+    const [row] = await testDb().select().from(users).where(eq(users.id, user.id));
+    expect(row?.termsVersion).toBe(LEGAL.version);
+    expect(row?.termsAcceptedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
+    expect(row?.termsAcceptedAt?.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+
+    const signedUp = (await listAllAuditEvents()).find((e) => e.action === "auth.signed_up");
+    expect(signedUp?.metadata).toEqual({ termsVersion: LEGAL.version });
+  });
+
+  it.each([
+    ["without agreeing", {}],
+    ["with an older version", { termsVersion: "2020-01-01" }],
+  ])("creates no account %s", async (_label, terms) => {
+    await expect(
+      auth.api.signUpEmail({ body: { name: "Maria Santos", email: "maria@example.com", password, ...terms } }),
+    ).rejects.toMatchObject({ body: { code: "TERMS_NOT_ACCEPTED" } });
+    expect(await testDb().select().from(users)).toHaveLength(0);
+    expect(await testDb().select().from(accounts)).toHaveLength(0);
+  });
+
+  it("never takes the acceptance time from the browser", async () => {
+    // A variable, not a literal: the typed body leaves this field out on purpose.
+    const body = {
+      name: "Maria Santos",
+      email: "maria@example.com",
+      password,
+      termsVersion: LEGAL.version,
+      termsAcceptedAt: new Date("2020-01-01T00:00:00Z"),
+    };
+    await expect(auth.api.signUpEmail({ body })).rejects.toMatchObject({ body: { code: "FIELD_NOT_ALLOWED" } });
+    expect(await testDb().select().from(users)).toHaveLength(0);
   });
 
   it("rejects a second account with the same email", async () => {

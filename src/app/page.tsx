@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LegalLinks } from "@/components/legal/legal-document";
 import { buttonVariants } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 
@@ -19,6 +20,7 @@ export default function Home() {
           Sign in
         </Link>
       </div>
+      <LegalLinks className="mt-12" />
     </main>
   );
 }

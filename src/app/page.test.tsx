@@ -27,4 +27,11 @@ describe("Home (holding page)", () => {
       "/sign-up",
     );
   });
+
+  it("links the Terms of Service and Privacy Notice", () => {
+    render(<Home />);
+
+    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+  });
 });

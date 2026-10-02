@@ -11,6 +11,7 @@ describe("authErrorMessage", () => {
     ["PASSWORD_COMPROMISED", /data breach/],
     ["INVALID_EMAIL", /valid email/],
     ["INVALID_TOKEN", /link has expired or was already used/],
+    ["TERMS_NOT_ACCEPTED", /Agree to the Terms of Service and Privacy Notice/],
   ])("explains %s in plain language", (code, expected) => {
     expect(authErrorMessage({ code })).toMatch(expected);
   });

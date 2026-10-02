@@ -16,6 +16,7 @@ export async function signUp(page: Page, { name, email, password }: { name: stri
   await page.getByLabel("Your name").fill(name);
   await page.getByLabel("Work email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("checkbox", { name: /^I agree to the Terms of Service/ }).click();
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/onboarding$/);
 }
