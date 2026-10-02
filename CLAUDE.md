@@ -4,7 +4,7 @@
 
 Quoting and invoicing SaaS for small service businesses: **Customer → Quote → Approval → Invoice → Payment**. Philippines first. No AI in the shipped product.
 
-**Source of truth:** `docs/foundation-proposal.md`. It holds the architecture, domain rules, the founder's decision log (D1–D17) and the roadmap. Read the relevant section before starting any feature, and update it when a decision changes.
+**Source of truth:** `docs/foundation-proposal.md`. It holds the architecture, domain rules, the founder's decision log (D1–D18) and the roadmap. Read the relevant section before starting any feature, and update it when a decision changes.
 
 ## Commands
 

@@ -21,7 +21,7 @@ Source of truth: `docs/foundation-proposal.md` §A (shape), §M (roadmap) and th
 | Design-system primitives / domain display components | `src/components/ui/**` / `src/components/**` |
 | Test fixtures that touch several modules' tables | `src/db/testing/` |
 
-Current modules: `identity`, `organizations`, `authz`, `documents`, `quotes`, `invoices`, `notifications`, `audit`, `system`. Phase 1 adds `customers`, `catalog`, `payments`.
+Current modules: `identity`, `organizations`, `authz`, `documents`, `quotes`, `invoices`, `notifications`, `audit`, `system`, `customers`, `catalog`, `payments`, `files`, `privacy`, and `reports` (2.2: read-only figures composed from other modules' queries; no tables of its own).
 
 ## Dependency direction (lint-enforced: `tavi/module-boundaries`)
 

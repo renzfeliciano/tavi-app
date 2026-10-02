@@ -39,6 +39,11 @@ export function addDays(date: CalendarDate, days: number): CalendarDate {
   return fromUtc(d);
 }
 
+/** Whole days from `from` to `to`: negative when `to` comes first. */
+export function daysBetween(from: CalendarDate, to: CalendarDate): number {
+  return Math.round((toUtc(to).getTime() - toUtc(from).getTime()) / 86_400_000);
+}
+
 /** Negative if `a` is before `b`, zero if the same day. */
 export function compareDates(a: CalendarDate, b: CalendarDate): number {
   return a < b ? -1 : a > b ? 1 : 0;

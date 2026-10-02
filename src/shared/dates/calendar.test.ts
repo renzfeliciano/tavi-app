@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, compareDates, formatCalendarDate, isCalendarDate, todayIn } from "./calendar";
+import { addDays, compareDates, daysBetween, formatCalendarDate, isCalendarDate, todayIn } from "./calendar";
 
 describe("todayIn", () => {
   it("is the business's local date, not the server's", () => {
@@ -40,5 +40,18 @@ describe("formatCalendarDate", () => {
   it("shows a date in the reader's locale without shifting the day", () => {
     expect(formatCalendarDate("2026-10-01", "en-PH")).toBe("Oct 1, 2026");
     expect(formatCalendarDate("2026-10-01", "de-DE")).toBe("01.10.2026");
+  });
+});
+
+describe("daysBetween", () => {
+  it("counts whole days from one date to another", () => {
+    expect(daysBetween("2026-10-01", "2026-10-01")).toBe(0);
+    expect(daysBetween("2026-10-01", "2026-10-31")).toBe(30);
+    expect(daysBetween("2026-10-31", "2026-10-01")).toBe(-30);
+  });
+
+  it("crosses months, years and leap days", () => {
+    expect(daysBetween("2028-02-28", "2028-03-01")).toBe(2);
+    expect(daysBetween("2026-12-31", "2027-01-01")).toBe(1);
   });
 });
