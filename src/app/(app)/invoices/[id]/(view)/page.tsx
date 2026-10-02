@@ -10,14 +10,14 @@ import { requireOrgContext } from "@/modules/identity";
 import { getInvoice, invoiceTitle, isPayable } from "@/modules/invoices";
 import { listInvoicePayments } from "@/modules/payments";
 import { todayIn } from "@/shared/dates/calendar";
-import { customerForDocumentAction } from "../../_documents/actions";
-import { DocumentEditor } from "../../_documents/document-editor";
-import { documentBusiness, editorContext } from "../../_documents/editor-props";
-import { deleteDraftInvoiceAction, saveInvoiceDraftAction, sendInvoiceAction } from "../actions";
-import { InvoicePayments } from "../_components/invoice-payments";
-import { SentInvoiceActions } from "../_components/sent-invoice-actions";
-import { toEditorState } from "../_lib/editor-state";
-import { invoiceDocumentView } from "../_lib/invoice-view";
+import { customerForDocumentAction } from "../../../_documents/actions";
+import { DocumentEditor } from "../../../_documents/document-editor";
+import { documentBusiness, editorContext } from "../../../_documents/editor-props";
+import { deleteDraftInvoiceAction, saveInvoiceDraftAction, sendInvoiceAction } from "../../actions";
+import { InvoicePayments } from "../../_components/invoice-payments";
+import { SentInvoiceActions } from "../../_components/sent-invoice-actions";
+import { toEditorState } from "../../_lib/editor-state";
+import { invoiceDocumentView } from "../../_lib/invoice-view";
 
 export const metadata: Metadata = { title: "Invoice" };
 

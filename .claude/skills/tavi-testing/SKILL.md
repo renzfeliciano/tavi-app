@@ -14,6 +14,8 @@ description: How TAVI is tested — the test pyramid and commands, the test-firs
 | `npm run test:e2e` | Playwright, desktop + Pixel 7, own server on :3201 against the test DB | Any UI/flow change |
 | `CI=1 npx playwright test` | Same against a **production build** (strict CSP, rate limits on) | Before committing security/header/auth changes |
 
+**How much to run per stage** (founder's call, October 2026): a roadmap stage commits after lint, typecheck, `npm test` and the E2E specs covering what it touched (`npx playwright test e2e/<spec>.spec.ts`). The full E2E suite runs once at the end of each phase, and on CI for every push. Agents don't push; the founder does.
+
 ## Test-first procedure (mandatory for logic)
 
 1. Write the test in the right file; run it; **confirm it fails for the right reason** (a stub that throws "not implemented" is fine).
@@ -28,7 +30,7 @@ description: How TAVI is tested — the test pyramid and commands, the test-firs
 | Domain rule / calculation / state machine | Unit; table-driven for transitions; property tests (fast-check) for money |
 | Use case / repository / migration | Integration, including tenant isolation (a second org can't see or touch it) and concurrency where relevant |
 | Capability | Update `policy.test.ts` snapshot deliberately |
-| Screen / flow | E2E happy path + key failure; add the route to the axe/overflow list |
+| Screen / flow | E2E happy path + key failure; a `loading.tsx` in the page's shape; add the route to the axe/overflow list |
 | Env var | `parse-env.test.ts` (valid, invalid-without-echo, production requirement) |
 
 ## Fixtures and helpers

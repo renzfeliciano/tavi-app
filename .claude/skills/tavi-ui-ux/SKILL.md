@@ -14,7 +14,7 @@ Proposal §G holds the product UX; `DESIGN.md` the visual system; `tavi-design-s
 3. What happens on success (toast copy, where do they land)?
 4. What happens on failure (validation, server error, offline)?
 5. Empty state: what is this, why it matters, what to do next?
-6. Loading: which skeleton matches the final layout?
+6. Loading: does the page's `loading.tsx` still match its final layout?
 7. Mobile: what stacks, what becomes a sheet, where's the sticky action?
 8. Permissions: which capability, and what does a Member see?
 9. Is it needed for the MVP?
@@ -38,7 +38,7 @@ Proposal §G holds the product UX; `DESIGN.md` the visual system; `tavi-design-s
 ## States
 
 - Empty: `SectionEmpty`/`EmptyState` (Stamp + title + why + one action).
-- Loading: `loading.tsx` skeletons matching the layout; no spinners in content.
+- Loading: every page has its own `loading.tsx`, built from `src/components/skeletons.tsx` inside `LoadingScreen` and matching that page's real layout (containers, spacing, row shapes, field grid). No spinners in content. A page with child routes sits in a route group so its skeleton covers only itself. `src/app/loading-states.test.tsx` enforces it.
 - Errors: `error.tsx` with human copy and a retry; not-found for foreign or missing IDs.
 - Success: toasts from §32 ("Quote sent", "Payment recorded", "Link copied").
 
