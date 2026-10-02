@@ -4,6 +4,7 @@ import type { ShellAccount } from "@/components/app-shell/account";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { MobileTabBar, MobileTopBar } from "@/components/app-shell/mobile-nav";
 import { VerifyEmailBanner } from "@/components/app-shell/verify-email-banner";
+import { can } from "@/modules/authz";
 import { needsTermsAcceptance, requireOrgContext } from "@/modules/identity";
 import { listMyBusinesses } from "@/modules/organizations";
 import { signOut, switchBusiness } from "./actions";
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     })),
     userName: ctx.userName,
     userEmail: ctx.userEmail,
+    canReadReports: can(ctx, "reports.read"),
   };
 
   return (

@@ -19,7 +19,7 @@ import type { ShellAccount } from "./account";
 import { AccountBlock } from "./account-menu";
 import {
   isActive,
-  mobileMore,
+  mobileMoreFor,
   mobileTabs,
   type NavItem,
   newActions,
@@ -105,7 +105,8 @@ export function MobileTabBar({
   const pathname = usePathname();
   const [newOpen, setNewOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const moreActive = mobileMore.some((item) => isActive(pathname, item.href));
+  const more = mobileMoreFor(account);
+  const moreActive = more.some((item) => isActive(pathname, item.href));
   const [home, quotes, invoices] = mobileTabs;
 
   return (
@@ -147,7 +148,7 @@ export function MobileTabBar({
               <SheetTitle>More</SheetTitle>
               <SheetDescription className="sr-only">Other sections of {brand.name}</SheetDescription>
             </SheetHeader>
-            <SheetLinkList items={mobileMore} onNavigate={() => setMoreOpen(false)} />
+            <SheetLinkList items={more} onNavigate={() => setMoreOpen(false)} />
             <div className="border-t border-border px-4 pt-3 pb-4">
               <AccountBlock account={account} signOutAction={signOutAction} switchAction={switchAction} />
             </div>

@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ShellAccount } from "./account";
 import { AccountBlock } from "./account-menu";
-import { isActive, type NavItem, newActions, primaryNav, settingsNav } from "./nav";
+import { isActive, type NavItem, newActions, primaryNavFor, settingsNav } from "./nav";
 
 function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const active = isActive(pathname, item.href);
@@ -96,7 +96,7 @@ export function AppSidebar({
 
       <nav aria-label="Main" className="flex-1 overflow-y-auto px-3">
         <ul className="grid gap-0.5">
-          {primaryNav.map((item) => (
+          {primaryNavFor(account).map((item) => (
             <li key={item.href}>
               <SidebarLink item={item} pathname={pathname} />
             </li>

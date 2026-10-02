@@ -294,6 +294,30 @@ test("the dashboard shows money, what needs attention, and recent activity", asy
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("reports total the period's sales and payments, age what's unpaid, and download as CSV", async () => {
+  await page.getByRole("link", { name: "Reports" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Reports" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "This month" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("region", { name: "Sales" })).toContainText("Before tax");
+  await expect(page.getByRole("region", { name: "Payments received" })).toContainText("GCash or Maya");
+  const unpaid = page.getByRole("region", { name: "Unpaid bills" });
+  await expect(unpaid).toContainText("₱1,500.00");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    unpaid.getByRole("link", { name: "Download CSV of unpaid bills" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^unpaid-\d{4}-\d{2}-\d{2}\.csv$/);
+  const csv = await (await download.createReadStream()).toArray();
+  expect(Buffer.concat(csv).toString("utf8")).toContain("INV-000002,Billing statement,Juan Dela Cruz");
+
+  await page.getByLabel("From").fill("2026-09-30");
+  await page.getByLabel("To").fill("2026-09-01");
+  await page.getByRole("button", { name: "Show" }).click();
+  await expect(page.getByText("Choose an end date on or after the start date.")).toBeVisible();
+});
+
 // Invoice mode (D13, D14, 1.12), last because it changes this business for
 // good: it enters its BIR registration; the next bill is a registered invoice
 // with a serial inside the approved series, the registration at the foot, no

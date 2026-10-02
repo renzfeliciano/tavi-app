@@ -1,6 +1,7 @@
 import type { Route } from "next";
 import {
   BanknoteIcon,
+  ChartColumnIcon,
   FilePlus2Icon,
   FileTextIcon,
   HouseIcon,
@@ -31,6 +32,9 @@ export const primaryNav: readonly NavItem[] = [
   { href: "/catalog", label: "Products & Services", icon: PackageIcon },
 ];
 
+/** Sales, payments and unpaid bills (D18): only for people who can read reports. */
+export const reportsNav: NavItem = { href: "/reports", label: "Reports", icon: ChartColumnIcon };
+
 export const settingsNav: NavItem = {
   href: "/settings",
   label: "Settings",
@@ -50,6 +54,14 @@ export const mobileMore: readonly NavItem[] = [
   { href: "/catalog", label: "Products & Services", icon: PackageIcon },
   settingsNav,
 ];
+
+/** The primary destinations this person can open: Reports joins them when allowed. */
+export const primaryNavFor = (account: { canReadReports: boolean }): readonly NavItem[] =>
+  account.canReadReports ? [...primaryNav, reportsNav] : primaryNav;
+
+/** The More sheet for this person: Reports sits before Settings when allowed. */
+export const mobileMoreFor = (account: { canReadReports: boolean }): readonly NavItem[] =>
+  account.canReadReports ? [...mobileMore.slice(0, -1), reportsNav, settingsNav] : mobileMore;
 
 /** Quick actions behind "New" (§25). */
 export const newActions: readonly NewAction[] = [

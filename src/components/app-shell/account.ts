@@ -5,4 +5,6 @@ export type ShellAccount = {
   businesses: { id: string; name: string; current: boolean }[];
   userName: string;
   userEmail: string;
+  /** Whether Reports shows in the navigation (`reports.read`, D18). */
+  canReadReports: boolean;
 };

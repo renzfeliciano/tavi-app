@@ -5,6 +5,7 @@ export const SCREENS = [
   "/quotes/new",
   "/invoices",
   "/payments",
+  "/reports",
   "/customers",
   "/customers/new",
   "/catalog",
