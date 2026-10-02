@@ -20,6 +20,7 @@ exports[`role matrix (docs/foundation-proposal.md §E) > matches the documented 
     "quotes.read",
     "quotes.send",
     "quotes.write",
+    "reports.read",
     "users.manage",
   ],
   "member": [
@@ -57,6 +58,7 @@ exports[`role matrix (docs/foundation-proposal.md §E) > matches the documented 
     "quotes.read",
     "quotes.send",
     "quotes.write",
+    "reports.read",
     "users.manage",
   ],
 }

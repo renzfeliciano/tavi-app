@@ -25,6 +25,7 @@ export const CAPABILITIES = [
   "organization.manage",
   "users.manage",
   "audit.read",
+  "reports.read",
   "billing.manage",
   "organization.delete",
   "ownership.transfer",
@@ -53,6 +54,8 @@ const ADMINISTRATION: readonly Capability[] = [
   "organization.manage",
   "users.manage",
   "audit.read",
+  // Sales, payments and unpaid totals for the period (D18).
+  "reports.read",
 ];
 
 const OWNERSHIP: readonly Capability[] = [

@@ -1,0 +1,1 @@
+CREATE INDEX "invoices_organization_issue_date_idx" ON "invoices" USING btree ("organization_id","issue_date");

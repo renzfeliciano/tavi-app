@@ -10,3 +10,6 @@ export const INVOICE_STATUSES = [
 ] as const;
 
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+
+/** Sent and not settled: what the business is still owed (dashboard §G.2, reports D18). */
+export const OWING_INVOICE_STATUSES = ["SENT", "PARTIALLY_PAID", "OVERDUE"] as const satisfies readonly InvoiceStatus[];

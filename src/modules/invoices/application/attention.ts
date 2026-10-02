@@ -2,6 +2,7 @@ import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { type Database, getDb } from "@/db";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import type { CalendarDate } from "@/shared/dates/calendar";
+import { OWING_INVOICE_STATUSES as OWING } from "../domain/status";
 import { invoices } from "../schema";
 
 // What the dashboard asks of invoices (§G.2): what's overdue, and the money
@@ -9,7 +10,6 @@ import { invoices } from "../schema";
 // itself, so it's right even before the daily status job runs (§B.4).
 // Totals are per currency and never summed across currencies (§B.2).
 
-const OWING = ["SENT", "PARTIALLY_PAID", "OVERDUE"] as const;
 
 export type OverdueInvoice = {
   id: string;

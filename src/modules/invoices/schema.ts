@@ -80,6 +80,8 @@ export const invoices = pgTable(
     unique("invoices_source_quote_unique").on(t.sourceQuoteId),
     index("invoices_organization_status_due_idx").on(t.organizationId, t.status, t.dueDate),
     index("invoices_organization_updated_idx").on(t.organizationId, t.updatedAt.desc()),
+    // Reports find a period's bills by issue date (D18).
+    index("invoices_organization_issue_date_idx").on(t.organizationId, t.issueDate),
     foreignKey({
       name: "invoices_customer_fk",
       columns: [t.organizationId, t.customerId],

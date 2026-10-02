@@ -24,11 +24,12 @@ describe("role matrix (docs/foundation-proposal.md §E)", () => {
     }
   });
 
-  it("lets admins manage the organization and money corrections", () => {
+  it("lets admins manage the organization and money corrections, and read the reports (D18)", () => {
     for (const cap of [
       "organization.manage",
       "users.manage",
       "audit.read",
+      "reports.read",
       "invoices.void",
       "payments.record",
       "payments.void",

@@ -73,3 +73,11 @@ export { canEditIssued, REGISTERED_INVOICE_LOCKED } from "./domain/corrections";
 export { type SalesBreakdown, salesBreakdown, salesBreakdownRows } from "./domain/sales-breakdown";
 export { buyerTaxIdReminder } from "./domain/registration";
 export { exportInvoices } from "./infra/export";
+export {
+  type InvoiceParty,
+  invoiceParties,
+  invoicesIssuedBetween,
+  type ReportedInvoice,
+  type UnpaidInvoice,
+  unpaidInvoices,
+} from "./application/reports";
