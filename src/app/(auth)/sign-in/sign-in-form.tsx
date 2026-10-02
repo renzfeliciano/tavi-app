@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -12,7 +13,8 @@ import { brand } from "@/config/brand";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/modules/identity/client";
 
-export function SignInForm() {
+/** `next`: where to go after signing in (an invitation), else the dashboard. */
+export function SignInForm({ next }: { next?: Route } = {}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function SignInForm() {
       setPending(false);
       return;
     }
-    router.replace("/dashboard");
+    router.replace(next ?? "/dashboard");
     router.refresh();
   }
 

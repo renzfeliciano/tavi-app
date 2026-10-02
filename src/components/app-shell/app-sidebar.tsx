@@ -46,9 +46,11 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
 export function AppSidebar({
   account,
   signOutAction,
+  switchAction,
 }: {
   account: ShellAccount;
   signOutAction: () => Promise<void>;
+  switchAction: (organizationId: string) => Promise<void>;
 }) {
   const pathname = usePathname();
 
@@ -105,7 +107,7 @@ export function AppSidebar({
       <div className="grid gap-2 border-t border-sidebar-border p-3">
         <SidebarLink item={settingsNav} pathname={pathname} />
         <div className="border-t border-sidebar-border pt-3">
-          <AccountBlock account={account} signOutAction={signOutAction} />
+          <AccountBlock account={account} signOutAction={signOutAction} switchAction={switchAction} />
         </div>
       </div>
     </aside>

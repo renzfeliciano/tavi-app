@@ -17,6 +17,9 @@ export const users = pgTable("users", {
   // when (src/config/legal.ts). Null for accounts made before 1.13b.
   termsVersion: text("terms_version"),
   termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
+  // Set when the person closes their account: the row stays (activity history
+  // points at it) with the name and email replaced (privacy module).
+  closedAt: timestamp("closed_at", { withTimezone: true }),
   ...timestamps(),
 });
 

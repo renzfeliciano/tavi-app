@@ -42,3 +42,35 @@ export async function markEmailVerified(email: string) {
     await client.end();
   }
 }
+
+/** Test-only: pretend this account agreed to an older version of the Terms (D15). */
+export async function setTermsVersion(email: string, version: string) {
+  const { Client } = await import("pg");
+  const { testDatabaseUrl } = await import("../src/db/testing/env");
+  const client = new Client({ connectionString: testDatabaseUrl() });
+  await client.connect();
+  try {
+    await client.query("update users set terms_version = $2 where email = $1", [email, version]);
+  } finally {
+    await client.end();
+  }
+}
+
+/** Test-only: the invitation link in the latest email queued for `to` (E2E runs have no mailbox). */
+export async function latestInvitationPath(to: string): Promise<string> {
+  const { Client } = await import("pg");
+  const { testDatabaseUrl } = await import("../src/db/testing/env");
+  const client = new Client({ connectionString: testDatabaseUrl() });
+  await client.connect();
+  try {
+    const { rows } = await client.query<{ text: string }>(
+      "select payload->>'text' as text from outbox_messages where payload->>'to' = $1 order by created_at desc limit 1",
+      [to],
+    );
+    const path = /\/invite\/[A-Za-z0-9_-]{43}/.exec(rows[0]?.text ?? "")?.[0];
+    if (!path) throw new Error(`No invitation email for ${to}`);
+    return path;
+  } finally {
+    await client.end();
+  }
+}

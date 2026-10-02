@@ -91,3 +91,13 @@ export async function recordShareLinkView(executor: Executor, token: string): Pr
     .returning({ viewCount: shareLinks.viewCount });
   return row?.viewCount === 1;
 }
+
+/** Closes every open customer link of a business (it was closed); returns how many. */
+export async function revokeOrganizationShareLinks(executor: Executor, organizationId: string): Promise<number> {
+  const rows = await executor
+    .update(shareLinks)
+    .set({ revokedAt: sql`now()` })
+    .where(and(eq(shareLinks.organizationId, organizationId), isNull(shareLinks.revokedAt)))
+    .returning({ id: shareLinks.id });
+  return rows.length;
+}

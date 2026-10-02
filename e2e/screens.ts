@@ -16,5 +16,7 @@ export const SCREENS = [
   "/settings/tax-rates",
   "/settings/numbering",
   "/settings/invoicing",
+  "/settings/team",
   "/settings/security",
+  "/settings/account",
 ] as const;

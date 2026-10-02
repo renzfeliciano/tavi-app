@@ -19,7 +19,8 @@ import {
   TERMS_REQUIRED_MESSAGE,
 } from "@/modules/identity/client";
 
-export function SignUpForm() {
+/** `next`: where to go after creating the account (an invitation), else onboarding. */
+export function SignUpForm({ next }: { next?: Route } = {}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +51,7 @@ export function SignUpForm() {
       setPending(false);
       return;
     }
-    router.replace("/onboarding");
+    router.replace(next ?? "/onboarding");
     router.refresh();
   }
 
@@ -98,9 +99,12 @@ export function SignUpForm() {
             }}
             aria-invalid={termsError ? true : undefined}
             aria-describedby={termsError ? `${termsId}-error` : undefined}
+            // Named by its text directly: the <label> points at Base UI's hidden
+            // input, and Field only links the visible checkbox after hydration.
+            aria-labelledby={`${termsId}-label`}
             className="mt-0.5"
           />
-          <span>
+          <span id={`${termsId}-label`}>
             I agree to the{" "}
             <LegalLink href={LEGAL_PATHS.terms}>Terms of Service</LegalLink> and have read the{" "}
             <LegalLink href={LEGAL_PATHS.privacy}>Privacy Notice</LegalLink>.

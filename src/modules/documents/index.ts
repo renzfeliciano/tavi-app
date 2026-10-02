@@ -50,6 +50,7 @@ export {
   hashShareToken,
   recordShareLinkView,
   resolveShareLink,
+  revokeOrganizationShareLinks,
   revokeShareLinks,
   setShareLinksExpiry,
   type ShareableKind,

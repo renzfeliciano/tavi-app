@@ -10,7 +10,14 @@ import { getAuth } from "../infra/auth";
 import { setSessionActiveOrganization } from "../infra/session-repository";
 
 export type SignedInSession = {
-  user: { id: string; name: string; email: string; emailVerified: boolean };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+    /** The Terms/Privacy version agreed to; null for accounts from before sign-up asked. */
+    termsVersion: string | null;
+  };
   session: { id: string; token: string; activeOrganizationId: string | null };
 };
 
@@ -38,6 +45,7 @@ export const getCurrentSession = cache(async (): Promise<SignedInSession | null>
       name: result.user.name,
       email: result.user.email,
       emailVerified: result.user.emailVerified,
+      termsVersion: (result.user as { termsVersion?: string | null }).termsVersion ?? null,
     },
     session: {
       id: result.session.id,
@@ -60,6 +68,8 @@ export type OrgContext = {
   userName: string;
   userEmail: string;
   emailVerified: boolean;
+  /** The Terms/Privacy version this person agreed to (the app layout asks again when it's out of date). */
+  termsVersion: string | null;
   sessionId: string;
   organizationId: string;
   organizationName: string;
@@ -91,6 +101,7 @@ export const requireOrgContext = cache(async (): Promise<OrgContext> => {
     userName: user.name,
     userEmail: user.email,
     emailVerified: user.emailVerified,
+    termsVersion: user.termsVersion,
     sessionId: session.id,
     organizationId: membership.organizationId,
     organizationName: membership.organizationName,

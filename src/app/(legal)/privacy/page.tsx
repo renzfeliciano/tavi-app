@@ -67,6 +67,10 @@ export default function PrivacyPage() {
             browser and sign-in times, so you can see and sign out your devices.
           </li>
           <li>
+            <strong className="font-semibold">Your team:</strong> who belongs to which business and with what role,
+            and the email address of anyone invited to join, which we use only to send the invitation.
+          </li>
+          <li>
             <strong className="font-semibold">Your business:</strong> what you enter in its profile, such as its name,
             registered name, tax identification number (TIN), address, contact details, logo, payment instructions and
             tax registration details.
@@ -164,9 +168,9 @@ export default function PrivacyPage() {
         <LegalList>
           <li>Your account and your business&apos;s records: for as long as the account is open.</li>
           <li>
-            After an account is closed: we delete or anonymise it, except what a business must keep under tax rules
-            (its issued documents and payments) and the activity history, which we keep for as long as those records
-            exist.
+            After an account is closed: the person&apos;s name, email and sign-in are removed straight away. A closed
+            business&apos;s records are kept, out of use, for as long as tax rules require it to keep its issued
+            documents and payments, and then deleted; the activity history goes with them.
           </li>
           <li>
             Signed-in devices: until you sign out or the session ends. Rate-limit counters: up to a day. Emails:
@@ -203,9 +207,10 @@ export default function PrivacyPage() {
           </li>
         </LegalList>
         <p>
-          You can correct your name and your business&apos;s details in {name} yourself. For anything else, including
-          closing your account, write to <span className="font-medium">{privacyEmail}</span>. We may need to confirm
-          it&apos;s you before acting on a request.
+          You can correct your name and your business&apos;s details, download a copy of your business&apos;s data,
+          and close your account yourself, in {name}&apos;s Settings under Account and data. For anything else, write
+          to <span className="font-medium">{privacyEmail}</span>. We may need to confirm it&apos;s you before acting on
+          a request.
         </p>
       </LegalSection>
 

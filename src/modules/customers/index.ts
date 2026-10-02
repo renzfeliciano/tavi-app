@@ -16,3 +16,4 @@ export {
 } from "./application/customers";
 export { CUSTOMER_FIELDS, type CustomerInput, customerInputSchema } from "./domain/customer-input";
 export { CUSTOMER_LIMITS, CUSTOMER_PAGE_SIZE } from "./domain/limits";
+export { exportCustomers } from "./infra/export";

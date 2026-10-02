@@ -7,4 +7,4 @@ export {
   passwordResetLifetime,
 } from "./domain/auth-policy";
 export { SESSION_POLICY } from "./domain/session-policy";
-export { TERMS_REQUIRED_MESSAGE } from "./domain/terms";
+export { TERMS_REQUIRED_MESSAGE, TERMS_REQUIRED_TO_CONTINUE } from "./domain/terms";

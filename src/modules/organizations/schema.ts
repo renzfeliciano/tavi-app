@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { char, check, index, integer, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { char, check, index, integer, pgTable, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "@/db/columns";
 import { users } from "@/modules/identity/schema";
 import { ROLES } from "@/modules/authz";
@@ -36,6 +36,9 @@ export const organizations = pgTable(
     defaultNotes: text("default_notes"),
     defaultTerms: text("default_terms"),
     paymentInstructions: text("payment_instructions"),
+    // Set when its only member closes their account: the records stay (tax
+    // rules), its customer links close and daily jobs skip it.
+    closedAt: timestamp("closed_at", { withTimezone: true }),
     ...timestamps(),
   },
   (t) => [
@@ -68,3 +71,35 @@ export const memberships = pgTable(
     check("memberships_role", sql`${t.role} in ('owner', 'admin', 'member')`),
   ],
 );
+
+// Invitations to join a business (Phase 2.1, D17). Like customer links, only
+// the SHA-256 of the token is stored. At most one open invitation per email
+// per business; accepting, cancelling or expiring frees the address.
+export const invitations = pgTable(
+  "invitations",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    /** Lowercased, as Better Auth stores account emails. */
+    email: text("email").notNull(),
+    role: text("role", { enum: ["admin", "member"] }).notNull(),
+    tokenHash: char("token_hash", { length: 64 }).notNull().unique(),
+    invitedBy: uuid("invited_by").references(() => users.id, { onDelete: "set null" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    acceptedBy: uuid("accepted_by").references(() => users.id, { onDelete: "set null" }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    ...timestamps(),
+  },
+  (t) => [
+    index("invitations_organization_idx").on(t.organizationId, t.createdAt),
+    uniqueIndex("invitations_open_email_unique")
+      .on(t.organizationId, t.email)
+      .where(sql`${t.acceptedAt} is null and ${t.revokedAt} is null`),
+    check("invitations_role", sql`${t.role} in ('admin', 'member')`),
+    check("invitations_email_lowercase", sql`${t.email} = lower(${t.email})`),
+  ],
+);
+

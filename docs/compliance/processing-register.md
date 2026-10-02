@@ -21,6 +21,8 @@ Prepared 2 Oct 2026 (proposal §M 1.13b, risk N.1) as the register of what perso
 | P6 | Activity history | Accountability, security and support; the product funnel | Users; customers (as actors) | Who did what and when; IP and user agent for sign-ins and customer decisions | Legitimate interest (Sec. 12(f)) | `audit_events` (append-only) | For as long as the records it describes exist |
 | P7 | Email delivery | Send account emails and the documents a business sends | Users; customers | Address, subject, body | Contract | `outbox_messages`; Google (Gmail SMTP) | Body deleted once delivered; address and subject kept as a delivery record |
 | P8 | Rate limiting | Stop abuse of sign-in and customer links | Anyone | A key derived from the IP address, counts | Legitimate interest (Sec. 12(f)) | `request_limits`, `rate_limits` | Pruned after a day |
+| P11 | Team invitations (D17) | Invite people to a business by email | People invited by a business | Email address, role, who invited them, when it was accepted | Contract with the inviting business; the invitee's own contract once they accept | `invitations`; Google (Gmail SMTP) | Kept with the business; an unused invitation stops working after 7 days |
+| P10 | Data download and account closure | Data portability and erasure on request (Sec. 16(e), 18) | Users; the business's customers (in the file) | Everything listed above for the business | Legal obligation | A JSON file streamed to the person; `users.closed_at`, `organizations.closed_at` | Not stored: the file is made on request; closure is permanent |
 | P9 | Breached-password check | Refuse passwords known from breaches | Users | First 5 characters of the password's SHA-1 hash (not identifiable) | Legitimate interest | Have I Been Pwned (k-anonymity range API) | Not stored |
 
 **Sensitive personal information.** An individual's TIN may count as sensitive personal information (RA 10173 Sec. 3(l)(3), "issued by government agencies peculiar to an individual"). It's processed because tax regulations require it on documents (Sec. 13(b)). To confirm with the lawyer.
@@ -50,5 +52,7 @@ Within 72 hours of knowledge or reasonable belief of a breach that puts people a
 1. Fill in `LEGAL.operator` (name, registered address, privacy email, data protection officer). The legal pages say "Draft" until then.
 2. Lawyer review of the Privacy Notice, Terms of Service and this register.
 3. Ask whether Tavi must register with the NPC (NPC Circular 2022-04 sets who must register; the answer depends on the number of people and whether sensitive personal information is processed).
-4. Account closure and data export are handled by email for now; build them in the app if beta businesses ask.
-5. When either document changes materially, existing users should agree again; there's no re-acceptance screen yet (users store `terms_version`, so one can be added).
+4. Delete a closed business's records once its tax retention period ends. Closing an account (D16) anonymises the person straight away and closes the business, but its records stay until then; there's no deletion job yet, and the lawyer should confirm the period.
+5. An owner whose business others still use must transfer ownership (Settings → Team) before closing their account; members leave the shared business when they close theirs (D17).
+
+Done in 1.13c (D16): "Download your data" (Settings → Account and data, one JSON file, owners and admins), "Close account" (password, then the steps above) and agreeing again after `LEGAL.version` changes (`/accept-terms`).

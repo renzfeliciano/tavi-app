@@ -1,7 +1,7 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { marketFor } from "@/config/markets";
-import { type Database, getDb } from "@/db";
+import { type Database, type Executor, getDb } from "@/db";
 import { recordAuditEvent } from "@/modules/audit";
 import type { Role } from "@/modules/authz";
 import { organizationInputSchema } from "../domain/organization-input";
@@ -132,5 +132,47 @@ export async function listOrganizationClocks(db: Database = getDb()): Promise<{ 
   return db
     .select({ organizationId: organizations.id, timezone: organizations.timezone })
     .from(organizations)
+    // A closed business's documents stay exactly as they were.
+    .where(isNull(organizations.closedAt))
     .orderBy(asc(organizations.createdAt));
+}
+
+export type MembershipForClosure = { organizationId: string; organizationName: string; role: Role; memberCount: number };
+
+/**
+ * The businesses a person belongs to and how many members each has, with
+ * those membership rows locked, for closing their account (privacy module).
+ */
+export async function listMembershipsForClosure(executor: Executor, userId: string): Promise<MembershipForClosure[]> {
+  const mine = await executor
+    .select({ organizationId: memberships.organizationId, organizationName: organizations.name, role: memberships.role })
+    .from(memberships)
+    .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
+    .where(eq(memberships.userId, userId))
+    .orderBy(asc(memberships.createdAt))
+    .for("update", { of: memberships });
+  if (mine.length === 0) return [];
+  const counts = await executor
+    .select({ organizationId: memberships.organizationId, members: count() })
+    .from(memberships)
+    .where(inArray(memberships.organizationId, mine.map((m) => m.organizationId)))
+    .groupBy(memberships.organizationId);
+  const byOrganization = new Map(counts.map((c) => [c.organizationId, Number(c.members)]));
+  return mine.map((m) => ({ ...m, memberCount: byOrganization.get(m.organizationId) ?? 1 }));
+}
+
+/** Marks a business closed (its only member closed their account). Returns false if it already was. */
+export async function closeOrganization(executor: Executor, organizationId: string): Promise<boolean> {
+  const rows = await executor
+    .update(organizations)
+    .set({ closedAt: sql`now()` })
+    .where(and(eq(organizations.id, organizationId), isNull(organizations.closedAt)))
+    .returning({ id: organizations.id });
+  return rows.length > 0;
+}
+
+/** The business's own row, for "Download your data". */
+export async function getOrganizationForExport(executor: Executor, organizationId: string) {
+  const [row] = await executor.select().from(organizations).where(eq(organizations.id, organizationId));
+  return row ?? null;
 }

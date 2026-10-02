@@ -77,7 +77,8 @@ describe("PORTAL_HEADERS", () => {
   });
 
   it("applies to the customer pages only", () => {
-    expect(PORTAL_PATH_PATTERNS).toEqual(["/q/:path*", "/i/:path*"]);
+    expect(PORTAL_PATH_PATTERNS).toEqual(["/q/:path*", "/i/:path*", "/invite/:path*"]);
+    expect(isProtectedPath("/invite/abc")).toBe(false);
     expect(isProtectedPath("/q/abc")).toBe(false);
     expect(isProtectedPath("/i/abc")).toBe(false);
   });

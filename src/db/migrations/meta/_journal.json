@@ -141,6 +141,20 @@
       "when": 1790886168292,
       "tag": "0019_terms_acceptance",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790923195166,
+      "tag": "0020_account_closure",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790926656342,
+      "tag": "0021_invitations",
+      "breakpoints": true
     }
   ]
 }

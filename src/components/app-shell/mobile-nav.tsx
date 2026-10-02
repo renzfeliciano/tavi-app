@@ -96,9 +96,11 @@ export function MobileTopBar({ organizationName }: { organizationName: string })
 export function MobileTabBar({
   account,
   signOutAction,
+  switchAction,
 }: {
   account: ShellAccount;
   signOutAction: () => Promise<void>;
+  switchAction: (organizationId: string) => Promise<void>;
 }) {
   const pathname = usePathname();
   const [newOpen, setNewOpen] = useState(false);
@@ -147,7 +149,7 @@ export function MobileTabBar({
             </SheetHeader>
             <SheetLinkList items={mobileMore} onNavigate={() => setMoreOpen(false)} />
             <div className="border-t border-border px-4 pt-3 pb-4">
-              <AccountBlock account={account} signOutAction={signOutAction} />
+              <AccountBlock account={account} signOutAction={signOutAction} switchAction={switchAction} />
             </div>
           </SheetContent>
         </Sheet>

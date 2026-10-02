@@ -125,8 +125,8 @@ export default function TermsPage() {
             the {jurisdiction.regulator} and the people affected within {jurisdiction.breachNotificationHours} hours.
           </li>
           <li>
-            When you close your account, we&apos;ll give you a copy of it on request, then delete it, except what the
-            law requires us to keep.
+            You can download a copy of it at any time. When you close your account, we keep it, out of use, only for
+            as long as the law requires you to keep your records, then delete it.
           </li>
           <li>
             We&apos;ll give you the information you reasonably need to show that this processing complies with the
@@ -141,9 +141,10 @@ export default function TermsPage() {
 
       <LegalSection title="Closing your account">
         <p>
-          You can stop using {name} at any time. To close your account, write to{" "}
-          <span className="font-medium">{privacyEmail}</span>. We may close {name} or your account with reasonable
-          notice, and we&apos;ll give you time to download your documents first.
+          You can close your account at any time in Settings, under Account and data; download your data there first
+          if you want a copy. If other people still use a business you own, make one of them the owner first; you can
+          also write to <span className="font-medium">{privacyEmail}</span>. We may close {name} or your account with
+          reasonable notice, and we&apos;ll give you time to download your data first.
         </p>
       </LegalSection>
 

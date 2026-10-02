@@ -4,7 +4,7 @@
 
 Quoting and invoicing SaaS for small service businesses: **Customer → Quote → Approval → Invoice → Payment**. Philippines first. No AI in the shipped product.
 
-**Source of truth:** `docs/foundation-proposal.md`. It holds the architecture, domain rules, the founder's decision log (D1–D15) and the roadmap. Read the relevant section before starting any feature, and update it when a decision changes.
+**Source of truth:** `docs/foundation-proposal.md`. It holds the architecture, domain rules, the founder's decision log (D1–D17) and the roadmap. Read the relevant section before starting any feature, and update it when a decision changes.
 
 ## Commands
 
@@ -40,7 +40,7 @@ Quoting and invoicing SaaS for small service businesses: **Customer → Quote �
 - **Logging:** use `logger` from `@/shared/logger` (never `console`). It redacts sensitive keys and scrubs credentials, but don't log request bodies, headers or URLs with query strings anyway.
 - **Security headers:** the CSP nonce is per request (`src/proxy.ts`), so every page renders dynamically. Never add `dangerouslySetInnerHTML`, inline `<script>`, or third-party scripts without updating `src/shared/security/headers.ts` and its tests.
 - **Secrets:** never paste or log connection strings or keys. `.env.local` is gitignored, and `.env.example` documents every variable.
-- **Privacy and terms (D15):** `/terms` and `/privacy` read the operator and the documents' version from `src/config/legal.ts`. When you add personal data, a table holding it, a service provider or a tracking cookie, update the Privacy Notice and `docs/compliance/processing-register.md` in the same change. Bump `LEGAL.version` only for a material change to either document (sign-up then records the new version).
+- **Privacy and terms (D15):** `/terms` and `/privacy` read the operator and the documents' version from `src/config/legal.ts`. When you add personal data, a table holding it, a service provider or a tracking cookie, update the Privacy Notice and `docs/compliance/processing-register.md` in the same change. Bump `LEGAL.version` only for a material change to either document: sign-up records the new version and everyone else is sent to `/accept-terms` once. New tenant tables must be added to the `privacy` module's export (D16), and anything that acts on businesses in bulk must skip closed ones (`organizations.closed_at`).
 - **Brand:** read product names and taglines from `src/config/brand.ts`. "TAVI" is the wordmark; "Tavi" is used in running text.
 - **No hardcoding (D12):** nothing country-specific appears in code or copy. Currency, locale, time zone, tax suggestions (e.g. VAT 12%), tax-ID name and format, address labels, payment methods, share channels and document names come from the business's market profile (`src/config/markets.ts`, `ctx.market` on `OrgContext`; add a country by adding an entry). Format with the business's `ctx.locale` / `ctx.timezone`, never a literal. Limits, lifetimes and accepted formats are named constants (`BUSINESS_PROFILE_LIMITS`, `TAX_RATE_LIMITS`, `NUMBERING_LIMITS`, `PASSWORD_POLICY`, `LINK_LIFETIMES`, `SESSION_POLICY`, `UPLOAD_MESSAGES`) that the rule, the form `maxLength` and the message all read; browser code imports them from `@/modules/<name>/client`. Build messages from the limit (`tooLong(max)`, `describeDuration(seconds)`). Database columns have no market defaults.
 

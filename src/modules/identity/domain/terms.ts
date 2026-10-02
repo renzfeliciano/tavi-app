@@ -10,7 +10,15 @@ export const TERMS_NOT_ACCEPTED = "TERMS_NOT_ACCEPTED";
 
 export const TERMS_REQUIRED_MESSAGE = "Agree to the Terms of Service and Privacy Notice to create your account.";
 
+/** The same, for someone who already has an account (the documents changed). */
+export const TERMS_REQUIRED_TO_CONTINUE = "Agree to the Terms of Service and Privacy Notice to continue.";
+
 /** The version agreed to, or null when it isn't exactly the current one. */
 export function acceptedTermsVersion(value: unknown, current: string = LEGAL.version): string | null {
   return typeof value === "string" && value === current ? value : null;
+}
+
+/** Whether someone must agree to the current documents before using the app. */
+export function needsTermsAcceptance(agreedVersion: string | null | undefined, current: string = LEGAL.version): boolean {
+  return agreedVersion !== current;
 }

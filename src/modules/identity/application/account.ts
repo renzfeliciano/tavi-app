@@ -1,5 +1,5 @@
 import "server-only";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getDb } from "@/db";
 import { recordAuditEvent } from "@/modules/audit";
 import { describeDevice } from "../domain/device";
@@ -76,5 +76,17 @@ export async function signOutCurrentSession(): Promise<void> {
       entityType: "session",
       entityId: current.session.id,
     });
+  }
+}
+
+/**
+ * Drops this browser's sign-in cookies, for when the session itself is
+ * already gone (the account was just closed). Better Auth names them with our
+ * `tavi` prefix, plus `__Secure-` over HTTPS.
+ */
+export async function forgetSessionCookies(): Promise<void> {
+  const jar = await cookies();
+  for (const cookie of jar.getAll()) {
+    if (/^(__Secure-)?tavi\./.test(cookie.name)) jar.delete(cookie.name);
   }
 }

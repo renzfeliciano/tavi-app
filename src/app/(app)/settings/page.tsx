@@ -1,6 +1,16 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
-import { BuildingIcon, ChevronRightIcon, FileBadgeIcon, HashIcon, type LucideIcon, PercentIcon, ShieldCheckIcon } from "lucide-react";
+import {
+  BuildingIcon,
+  ChevronRightIcon,
+  FileBadgeIcon,
+  HashIcon,
+  type LucideIcon,
+  PercentIcon,
+  ShieldCheckIcon,
+  UserRoundIcon,
+  UsersIcon,
+} from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { documentWording, type MarketProfile } from "@/config/markets";
 import { requireOrgContext } from "@/modules/identity";
@@ -42,10 +52,22 @@ function sectionsFor(market: MarketProfile): Section[] {
         ]
       : []),
     {
+      href: "/settings/team",
+      title: "Team",
+      description: "Invite the people who work with you, and choose what each of them can do.",
+      icon: UsersIcon,
+    },
+    {
       href: "/settings/security",
       title: "Security",
       description: "See the devices signed in to your account and sign them out.",
       icon: ShieldCheckIcon,
+    },
+    {
+      href: "/settings/account",
+      title: "Account and data",
+      description: "Download a copy of your data, or close your account.",
+      icon: UserRoundIcon,
     },
   ];
 }

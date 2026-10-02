@@ -11,6 +11,7 @@ describe("loggablePath", () => {
     [`/q/${token}/pdf`, "/q/[token]/pdf"],
     [`/i/${token}/receipts/OR-000012/pdf`, "/i/[token]/receipts/OR-000012/pdf"],
     [`/i/${token}?utm=x`, "/i/[token]"],
+    [`/invite/${token}`, "/invite/[token]"],
   ])("hides the token in %s", (path, expected) => expect(loggablePath(path)).toBe(expected));
 
   it.each([

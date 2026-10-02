@@ -42,3 +42,4 @@ export {
   type CatalogItemKind,
   examplePrice,
 } from "./domain/catalog-item";
+export { exportCatalog } from "./infra/export";
