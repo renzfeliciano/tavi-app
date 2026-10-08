@@ -105,8 +105,8 @@ export type SaveQuoteDraftResult =
 
 export type QuoteCommandResult = { ok: true } | { ok: false; notFound: true } | { ok: false; error: string };
 
-/** How typed input is read: the business's locale. */
-export type QuoteInputOptions = { locale: string };
+/** How typed input is read: the business's locale, and the market's units (null skips that check). */
+export type QuoteInputOptions = { locale: string; units?: readonly string[] | null };
 
 /** Module-internal (used by ./sending); not exported from the module. */
 export const headerColumns = {
@@ -286,11 +286,11 @@ export async function saveQuoteDraft(
   actor: OrgActor,
   id: string | null,
   input: unknown,
-  { locale }: QuoteInputOptions,
+  { locale, units = null }: QuoteInputOptions,
   db: Database = getDb(),
 ): Promise<SaveQuoteDraftResult> {
   assertCan(actor, "quotes.write");
-  const parsed = parseQuoteDraft(input, { locale });
+  const parsed = parseQuoteDraft(input, { locale, units });
   if (!parsed.ok) return parsed;
   const draft = parsed.draft;
 

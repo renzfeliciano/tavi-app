@@ -32,7 +32,8 @@ export type ListCatalogItemsOptions = { search?: string | null; status?: Catalog
 export type CatalogItemList = { items: CatalogItem[]; page: number; hasMore: boolean; archivedCount: number };
 
 /** How typed input is read: the business's locale and its market's default units. */
-export type CatalogInputOptions = { locale: string; units: Record<CatalogItemKind, string> };
+/** The business's locale, and the market's units (`market.units`): with `options`, items must use one. */
+export type CatalogInputOptions = { locale: string; units: Record<CatalogItemKind, string> & { options?: readonly string[] } };
 
 type FieldErrors = Partial<Record<string, string[]>>;
 export type SaveCatalogItemResult =

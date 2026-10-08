@@ -61,6 +61,17 @@ describe("catalogItemSchemaFor", () => {
     });
   });
 
+  it("takes only the market's units when given its list", () => {
+    const listed = catalogItemSchemaFor({ kind: "service", locale: "en-PH", units: { ...units, options: ["hour", "set"] } });
+    expect(listed.parse(valid).unitLabel).toBe("set");
+    expect(listed.safeParse({ ...valid, unitLabel: "hrs" }).error?.flatten().fieldErrors).toEqual({
+      unitLabel: ["Choose a unit from the list."],
+    });
+    expect(listed.safeParse({ ...valid, unitLabel: "" }).error?.flatten().fieldErrors).toEqual({
+      unitLabel: ["Choose a unit."],
+    });
+  });
+
   it("explains a price that can't be read, once the currency is known", () => {
     const result = product.safeParse({ ...valid, unitPrice: "12.345" });
     expect(result.error?.flatten().fieldErrors).toEqual({

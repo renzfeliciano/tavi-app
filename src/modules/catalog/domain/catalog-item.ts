@@ -25,9 +25,20 @@ type SchemaOptions = {
   kind: CatalogItemKind;
   /** The business's locale, for reading typed prices. */
   locale: string;
-  /** The market's default units, for examples. */
-  units: Record<CatalogItemKind, string>;
+  /**
+   * The market's default units, for examples, and its list of units
+   * (`market.units.options`): when given, an item must use one of them.
+   */
+  units: Record<CatalogItemKind, string> & { options?: readonly string[] };
 };
+
+function unitSchema(units: SchemaOptions["units"], kind: CatalogItemKind) {
+  const { options } = units;
+  if (!options) return requiredText(CATALOG_ITEM_LIMITS.unitLabel, `Enter a unit, e.g. ${units[kind]}.`);
+  return requiredText(CATALOG_ITEM_LIMITS.unitLabel, "Choose a unit.").refine((unit) => unit === "" || options.includes(unit), {
+    error: "Choose a unit from the list.",
+  });
+}
 
 export function catalogItemSchemaFor({ kind, locale, units }: SchemaOptions) {
   const L = CATALOG_ITEM_LIMITS;
@@ -35,7 +46,7 @@ export function catalogItemSchemaFor({ kind, locale, units }: SchemaOptions) {
     name: requiredText(L.name, "Enter a name."),
     description: optionalText(L.description),
     ...(kind === "product" ? { sku: optionalText(L.sku) } : {}),
-    unitLabel: requiredText(L.unitLabel, `Enter a unit, e.g. ${units[kind]}.`),
+    unitLabel: unitSchema(units, kind),
     unitPrice: z.preprocess(asText, z.string()),
     currency: requiredCurrency(),
     taxRateId: z.preprocess(

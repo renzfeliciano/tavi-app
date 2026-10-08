@@ -33,6 +33,8 @@ export type DocumentDraftResult = { ok: true; draft: DocumentDraft } | { ok: fal
 
 export type DocumentDraftOptions = {
   locale: string;
+  /** The market's units; lines must use one. Null (the default) skips the check. */
+  units?: readonly string[] | null;
   /** The payload key and error key of the second date, e.g. "validUntil". */
   endDateField: string;
   /** Shown when the second date is before the document date. */
@@ -79,7 +81,7 @@ export function parseDocumentDraft(input: unknown, options: DocumentDraftOptions
     errors.currency = "Choose a currency.";
     return { ok: false, errors };
   }
-  const lines = parseDocumentLines(raw.lines, { currency: raw.currency, locale: options.locale });
+  const lines = parseDocumentLines(raw.lines, { currency: raw.currency, locale: options.locale, units: options.units ?? null });
   if (!lines.ok) Object.assign(errors, lines.errors);
 
   if (Object.keys(errors).length > 0 || !lines.ok) return { ok: false, errors };

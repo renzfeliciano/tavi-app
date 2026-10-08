@@ -148,8 +148,8 @@ app/  →  modules/*/index  →  application  →  domain
 | **User** | Identity only (name, email, verified). Owned by `identity`. |
 | **Membership** | `(organizationId, userId, role)`. Role ∈ Owner/Admin/Member. One Owner minimum. |
 | **Customer** | Display name, company, email, phone, billing address, tax ID, preferred currency, notes, `archivedAt`. |
-| **Product** | Physical or stock goods. Name, description, **SKU**, unit label (default "pc"), unit price + currency, default tax rate, `archivedAt`. |
-| **Service** | Labour or time. Name, description, unit label (default "hour"), unit price + currency, default tax rate, `archivedAt`. It's a separate entity from Product (D8). Both implement a shared `LineSource` read interface, so the line-item editor can search both in one combobox, grouped under "Products" and "Services". |
+| **Product** | Physical or stock goods. Name, description, **SKU**, unit label (default "pc", chosen from the market's unit list), unit price + currency, default tax rate, `archivedAt`. |
+| **Service** | Labour or time. Name, description, unit label (default "hour", chosen from the market's unit list), unit price + currency, default tax rate, `archivedAt`. It's a separate entity from Product (D8). Both implement a shared `LineSource` read interface, so the line-item editor can search both in one combobox, grouped under "Products" and "Services". |
 | **TaxRate** | Name ("VAT 12%"), rate in basis points, `archivedAt`. |
 | **Quote** (aggregate) | Header + `QuoteLine[]`. Has a customer, currency, issue date, valid-until date, notes, terms, a revision number, and a customer snapshot taken at send. |
 | **Invoice** (aggregate) | Header + `InvoiceLine[]`, `sourceQuoteId?`, issue date, due date, customer snapshot, cached `amountPaid`/`balanceDue`. |
@@ -158,7 +158,7 @@ app/  →  modules/*/index  →  application  →  domain
 | **DocumentSequence** | Per-org, per-document-kind counter. |
 | **AuditEvent**, **OutboxMessage** | Infrastructure-flavoured domain records. |
 
-**Snapshots (§7):** each line stores its own `description`, `unitLabel`, `quantity`, `unitPrice`, `discount`, `taxRateName`, `taxRateBps` and computed amounts. `sourceKind` + `sourceId` are kept as a nullable back-reference to the product or service for reporting only and is never used to render a document. The customer's name, address, email and tax ID are copied onto the document **when it's issued**. Editing a customer or catalog item never changes an issued document.
+**Snapshots (§7):** each line stores its own `description`, `unitLabel`, `quantity`, `unitPrice`, `discount`, `taxRateName`, `taxRateBps` and computed amounts. A line's unit is picked from the market's fixed list (`market.units.options`, e.g. hour, day, job, pc, set), so the same unit is always written the same way; a unit saved before the list still shows, marked, until it is changed. `sourceKind` + `sourceId` are kept as a nullable back-reference to the product or service for reporting only and is never used to render a document. The customer's name, address, email and tax ID are copied onto the document **when it's issued**. Editing a customer or catalog item never changes an issued document.
 
 ### B.2 Money and calculation rules (§13)
 

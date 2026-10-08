@@ -56,7 +56,7 @@ export default async function CatalogItemPage({ params }: PageProps<"/catalog/[k
           kind={kind}
           itemId={item.id}
           initialValues={itemFormValues(item, ctx.locale)}
-          copy={await catalogFormCopy(ctx, kind, item)}
+          copy={await catalogFormCopy(ctx, item)}
         />
       </div>
     </>

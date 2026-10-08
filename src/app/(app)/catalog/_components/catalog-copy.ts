@@ -11,15 +11,11 @@ import type { CatalogItemFormCopy } from "./catalog-item-form";
  * settings. `current` keeps an archived tax rate selectable on an item that
  * already uses it.
  */
-export async function catalogFormCopy(
-  ctx: OrgContext,
-  kind: CatalogItemKind,
-  current?: CatalogItem,
-): Promise<CatalogItemFormCopy> {
+export async function catalogFormCopy(ctx: OrgContext, current?: CatalogItem): Promise<CatalogItemFormCopy> {
   const [rates, profile] = await Promise.all([listTaxRates(ctx), getBusinessProfile(ctx)]);
   const usable = rates.filter((rate) => rate.archivedAt === null || rate.id === current?.taxRateId);
   return {
-    defaultUnit: ctx.market.units[kind],
+    units: ctx.market.units.options,
     pricePlaceholder: `e.g. ${examplePrice(ctx.currency, ctx.locale)}`,
     taxModeHint:
       profile.taxMode === "inclusive"

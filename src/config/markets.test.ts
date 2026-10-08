@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { CATALOG_ITEM_LIMITS } from "@/modules/catalog/client";
+import { DOCUMENT_LIMITS } from "@/modules/documents/client";
 import { isCurrencyCode } from "@/shared/money";
 import {
   DEFAULT_MARKET,
@@ -61,6 +63,18 @@ describe("market profiles", () => {
     it("names default units for products and services", () => {
       expect(market.units.product.trim()).not.toBe("");
       expect(market.units.service.trim()).not.toBe("");
+    });
+
+    it("lists the units people choose from, defaults included, each once and short enough to store", () => {
+      const { options, product, service } = market.units;
+      expect(options).toContain(product);
+      expect(options).toContain(service);
+      expect(new Set(options).size).toBe(options.length);
+      for (const unit of options) {
+        expect(unit.trim()).toBe(unit);
+        expect(unit.length).toBeGreaterThan(0);
+        expect(unit.length).toBeLessThanOrEqual(Math.min(DOCUMENT_LIMITS.unitLabel, CATALOG_ITEM_LIMITS.unitLabel));
+      }
     });
 
     it("has document defaults the database accepts", () => {

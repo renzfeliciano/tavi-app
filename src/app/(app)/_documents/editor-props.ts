@@ -56,6 +56,7 @@ export async function editorContext(ctx: OrgContext, kind: DocumentKind, currenc
     // Invoices show how to pay; the instructions are snapshotted when sent.
     paymentInstructions: kind === "invoice" ? profile.paymentInstructions : null,
     defaultUnit: ctx.market.units.service,
+    units: ctx.market.units.options,
     shareChannels: ctx.market.shareChannels,
     emailVerified: ctx.emailVerified,
     locale: ctx.locale,

@@ -16,7 +16,7 @@ export default async function NewCatalogItemPage({ params }: PageProps<"/catalog
   const kind = kindFromSegment((await params).kind);
   if (!kind) notFound();
   const ctx = await requireOrgContext();
-  const [copy, values] = await Promise.all([catalogFormCopy(ctx, kind), newItemValues(ctx, kind)]);
+  const [copy, values] = await Promise.all([catalogFormCopy(ctx), newItemValues(ctx, kind)]);
 
   return (
     <>

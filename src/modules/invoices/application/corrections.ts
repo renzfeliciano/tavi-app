@@ -43,12 +43,16 @@ export async function editIssuedInvoice(
   actor: OrgActor,
   id: string,
   input: unknown,
-  { locale, qualifiedDiscounts = null }: { locale: string; qualifiedDiscounts?: QualifiedDiscountConfig | null },
+  {
+    locale,
+    units = null,
+    qualifiedDiscounts = null,
+  }: { locale: string; units?: readonly string[] | null; qualifiedDiscounts?: QualifiedDiscountConfig | null },
   db: Database = getDb(),
   now: Date = new Date(),
 ): Promise<EditIssuedInvoiceResult> {
   assertCan(actor, "invoices.write");
-  const parsed = parseInvoiceDraft(input, { locale, qualifiedDiscounts });
+  const parsed = parseInvoiceDraft(input, { locale, units, qualifiedDiscounts });
   if (!parsed.ok) return parsed;
   const draft = parsed.draft;
 

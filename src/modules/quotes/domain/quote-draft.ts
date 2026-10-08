@@ -26,9 +26,13 @@ export type QuoteDraft = {
 
 export type QuoteDraftResult = { ok: true; draft: QuoteDraft } | { ok: false; errors: Record<string, string> };
 
-export function parseQuoteDraft(input: unknown, { locale }: { locale: string }): QuoteDraftResult {
+export function parseQuoteDraft(
+  input: unknown,
+  { locale, units = null }: { locale: string; units?: readonly string[] | null },
+): QuoteDraftResult {
   const result = parseDocumentDraft(input, {
     locale,
+    units,
     endDateField: "validUntil",
     endBeforeIssue: "Choose a date on or after the quote date.",
   });

@@ -37,10 +37,15 @@ export type InvoiceDraftResult = { ok: true; draft: InvoiceDraft } | { ok: false
 
 export function parseInvoiceDraft(
   input: unknown,
-  { locale, qualifiedDiscounts = null }: { locale: string; qualifiedDiscounts?: QualifiedDiscountConfig | null },
+  {
+    locale,
+    units = null,
+    qualifiedDiscounts = null,
+  }: { locale: string; units?: readonly string[] | null; qualifiedDiscounts?: QualifiedDiscountConfig | null },
 ): InvoiceDraftResult {
   const result = parseDocumentDraft(input, {
     locale,
+    units,
     endDateField: "dueDate",
     endBeforeIssue: "Choose a due date on or after the invoice date.",
   });

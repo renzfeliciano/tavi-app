@@ -124,6 +124,8 @@ type DocumentEditorProps = {
   qualifiedDiscounts?: QualifiedDiscountConfig | null;
   /** The market's usual unit for new free-text lines. */
   defaultUnit: string;
+  /** The units a line can use (`market.units.options`), offered as a list. */
+  units: readonly string[];
   customerCopy: CustomerFormCopy;
   /** Where people paste a link, e.g. "Messenger or Viber". */
   shareChannels: string;
@@ -230,7 +232,11 @@ export function DocumentEditor(props: DocumentEditorProps) {
     return { ...rest, [kind.endField]: endDate, lines: state.lines.map(toRawLine) };
   }, [state, kind.endField]);
   const qualifiedConfig = props.kind === "invoice" ? (props.qualifiedDiscounts ?? null) : null;
-  const parseOptions = useMemo(() => ({ locale, qualifiedDiscounts: qualifiedConfig }), [locale, qualifiedConfig]);
+  const units = props.units;
+  const parseOptions = useMemo(
+    () => ({ locale, units, qualifiedDiscounts: qualifiedConfig }),
+    [locale, units, qualifiedConfig],
+  );
   const clientErrors = useMemo(() => {
     const parsed = kind.parse(payload, parseOptions);
     return parsed.ok ? {} : parsed.errors;
@@ -635,6 +641,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
               amounts={preview.lineAmounts}
               currency={state.currency}
               taxRates={taxRates}
+              units={units}
               errors={visibleErrors}
               onChange={changeLine}
               onMove={moveLine}

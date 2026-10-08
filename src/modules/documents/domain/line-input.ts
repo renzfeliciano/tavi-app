@@ -75,13 +75,20 @@ export type LinesResult = { ok: true; lines: ParsedLine[] } | { ok: false; error
 const isUuid = (v: string) => z.uuid().safeParse(v).success;
 const isBlank = (line: RawLine) => line.description.trim() === "" && line.unitPrice.trim() === "";
 
+export type LineOptions = {
+  currency: string;
+  locale: string;
+  /** The market's units (`market.units.options`); a line must use one. Null skips the check. */
+  units?: readonly string[] | null;
+};
+
 /**
  * Reads the editor's lines. Blank lines are skipped; errors are keyed by
  * `lines.<index>.<field>` (the index in the editor, so the right row lights up).
  */
 export function parseDocumentLines(
   rawLines: readonly RawLine[],
-  { currency, locale }: { currency: string; locale: string },
+  { currency, locale, units = null }: LineOptions,
 ): LinesResult {
   if (rawLines.length > DOCUMENT_LIMITS.lines) {
     return { ok: false, errors: { lines: `Use up to ${DOCUMENT_LIMITS.lines} lines.` } };
@@ -105,7 +112,10 @@ export function parseDocumentLines(
     if (quantity === null) error("quantity", `Enter a quantity like ${formatQuantity(15_000, locale)}.`);
 
     const unitLabel = line.unitLabel.trim();
-    if (unitLabel === "" || unitLabel.length > DOCUMENT_LIMITS.unitLabel) error("unitLabel", "Enter a unit.");
+    if (unitLabel === "") error("unitLabel", units ? "Choose a unit." : "Enter a unit.");
+    else if (units ? !units.includes(unitLabel) : unitLabel.length > DOCUMENT_LIMITS.unitLabel) {
+      error("unitLabel", units ? "Choose a unit from the list." : "Enter a unit.");
+    }
 
     const unitPriceMinor = parseMoneyInput(line.unitPrice, currency, locale);
     if (unitPriceMinor === null) error("unitPrice", `Enter a price like ${examplePrice(currency, locale)}.`);

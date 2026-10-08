@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { UnitOptions } from "@/components/unit-options";
 import { cn } from "@/lib/utils";
 import { DOCUMENT_LIMITS, type RawLine } from "@/modules/documents/client";
 import type { TaxRateChoice } from "./editor-types";
@@ -17,6 +18,8 @@ type LineItemsEditorProps = {
   amounts: Record<string, string>;
   currency: string;
   taxRates: TaxRateChoice[];
+  /** The market's units: the only ones a line can use. */
+  units: readonly string[];
   /** Errors to show, keyed `lines.<index>.<field>`. */
   errors: Record<string, string>;
   onChange: (key: string, patch: Partial<RawLine>) => void;
@@ -39,6 +42,7 @@ export function LineItemsEditor({
   amounts,
   currency,
   taxRates,
+  units,
   errors,
   onChange,
   onMove,
@@ -135,12 +139,13 @@ export function LineItemsEditor({
                 <label htmlFor={id("unitLabel")} className="text-xs text-muted-foreground">
                   Unit
                 </label>
-                <Input
+                <NativeSelect
                   {...control("unitLabel")}
                   value={line.unitLabel}
                   onChange={(e) => onChange(line.key, { unitLabel: e.target.value })}
-                  maxLength={DOCUMENT_LIMITS.unitLabel}
-                />
+                >
+                  <UnitOptions units={units} current={line.unitLabel} />
+                </NativeSelect>
                 <FieldError id={`${id("unitLabel")}-error`} message={error("unitLabel")} />
               </div>
               <div className="grid gap-1">

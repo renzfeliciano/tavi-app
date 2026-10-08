@@ -136,8 +136,13 @@ export type MarketProfile = {
   } | null;
   /** Printed in bold on documents that aren't registered invoices (PH: RR 7-2024 Sec. 6 B.15), or null. */
   supplementaryDocumentNotice: string | null;
-  /** Default unit names for new catalog items, in the market's language. */
-  units: { product: string; service: string };
+  /**
+   * The units a line or a catalog item can be priced in, in the market's
+   * language: a fixed list, so the same thing is always written the same way
+   * ("hour", never "hr" on one quote and "hours" on the next). `product` and
+   * `service` are the defaults for new items and must be in `options`.
+   */
+  units: { product: string; service: string; options: readonly string[] };
   /** New-business defaults, editable in Settings. */
   quoteValidityDays: number;
   paymentTermsDays: number;
@@ -261,7 +266,14 @@ export const MARKETS = {
       signature: "Signature over printed name",
     },
     supplementaryDocumentNotice: "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.",
-    units: { product: "pc", service: "hour" },
+    units: {
+      product: "pc",
+      service: "hour",
+      options: [
+        "hour", "day", "week", "month", "job", "visit", "session", "trip", "pax",
+        "pc", "unit", "set", "lot", "box", "pack", "kg", "m", "sq m", "L",
+      ],
+    },
     quoteValidityDays: 30,
     paymentTermsDays: 15,
   },

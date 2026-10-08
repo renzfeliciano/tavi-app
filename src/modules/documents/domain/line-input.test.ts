@@ -83,6 +83,26 @@ describe("parseDocumentLines", () => {
     });
   });
 
+  it("takes only the market's units when given its list", () => {
+    const units = ["hour", "unit", "sq m"];
+    const result = parseDocumentLines(
+      [raw({ unitLabel: "sq m" }), raw({ unitLabel: "hrs" }), raw({ unitLabel: " " }), raw({ unitLabel: "Unit" })],
+      { ...opts, units },
+    );
+    expect(result).toEqual({
+      ok: false,
+      errors: {
+        "lines.1.unitLabel": "Choose a unit from the list.",
+        "lines.2.unitLabel": "Choose a unit.",
+        "lines.3.unitLabel": "Choose a unit from the list.",
+      },
+    });
+    expect(parseDocumentLines([raw({ unitLabel: " hour " })], { ...opts, units })).toEqual({
+      ok: true,
+      lines: [expect.objectContaining({ unitLabel: "hour" })],
+    });
+  });
+
   it("uses the currency's decimals and the locale's separators", () => {
     const yen = parseDocumentLines([raw({ unitPrice: "1.250", quantity: "2,5" })], { currency: "JPY", locale: "de-DE" });
     expect(yen).toEqual({ ok: true, lines: [expect.objectContaining({ unitPriceMinor: 1250, quantity: 25_000 })] });

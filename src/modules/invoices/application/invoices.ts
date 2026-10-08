@@ -375,11 +375,15 @@ export async function saveInvoiceDraft(
   actor: OrgActor,
   id: string | null,
   input: unknown,
-  { locale, qualifiedDiscounts = null }: { locale: string; qualifiedDiscounts?: QualifiedDiscountConfig | null },
+  {
+    locale,
+    units = null,
+    qualifiedDiscounts = null,
+  }: { locale: string; units?: readonly string[] | null; qualifiedDiscounts?: QualifiedDiscountConfig | null },
   db: Database = getDb(),
 ): Promise<SaveInvoiceDraftResult> {
   assertCan(actor, "invoices.write");
-  const parsed = parseInvoiceDraft(input, { locale, qualifiedDiscounts });
+  const parsed = parseInvoiceDraft(input, { locale, units, qualifiedDiscounts });
   if (!parsed.ok) return parsed;
   const draft = parsed.draft;
 

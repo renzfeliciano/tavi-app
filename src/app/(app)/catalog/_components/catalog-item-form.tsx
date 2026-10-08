@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { UnitOptions } from "@/components/unit-options";
 import type { CurrencyOption } from "@/config/currencies";
 import { CATALOG_ITEM_LIMITS as LIMITS, type CatalogItemKind } from "@/modules/catalog/client";
 import { type CatalogFormState, type CatalogFormValues, saveCatalogItem } from "../actions";
@@ -17,8 +18,8 @@ import { itemHref, KIND_LABEL } from "../_lib/kinds";
 
 /** Wording and choices from the business's market and settings. */
 export type CatalogItemFormCopy = {
-  /** The market's usual unit for this kind, e.g. "hour". */
-  defaultUnit: string;
+  /** The units an item can be counted in (`market.units.options`). */
+  units: readonly string[];
   /** An example price in the business's format, e.g. "1,250.50". */
   pricePlaceholder: string;
   /** Whether prices are entered with tax included (from Settings). */
@@ -115,10 +116,14 @@ export function CatalogItemForm({ kind, itemId, initialValues, copy }: CatalogIt
           <FormField
             name="unitLabel"
             label="Unit"
-            hint={`What one of these is counted in, e.g. ${copy.defaultUnit}.`}
+            hint="What one of these is counted in."
             error={error("unitLabel")}
           >
-            {(p) => <Input {...p} defaultValue={v.unitLabel} maxLength={LIMITS.unitLabel} />}
+            {(p) => (
+              <NativeSelect {...p} defaultValue={v.unitLabel}>
+                <UnitOptions units={copy.units} current={v.unitLabel ?? ""} />
+              </NativeSelect>
+            )}
           </FormField>
           <FormField
             name="taxRateId"

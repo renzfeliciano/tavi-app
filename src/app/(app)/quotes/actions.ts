@@ -19,7 +19,7 @@ import type { SaveDraftResponse, SendDocumentResponse } from "../_documents/edit
 /** Autosave: creates the draft on the first save, then updates it. */
 export async function saveQuoteDraftAction(id: string | null, draft: unknown): Promise<SaveDraftResponse> {
   const ctx = await requireOrgContext();
-  const result = await saveQuoteDraft(ctx, id, draft, { locale: ctx.locale });
+  const result = await saveQuoteDraft(ctx, id, draft, { locale: ctx.locale, units: ctx.market.units.options });
   // No revalidatePath: quote pages render per request anyway, and autosave
   // fires every few seconds, so a refresh per save would only cost renders.
   if (result.ok) return { ok: true, id: result.quote.id, savedAt: Date.now() };
@@ -51,7 +51,7 @@ export async function sendQuoteAction(
   const parsedDelivery = parseDelivery(delivery);
   if (!parsedDelivery.ok) return parsedDelivery;
   const { email } = parsedDelivery;
-  const saved = await saveQuoteDraft(ctx, id, draft, { locale: ctx.locale });
+  const saved = await saveQuoteDraft(ctx, id, draft, { locale: ctx.locale, units: ctx.market.units.options });
   if (!saved.ok) {
     if ("errors" in saved) return { ok: false, errors: saved.errors };
     return { ok: false, error: "notEditable" in saved ? "This quote was already sent." : "This quote no longer exists." };

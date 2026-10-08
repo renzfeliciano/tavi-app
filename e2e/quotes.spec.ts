@@ -27,7 +27,7 @@ test.beforeAll(async ({ browser }) => {
   await page.goto("/catalog/services/new");
   await page.getByLabel("Name", { exact: true }).fill("Aircon cleaning");
   await page.getByLabel("Price per unit").fill("1,500");
-  await page.getByLabel("Unit", { exact: true }).fill("unit");
+  await page.getByLabel("Unit", { exact: true }).selectOption("unit");
   await page.getByRole("button", { name: "Add service" }).click();
   await expect(toast("Aircon cleaning added.")).toBeVisible();
 });
