@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { after } from "next/server";
 import { haveIBeenPwned } from "better-auth/plugins";
 import type { Database } from "@/db";
 import { brand } from "@/config/brand";
@@ -24,11 +25,24 @@ export type AuthConfig = {
 };
 
 // Email delivery must never block or reveal anything to the caller: send in
-// the background and log failures (timing-safe for password resets).
-function deliver(send: Promise<void>) {
-  send.catch((error: unknown) => {
-    logger.error("auth email delivery failed", { error });
-  });
+// the background and log failures (timing-safe for password resets). On
+// Vercel a function is frozen once its response is sent, so a bare
+// background promise may never finish: `after()` keeps the function alive
+// until the email is out. Outside a request (integration tests) it throws,
+// and the send just runs in the background as before.
+function deliver(send: () => Promise<void>) {
+  const run = async () => {
+    try {
+      await send();
+    } catch (error: unknown) {
+      logger.error("auth email delivery failed", { error });
+    }
+  };
+  try {
+    after(run);
+  } catch {
+    void run();
+  }
 }
 
 /**
@@ -78,7 +92,7 @@ export function createAuth(db: Database, config: AuthConfig) {
         });
       },
       sendResetPassword: async ({ user, url }) => {
-        deliver(sendEmail(passwordResetEmail({ to: user.email, name: user.name, url, expiresIn: passwordResetLifetime() })));
+        deliver(() => sendEmail(passwordResetEmail({ to: user.email, name: user.name, url, expiresIn: passwordResetLifetime() })));
       },
     },
     emailVerification: {
@@ -86,7 +100,7 @@ export function createAuth(db: Database, config: AuthConfig) {
       autoSignInAfterVerification: true,
       expiresIn: LINK_LIFETIMES.emailVerificationSeconds,
       sendVerificationEmail: async ({ user, url }) => {
-        deliver(sendEmail(verifyEmailEmail({ to: user.email, name: user.name, url })));
+        deliver(() => sendEmail(verifyEmailEmail({ to: user.email, name: user.name, url })));
       },
     },
     user: {
