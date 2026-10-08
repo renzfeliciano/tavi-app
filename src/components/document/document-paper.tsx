@@ -182,6 +182,20 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
         )}
       </div>
 
+      {view.qualifiedDiscount && (
+        // RR 7-2024 Sec. 6 B.18: the buyer's ID number and their signature (D19).
+        <section aria-label="Qualified discount" className="mt-8 grid gap-4 text-sm sm:grid-cols-2 sm:items-end">
+          <div>
+            <p className="font-medium">{view.qualifiedDiscount.holder}</p>
+            <p className="text-muted-foreground">{view.qualifiedDiscount.idLine}</p>
+          </div>
+          <div className="pt-6">
+            <div className="border-b border-border-strong" aria-hidden="true" />
+            <p className="mt-1 text-center text-xs text-muted-foreground">{view.qualifiedDiscount.signature}</p>
+          </div>
+        </section>
+      )}
+
       {view.paymentInstructions && (
         <section aria-label="How to pay" className="mt-8 rounded-lg border border-border bg-surface-sunken p-4 text-sm">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">How to pay</p>

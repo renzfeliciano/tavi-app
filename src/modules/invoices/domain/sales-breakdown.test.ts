@@ -31,6 +31,27 @@ describe("salesBreakdown", () => {
     });
   });
 
+  it("makes a senior citizen's (tax-exempt) sale VAT-exempt, shown before the discount (B.18, D19)", () => {
+    // ₱1,120 incl. VAT for a senior citizen: ₱1,000 VAT-exempt, less ₱200 discount, ₱800 due.
+    const line = { rateBps: 1200, taxMinor: 0, totalMinor: 80000, qualifiedDiscountMinor: 20000 };
+    expect(salesBreakdown("vat", [line, { rateBps: 0, taxMinor: 0, totalMinor: 4000, qualifiedDiscountMinor: 1000 }], { taxExemptSale: true })).toEqual({
+      kind: "vat",
+      vatableMinor: 0,
+      vatMinor: 0,
+      zeroRatedMinor: 5000,
+      exemptMinor: 100000,
+      lines: ["exempt", "zero_rated"],
+    });
+  });
+
+  it("keeps a discount without tax exemption VATable on the undiscounted price (athletes, D19)", () => {
+    // ₱1,120 incl. VAT: ₱1,000 VATable + ₱120 VAT, less ₱200 discount, ₱920 due.
+    expect(salesBreakdown("vat", [{ rateBps: 1200, taxMinor: 12000, totalMinor: 92000, qualifiedDiscountMinor: 20000 }])).toMatchObject({
+      vatableMinor: 100000,
+      vatMinor: 12000,
+    });
+  });
+
   it("shows sales subject to percentage tax for non-VAT sellers, and EXEMPT for exempt ones", () => {
     const lines = [{ rateBps: null, taxMinor: 0, totalMinor: 30000 }, { rateBps: null, taxMinor: 0, totalMinor: 5000 }];
     expect(salesBreakdown("percentage_tax", lines)).toEqual({ kind: "percentage_tax", amountMinor: 35000 });

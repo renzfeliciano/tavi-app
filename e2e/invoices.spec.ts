@@ -313,7 +313,7 @@ test("reports total the period's sales and payments, age what's unpaid, and down
   expect(Buffer.concat(csv).toString("utf8")).toContain("INV-000002,Billing statement,Juan Dela Cruz");
 
   await page.getByLabel("From").fill("2026-09-30");
-  await page.getByLabel("To").fill("2026-09-01");
+  await page.getByLabel("To", { exact: true }).fill("2026-09-01");
   await page.getByRole("button", { name: "Show" }).click();
   await expect(page.getByText("Choose an end date on or after the start date.")).toBeVisible();
 });
@@ -405,6 +405,50 @@ test("the customer sees the registered invoice and can download it", async ({ br
   expect(pdf.headers()["content-type"]).toBe("application/pdf");
   expect(pdf.headers()["content-disposition"]).toContain('filename="Service-Invoice-001.pdf"');
   await customer.context().close();
+});
+
+test("after its first PDF, a registered invoice's copies are reprints; it also downloads as an e-invoice (D19)", async () => {
+  // The customer's download in the previous test was the original.
+  await page.goto(registeredUrl);
+  const reprint = page.getByRole("link", { name: "Download reprint" });
+  await expect(reprint).toBeVisible();
+  const [pdf] = await Promise.all([page.waitForEvent("download"), reprint.click()]);
+  expect(pdf.suggestedFilename()).toBe("Service-Invoice-001.pdf");
+
+  const [json] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Download e-invoice" }).click()]);
+  expect(json.suggestedFilename()).toBe("e-invoice-001.json");
+  const { readFile } = await import("node:fs/promises");
+  const file = JSON.parse(await readFile(await json.path(), "utf8"));
+  expect(file.format.birCertified).toBe(false);
+  expect(file.invoices[0]).toMatchObject({ invoiceType: "Service Invoice", serialNo: "001", totals: { totalAmountDue: "1500.00" } });
+});
+
+test("a senior citizen's discount shows its breakdown, the ID and a signature line (B.18, D19)", async () => {
+  await page.goto("/invoices/new");
+  await page.getByRole("combobox", { name: "Customer", exact: true }).fill("Juan");
+  await page.getByRole("option", { name: /Juan Dela Cruz/ }).click();
+  await page.getByRole("button", { name: "Add a line" }).click();
+  await page.getByLabel("Line 1 description").fill("Aircon cleaning");
+  await page.getByLabel("Price (PHP)").first().fill("1,500");
+  await page.getByLabel("Buyer qualifies as").selectOption({ label: "Senior citizen (20%, VAT-exempt)" });
+  await page.getByLabel("OSCA / SC ID No.").fill("OSCA-0042");
+  await page.getByLabel("Name on the ID").fill("Juan Dela Cruz");
+
+  const preview = page.getByRole("complementary", { name: "Preview" });
+  await expect(preview).toContainText("Less: Senior citizen discount (20%)−₱300.00");
+  await expect(preview).toContainText("Total Amount Due₱1,200.00");
+  await expect(preview).toContainText("OSCA / SC ID No. OSCA-0042");
+  await expect(preview).toContainText("Signature over printed name");
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: /^Send / });
+  await dialog.getByLabel("Copy link").check();
+  await dialog.getByRole("button", { name: "Mark as sent and copy link" }).click();
+  await expect(toast("Service Invoice 002 is ready. Link copied.")).toBeVisible();
+  const paper = page.getByRole("article", { name: "Service Invoice 002" });
+  await expect(paper.getByRole("region", { name: "Qualified discount" })).toContainText("Senior citizen: Juan Dela Cruz");
+  expect((await registeredAxe(page)).violations).toEqual([]);
 });
 
 test("turning invoice mode off asks first, and the next bill is a billing statement again", async () => {

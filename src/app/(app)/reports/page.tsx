@@ -9,6 +9,7 @@ import { MoneyAmount } from "@/components/money-amount";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { brand } from "@/config/brand";
 import { can } from "@/modules/authz";
 import { requireOrgContext } from "@/modules/identity";
 import { getBusinessProfile } from "@/modules/organizations";
@@ -111,6 +112,20 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
         description="Bills issued in this period. Void bills are left out; cancelled ones are shown apart."
         csv={csvHref("sales", period)}
       >
+        {sales.rows.some((r) => r.registered) && (
+          // D19: registered invoices as structured data for the BIR's e-invoicing system.
+          <p className="text-sm text-pretty text-muted-foreground">
+            <a
+              href={`/reports/e-invoices?from=${period.from}&to=${period.to}`}
+              download
+              className="font-medium text-foreground underline underline-offset-4"
+            >
+              Download e-invoices (JSON)
+            </a>{" "}
+            for this period&apos;s registered invoices, ready for e-invoicing. {brand.name} isn&apos;t BIR-certified for e-invoicing yet,
+            so the file is for your records and your accountant.
+          </p>
+        )}
         {sales.summaries.length === 0 ? (
           <Quiet>No bills issued in this period.</Quiet>
         ) : (
@@ -132,6 +147,10 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
                     [salesLabels.vat, amount(s.breakdown.vatMinor, s.currency)],
                     [salesLabels.zeroRated, amount(s.breakdown.zeroRatedMinor, s.currency)],
                     [salesLabels.exempt, amount(s.breakdown.exemptMinor, s.currency)],
+                    // Sales are shown before qualified buyers' discounts (D19), so those come off here.
+                    ...(s.breakdown.qualifiedDiscountMinor > 0
+                      ? [["Less: special discounts", amount(s.breakdown.qualifiedDiscountMinor, s.currency)] as [ReactNode, ReactNode]]
+                      : []),
                   ]}
                 />
               )}

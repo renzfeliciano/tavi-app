@@ -20,3 +20,4 @@ export {
   type UnpaidRow,
   type UnpaidSummary,
 } from "./domain/summaries";
+export { type EInvoiceExport, eInvoiceFor, eInvoicesForPeriod } from "./application/e-invoices";

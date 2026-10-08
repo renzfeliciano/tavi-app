@@ -15,4 +15,4 @@ export {
 } from "./application/payments";
 export { PAYMENT_LIMITS, type PaymentInput, parsePaymentInput, type RawPayment } from "./domain/payment-input";
 export { exportPayments } from "./infra/export";
-export { paymentsReceivedBetween, type ReceivedPayment } from "./application/reports";
+export { paymentsReceivedBetween, type ReceivedPayment, taxWithheldByInvoice } from "./application/reports";

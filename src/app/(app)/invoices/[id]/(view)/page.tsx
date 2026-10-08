@@ -110,6 +110,8 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
             name={name}
             amountPaidMinor={invoice.amountPaidMinor}
             registered={invoice.registration !== null}
+            printed={invoice.printCount > 0}
+            eInvoice={invoice.registration !== null && can(ctx, "reports.read")}
             canVoid={can(ctx, "invoices.void")}
             shareChannels={ctx.market.shareChannels}
           />

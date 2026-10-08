@@ -20,6 +20,7 @@ import { customers } from "@/modules/customers/schema";
 import { users } from "@/modules/identity/schema";
 import { organizations } from "@/modules/organizations/schema";
 import { type CustomerSnapshot, quotes } from "@/modules/quotes/schema";
+import type { QualifiedDiscountSnapshot } from "./domain/qualified-discount";
 import type { InvoiceRegistrationSnapshot } from "./domain/registration";
 import { INVOICE_STATUSES } from "./domain/status";
 
@@ -55,6 +56,15 @@ export const invoices = pgTable(
     discountTotalMinor: money("discount_total_minor"),
     taxTotalMinor: money("tax_total_minor"),
     totalMinor: money("total_minor"),
+    /**
+     * A qualified buyer's discount (D19; PH: senior citizen, PWD, …, RR 7-2024
+     * Sec. 6 B.18): the kind with its rate and tax treatment as applied, the
+     * buyer's ID number and name. Null when there's none.
+     */
+    qualifiedDiscount: jsonb("qualified_discount").$type<QualifiedDiscountSnapshot>(),
+    qualifiedDiscountMinor: money("qualified_discount_minor"),
+    /** Tax the sale would have carried, waived by a tax-exempt qualified discount. */
+    taxWaivedMinor: money("tax_waived_minor"),
     /** Sum of active payments (1.8); the status is computed from it. */
     amountPaidMinor: money("amount_paid_minor"),
     sentAt: timestamp("sent_at", { withTimezone: true }),
@@ -65,6 +75,12 @@ export const invoices = pgTable(
      * A registered invoice can't be edited once issued (D14).
      */
     registration: jsonb("registration").$type<InvoiceRegistrationSnapshot>(),
+    /**
+     * PDFs made of an issued registered invoice (D19, RR 7-2024 Sec. 6 B.21):
+     * the first is the original, every later one prints "REPRINT".
+     */
+    printCount: integer("print_count").notNull().default(0),
+    firstPrintedAt: timestamp("first_printed_at", { withTimezone: true }),
     /** Last edit after sending (D7); the customer's page shows "Updated …". */
     editedAt: timestamp("edited_at", { withTimezone: true }),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
@@ -104,9 +120,10 @@ export const invoices = pgTable(
     check("invoices_issued_complete", sql`${t.status} = 'DRAFT' or (${t.customerId} is not null and ${t.number} is not null)`),
     check(
       "invoices_amounts_not_negative",
-      sql`${t.subtotalMinor} >= 0 and ${t.discountTotalMinor} >= 0 and ${t.taxTotalMinor} >= 0 and ${t.totalMinor} >= 0 and ${t.amountPaidMinor} >= 0`,
+      sql`${t.subtotalMinor} >= 0 and ${t.discountTotalMinor} >= 0 and ${t.taxTotalMinor} >= 0 and ${t.totalMinor} >= 0 and ${t.amountPaidMinor} >= 0 and ${t.qualifiedDiscountMinor} >= 0 and ${t.taxWaivedMinor} >= 0`,
     ),
     check("invoices_no_overpayment", sql`${t.amountPaidMinor} <= ${t.totalMinor}`),
+    check("invoices_print_count_not_negative", sql`${t.printCount} >= 0`),
   ],
 );
 
@@ -135,6 +152,9 @@ export const invoiceLines = pgTable(
     discountMinor: bigint("discount_minor", { mode: "number" }).notNull(),
     taxMinor: bigint("tax_minor", { mode: "number" }).notNull(),
     totalMinor: bigint("total_minor", { mode: "number" }).notNull(),
+    /** This line's share of the bill's qualified discount, and the tax it waived (D19). */
+    qualifiedDiscountMinor: bigint("qualified_discount_minor", { mode: "number" }).notNull().default(0),
+    taxWaivedMinor: bigint("tax_waived_minor", { mode: "number" }).notNull().default(0),
     ...timestamps(),
   },
   (t) => [
@@ -158,7 +178,7 @@ export const invoiceLines = pgTable(
     ),
     check(
       "invoice_lines_amounts_not_negative",
-      sql`${t.grossMinor} >= 0 and ${t.discountMinor} >= 0 and ${t.taxMinor} >= 0 and ${t.totalMinor} >= 0`,
+      sql`${t.grossMinor} >= 0 and ${t.discountMinor} >= 0 and ${t.taxMinor} >= 0 and ${t.totalMinor} >= 0 and ${t.qualifiedDiscountMinor} >= 0 and ${t.taxWaivedMinor} >= 0`,
     ),
   ],
 );

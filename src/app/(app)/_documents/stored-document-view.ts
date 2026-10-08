@@ -1,6 +1,14 @@
 import type { MarketProfile } from "@/config/markets";
-import { buildDocumentView, type DocumentSalesInput, type DocumentView, type DocumentViewLineInput } from "@/components/document/document-view";
-import { calculateDocument, type LineDiscount, type TaxMode } from "@/modules/documents/client";
+import {
+  buildDocumentView,
+  type DocumentQualifiedDiscountInput,
+  type DocumentSalesInput,
+  type DocumentView,
+  type DocumentViewLineInput,
+} from "@/components/document/document-view";
+import { calculateDocument, type DocumentAmounts, type LineDiscount, type TaxMode } from "@/modules/documents/client";
+import { qualifiedDiscountInput, qualifiedDiscountRows, type QualifiedDiscountSnapshot } from "@/modules/invoices/client";
+import { formatRate } from "@/shared/numbers/percent";
 import type { CustomerSnapshot } from "@/modules/quotes";
 import type { CalendarDate } from "@/shared/dates/calendar";
 
@@ -25,7 +33,32 @@ export type StoredDocument = {
   notes: string | null;
   terms: string | null;
   lines: StoredLine[];
+  /** Bills only: a qualified buyer's discount (D19). */
+  qualifiedDiscount?: QualifiedDiscountSnapshot | null;
 };
+
+/**
+ * A bill's qualified discount as the document shows it: the buyer, their ID
+ * and the breakdown (RR 7-2024 Sec. 6 B.18), in the market's words.
+ */
+export function qualifiedDiscountView(
+  discount: QualifiedDiscountSnapshot | null | undefined,
+  amounts: DocumentAmounts,
+  market: MarketProfile,
+  locale: string,
+): DocumentQualifiedDiscountInput | null {
+  const config = market.qualifiedDiscounts;
+  if (!discount || !config) return null;
+  return {
+    label: discount.label,
+    idLabel: discount.idLabel,
+    idNumber: discount.idNumber,
+    holderName: discount.holderName,
+    taxExempt: discount.taxExempt,
+    signature: config.signature,
+    rows: qualifiedDiscountRows(amounts, discount, config.rows, formatRate(discount.rateBps, locale)),
+  };
+}
 
 /** A stored line's discount back into the engine's shape. */
 function discountOf(line: StoredLine): LineDiscount | null {
@@ -48,6 +81,7 @@ export function storedDocumentView(
     locale: string;
     notice: string | null;
     registration?: string | null;
+    reprint?: string | null;
     sales?: DocumentSalesInput | null;
     paymentInstructions?: string | null;
   },
@@ -61,6 +95,11 @@ export function storedDocumentView(
     tax: line.taxRateName !== null && line.taxRateBps !== null ? { name: line.taxRateName, rateBps: line.taxRateBps } : null,
   }));
   const snapshot = doc.customerSnapshot;
+  const amounts = calculateDocument({
+    taxMode: doc.taxMode,
+    lines,
+    qualifiedDiscount: qualifiedDiscountInput(doc.qualifiedDiscount ?? null),
+  });
 
   return buildDocumentView({
     title: options.title,
@@ -81,12 +120,14 @@ export function storedDocumentView(
     taxMode: doc.taxMode,
     dates: options.dates,
     lines,
-    amounts: calculateDocument({ taxMode: doc.taxMode, lines }),
+    amounts,
     notes: doc.notes,
     terms: doc.terms,
     paymentInstructions: options.paymentInstructions ?? null,
     notice: options.notice,
     registration: options.registration ?? null,
+    reprint: options.reprint ?? null,
     sales: options.sales ?? null,
+    qualifiedDiscount: qualifiedDiscountView(doc.qualifiedDiscount, amounts, options.market, options.locale),
   });
 }

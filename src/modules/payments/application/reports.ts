@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import type { PaymentMethod } from "@/config/markets";
 import { type Database, getDb } from "@/db";
 import { assertCan, type OrgActor } from "@/modules/authz";
@@ -47,4 +47,24 @@ export async function paymentsReceivedBetween(
       ),
     )
     .orderBy(desc(payments.paidOn), desc(payments.createdAt));
+}
+
+/**
+ * Creditable tax the buyer withheld on each of these bills, over their
+ * active payments (PH: Form 2307), for e-invoice exports (D19). Bills with
+ * none are left out of the map.
+ */
+export async function taxWithheldByInvoice(
+  actor: OrgActor,
+  invoiceIds: readonly string[],
+  db: Database = getDb(),
+): Promise<Map<string, number>> {
+  assertCan(actor, "payments.read");
+  if (invoiceIds.length === 0) return new Map();
+  const rows = await db
+    .select({ invoiceId: payments.invoiceId, withheldMinor: sql<string>`sum(${payments.withheldMinor})` })
+    .from(payments)
+    .where(and(eq(payments.organizationId, actor.organizationId), isNull(payments.voidedAt), inArray(payments.invoiceId, [...invoiceIds])))
+    .groupBy(payments.invoiceId);
+  return new Map(rows.map((row) => [row.invoiceId, Number(row.withheldMinor)]));
 }

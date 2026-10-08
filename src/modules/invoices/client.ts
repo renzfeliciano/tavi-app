@@ -8,3 +8,15 @@ export { canEditIssued, REGISTERED_INVOICE_LOCKED } from "./domain/corrections";
 export { formatSerial, INVOICE_REGISTRATION_LIMITS, invoiceTitle, registrationFooter } from "./domain/registration";
 export { type SalesBreakdown, salesBreakdown, salesBreakdownRows } from "./domain/sales-breakdown";
 export { buyerTaxIdReminder } from "./domain/registration";
+export {
+  EMPTY_QUALIFIED_DISCOUNT,
+  parseQualifiedDiscount,
+  QUALIFIED_DISCOUNT_FIELDS,
+  QUALIFIED_DISCOUNT_LIMITS,
+  type QualifiedDiscountConfig,
+  qualifiedDiscountInput,
+  qualifiedDiscountRows,
+  type QualifiedDiscountSnapshot,
+  type RawQualifiedDiscount,
+  toRawQualifiedDiscount,
+} from "./domain/qualified-discount";

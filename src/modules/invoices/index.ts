@@ -73,6 +73,8 @@ export { canEditIssued, REGISTERED_INVOICE_LOCKED } from "./domain/corrections";
 export { type SalesBreakdown, salesBreakdown, salesBreakdownRows } from "./domain/sales-breakdown";
 export { buyerTaxIdReminder } from "./domain/registration";
 export { exportInvoices } from "./infra/export";
+export { type InvoicePrint, recordInvoicePrint, recordSharedInvoicePrint } from "./application/printing";
+export { copyForPrint, countsAsPrint, type InvoiceCopy } from "./domain/printing";
 export {
   type InvoiceParty,
   invoiceParties,
@@ -81,3 +83,18 @@ export {
   type UnpaidInvoice,
   unpaidInvoices,
 } from "./application/reports";
+export {
+  EMPTY_QUALIFIED_DISCOUNT,
+  parseQualifiedDiscount,
+  QUALIFIED_DISCOUNT_FIELDS,
+  QUALIFIED_DISCOUNT_LIMITS,
+  type QualifiedDiscountConfig,
+  qualifiedDiscountInput,
+  qualifiedDiscountRows,
+  type QualifiedDiscountSnapshot,
+  type RawQualifiedDiscount,
+  toRawQualifiedDiscount,
+} from "./domain/qualified-discount";
+export { type EInvoiceRecord, registeredInvoicesForExport } from "./application/e-invoices";
+export { buildEInvoice, type EInvoice, type EInvoiceSource } from "./domain/e-invoice";
+export { E_INVOICE_FORMAT, eInvoiceFile, eInvoiceJson } from "./domain/e-invoice-format";

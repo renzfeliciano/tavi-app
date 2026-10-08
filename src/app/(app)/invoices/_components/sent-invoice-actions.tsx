@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ban, CopyPlusIcon, DownloadIcon, FileXIcon, LinkIcon, PencilIcon } from "lucide-react";
+import { Ban, CopyPlusIcon, DownloadIcon, FileJsonIcon, FileXIcon, LinkIcon, PencilIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -32,6 +32,10 @@ type SentInvoiceActionsProps = {
   amountPaidMinor: number;
   /** A registered invoice can't be edited once issued (D14); void & duplicate is the correction. */
   registered: boolean;
+  /** A registered invoice already printed once: its next PDF says "REPRINT" (D19). */
+  printed: boolean;
+  /** A registered invoice the person may export as e-invoice JSON (D19, reports.read). */
+  eInvoice: boolean;
   /** Void and cancel need the invoices.void capability (checked again on the server). */
   canVoid: boolean;
   shareChannels: string;
@@ -65,7 +69,17 @@ const COPY: Record<Correction, { title: string; body: string; button: string; pe
  * until a payment (D7); void, cancel and void & duplicate ask for a reason,
  * because they can't be undone.
  */
-export function SentInvoiceActions({ id, status, name, amountPaidMinor, registered, canVoid, shareChannels }: SentInvoiceActionsProps) {
+export function SentInvoiceActions({
+  id,
+  status,
+  name,
+  amountPaidMinor,
+  registered,
+  printed,
+  eInvoice,
+  canVoid,
+  shareChannels,
+}: SentInvoiceActionsProps) {
   const router = useRouter();
   const [linking, setLinking] = useState(false);
   const [open, setOpen] = useState<Correction | null>(null);
@@ -135,8 +149,14 @@ export function SentInvoiceActions({ id, status, name, amountPaidMinor, register
     <div className="flex flex-wrap gap-2">
       <a href={`/invoices/${id}/pdf`} download className={buttonVariants({ variant: "outline" })}>
         <DownloadIcon aria-hidden="true" />
-        Download PDF
+        {registered && printed ? "Download reprint" : "Download PDF"}
       </a>
+      {eInvoice && (
+        <a href={`/invoices/${id}/e-invoice`} download className={buttonVariants({ variant: "outline" })}>
+          <FileJsonIcon aria-hidden="true" />
+          Download e-invoice
+        </a>
+      )}
       {!closed && (
         <Button type="button" variant="outline" pending={linking} pendingLabel="Copying…" onClick={() => void copyLink()}>
           <LinkIcon aria-hidden="true" />

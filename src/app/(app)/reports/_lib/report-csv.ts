@@ -8,7 +8,7 @@ import { minorToDecimalString } from "@/shared/money";
 // The CSV downloads behind each report (2.2c, D18): one row per bill or
 // payment, money as exact decimals, column names in the market's words.
 
-type Market = Pick<MarketProfile, "taxId" | "paymentMethodLabels" | "taxWithheld" | "invoiceRegistration">;
+type Market = Pick<MarketProfile, "taxId" | "paymentMethodLabels" | "taxWithheld" | "invoiceRegistration" | "qualifiedDiscounts">;
 /** How the business's sales break down on its registered invoices: decides the extra VAT columns. */
 export type SellerSales = "vat" | "percentage_tax" | "exempt" | null;
 
@@ -31,6 +31,8 @@ export function salesCsv(rows: readonly SalesRow[], market: Market, seller: Sell
     "Paid",
     "Balance",
     ...(sales ? [sales.vatable, sales.vat, sales.zeroRated, sales.exempt] : []),
+    // Qualified buyers' discounts (D19), for the accountant's discount records.
+    ...(market.qualifiedDiscounts ? ["Special discount"] : []),
   ];
   return toCsv([
     header,
@@ -50,6 +52,7 @@ export function salesCsv(rows: readonly SalesRow[], market: Market, seller: Sell
       ...(sales
         ? [r.vatableMinor, r.vatMinor, r.zeroRatedMinor, r.exemptMinor].map((m) => money(m, r.currency))
         : []),
+      ...(market.qualifiedDiscounts ? [money(r.qualifiedDiscountMinor, r.currency)] : []),
     ]),
   ]);
 }

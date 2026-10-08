@@ -26,20 +26,21 @@ const sale: SalesRow = {
   vatMinor: 12_000,
   zeroRatedMinor: 0,
   exemptMinor: 0,
+  qualifiedDiscountMinor: 0,
 };
 
 describe("salesCsv", () => {
   it("writes one row per bill, money as exact decimals, with the VAT columns for VAT sellers", () => {
     expect(lines(salesCsv([sale], market, "vat"))).toEqual([
-      "Date issued,Number,Document,Customer,Customer TIN,Status,Currency,Before tax,Tax,Total,Paid,Balance,VATable Sales,VAT Amount,Zero-Rated Sales,VAT-Exempt Sales",
-      '2026-09-05,INV-000001,Billing statement,"Santos, Juan",123-456-789-00000,Partially paid,PHP,1000.00,120.00,1120.00,500.00,620.00,1000.00,120.00,0.00,0.00',
+      "Date issued,Number,Document,Customer,Customer TIN,Status,Currency,Before tax,Tax,Total,Paid,Balance,VATable Sales,VAT Amount,Zero-Rated Sales,VAT-Exempt Sales,Special discount",
+      '2026-09-05,INV-000001,Billing statement,"Santos, Juan",123-456-789-00000,Partially paid,PHP,1000.00,120.00,1120.00,500.00,620.00,1000.00,120.00,0.00,0.00,0.00',
     ]);
   });
 
   it("leaves the VAT columns out for other sellers, and a cancelled bill owes nothing", () => {
     const [header, row] = lines(salesCsv([{ ...sale, status: "CANCELLED", cancelled: true, paidMinor: 0 }], market, "percentage_tax"));
-    expect(header?.endsWith("Paid,Balance")).toBe(true);
-    expect(row?.endsWith("Cancelled,PHP,1000.00,120.00,1120.00,0.00,0.00")).toBe(true);
+    expect(header?.endsWith("Paid,Balance,Special discount")).toBe(true);
+    expect(row?.endsWith("Cancelled,PHP,1000.00,120.00,1120.00,0.00,0.00,0.00")).toBe(true);
   });
 });
 

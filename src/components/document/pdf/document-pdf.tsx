@@ -50,6 +50,8 @@ const s = StyleSheet.create({
   grand: { borderTopWidth: 1, borderTopColor: C.ink, marginTop: 4, paddingTop: 4, fontSize: 12, fontWeight: 600 },
   box: { marginTop: 18, padding: 10, borderWidth: 1, borderColor: "#e2e1ea", borderRadius: 4 },
   notice: { marginTop: 18, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#e2e1ea", textAlign: "center", fontWeight: 600 },
+  // RR 7-2024 Sec. 6 B.21: "REPRINT" prominently at the top portion.
+  reprint: { fontSize: 18, fontWeight: 600, textAlign: "center", letterSpacing: 4, marginBottom: 12, paddingVertical: 4, borderWidth: 1.5, borderColor: C.ink },
   registration: { marginTop: 18, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#e2e1ea", textAlign: "center", fontSize: 8, color: C.muted },
   footer: { position: "absolute", bottom: 20, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between", fontSize: 8, color: C.muted },
 });
@@ -119,6 +121,7 @@ export function DocumentPdf({ view }: { view: DocumentView }) {
   return (
     <Document title={name} author={view.business.name} creator={brand.name} producer={brand.name}>
       <Page size="A4" style={s.page}>
+        {view.reprint && <Text style={s.reprint}>{view.reprint}</Text>}
         <Letterhead business={view.business} title={view.title} number={number} />
 
         <View style={[s.section, s.row]}>
@@ -182,6 +185,19 @@ export function DocumentPdf({ view }: { view: DocumentView }) {
           )}
         </View>
 
+        {view.qualifiedDiscount && (
+          // RR 7-2024 Sec. 6 B.18: the buyer's ID number and signature line (D19).
+          <View style={[s.row, { marginTop: 18, alignItems: "flex-end" }]} wrap={false}>
+            <View>
+              <Text style={s.strong}>{view.qualifiedDiscount.holder}</Text>
+              <Text style={s.muted}>{view.qualifiedDiscount.idLine}</Text>
+            </View>
+            <View style={{ width: 200 }}>
+              <View style={{ borderBottomWidth: 1, borderBottomColor: C.ink, height: 24 }} />
+              <Text style={[s.muted, { fontSize: 8, textAlign: "center", marginTop: 2 }]}>{view.qualifiedDiscount.signature}</Text>
+            </View>
+          </View>
+        )}
         {view.paymentInstructions && (
           <View style={s.box} wrap={false}>
             <Text style={s.label}>How to pay</Text>

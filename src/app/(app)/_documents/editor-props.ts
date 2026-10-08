@@ -51,6 +51,8 @@ export async function editorContext(ctx: OrgContext, kind: DocumentKind, currenc
       ? registrationFooter({ ...registration, serial: registration.nextSerial }, ctx.market, ctx.locale)
       : null,
     buyerTaxIdRule: registration ? (ctx.market.invoiceRegistration?.buyerTaxId ?? null) : null,
+    // Bills can carry a qualified buyer's discount (D19; PH: senior citizens, PWDs, …).
+    qualifiedDiscounts: kind === "invoice" ? ctx.market.qualifiedDiscounts : null,
     // Invoices show how to pay; the instructions are snapshotted when sent.
     paymentInstructions: kind === "invoice" ? profile.paymentInstructions : null,
     defaultUnit: ctx.market.units.service,

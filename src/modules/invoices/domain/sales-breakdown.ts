@@ -14,24 +14,30 @@ export type SalesBreakdown =
   | { kind: "percentage_tax"; amountMinor: number }
   | { kind: "exempt" };
 
-type Line = { rateBps: number | null; taxMinor: number; totalMinor: number };
+type Line = { rateBps: number | null; taxMinor: number; totalMinor: number; qualifiedDiscountMinor?: number };
 
-const categoryOf = (line: Line): SaleCategory =>
-  line.rateBps === null ? "exempt" : line.rateBps > 0 ? "vatable" : "zero_rated";
+const categoryOf = (line: Line, taxExemptSale: boolean): SaleCategory =>
+  line.rateBps === null || (taxExemptSale && line.rateBps > 0) ? "exempt" : line.rateBps > 0 ? "vatable" : "zero_rated";
 
-export function salesBreakdown(seller: SellerSales, lines: Line[]): SalesBreakdown {
+/**
+ * `taxExemptSale`: the bill has a tax-exempt qualified discount (D19, e.g. a
+ * senior citizen's), so its VATable lines are VAT-exempt sales (B.18). Sales
+ * are shown before a qualified discount, which is printed on its own line.
+ */
+export function salesBreakdown(seller: SellerSales, lines: Line[], { taxExemptSale = false }: { taxExemptSale?: boolean } = {}): SalesBreakdown {
+  const sale = (line: Line) => line.totalMinor + (line.qualifiedDiscountMinor ?? 0);
   if (seller === "exempt") return { kind: "exempt" };
-  if (seller === "percentage_tax") return { kind: "percentage_tax", amountMinor: lines.reduce((sum, l) => sum + l.totalMinor, 0) };
+  if (seller === "percentage_tax") return { kind: "percentage_tax", amountMinor: lines.reduce((sum, l) => sum + sale(l), 0) };
   const breakdown = { kind: "vat" as const, vatableMinor: 0, vatMinor: 0, zeroRatedMinor: 0, exemptMinor: 0, lines: [] as SaleCategory[] };
   for (const line of lines) {
-    const category = categoryOf(line);
+    const category = categoryOf(line, taxExemptSale);
     breakdown.lines.push(category);
     if (category === "vatable") {
       // In both tax modes the line total includes its VAT; VATable sales exclude it.
-      breakdown.vatableMinor += line.totalMinor - line.taxMinor;
+      breakdown.vatableMinor += sale(line) - line.taxMinor;
       breakdown.vatMinor += line.taxMinor;
-    } else if (category === "zero_rated") breakdown.zeroRatedMinor += line.totalMinor;
-    else breakdown.exemptMinor += line.totalMinor;
+    } else if (category === "zero_rated") breakdown.zeroRatedMinor += sale(line);
+    else breakdown.exemptMinor += sale(line);
   }
   return breakdown;
 }

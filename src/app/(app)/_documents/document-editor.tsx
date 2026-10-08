@@ -14,7 +14,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AsyncCombobox } from "@/components/async-combobox";
-import { buyerTaxIdReminder } from "@/modules/invoices/client";
+import {
+  buyerTaxIdReminder,
+  EMPTY_QUALIFIED_DISCOUNT,
+  parseQualifiedDiscount,
+  QUALIFIED_DISCOUNT_FIELDS,
+  QUALIFIED_DISCOUNT_LIMITS,
+  type QualifiedDiscountConfig,
+  qualifiedDiscountInput,
+  qualifiedDiscountRows,
+  type RawQualifiedDiscount,
+} from "@/modules/invoices/client";
 import { DocumentPaper } from "@/components/document/document-paper";
 import { buildDocumentView, type DocumentView, type DocumentViewLineInput } from "@/components/document/document-view";
 import { FormAlert } from "@/components/form-alert";
@@ -44,6 +54,7 @@ import {
 import { parseInvoiceDraft } from "@/modules/invoices/client";
 import { parseQuoteDraft } from "@/modules/quotes/client";
 import { formatAmountForInput, formatMoney } from "@/shared/money";
+import { formatRate } from "@/shared/numbers/percent";
 import { CustomerForm, type CustomerFormCopy, EMPTY_CUSTOMER } from "../customers/_components/customer-form";
 import { customerForDocumentAction, searchCustomersAction, searchLineSourcesAction } from "./actions";
 import type {
@@ -68,6 +79,8 @@ export type DocumentEditorState = {
   notes: string;
   terms: string;
   lines: EditorLine[];
+  /** Invoices only: a qualified buyer's discount (D19). */
+  qualifiedDiscount?: RawQualifiedDiscount;
 };
 
 /** What differs between the quote and invoice editors. */
@@ -107,6 +120,8 @@ type DocumentEditorProps = {
   registration?: string | null;
   /** Invoice mode: when to remind about the buyer's tax ID (Sec. 3 B.4). */
   buyerTaxIdRule?: { currency: string; thresholdMinor: number; reminder: string } | null;
+  /** Invoices: the market's qualified discounts (D19), or null where there are none. */
+  qualifiedDiscounts?: QualifiedDiscountConfig | null;
   /** The market's usual unit for new free-text lines. */
   defaultUnit: string;
   customerCopy: CustomerFormCopy;
@@ -214,10 +229,12 @@ export function DocumentEditor(props: DocumentEditorProps) {
     const { endDate, ...rest } = state;
     return { ...rest, [kind.endField]: endDate, lines: state.lines.map(toRawLine) };
   }, [state, kind.endField]);
+  const qualifiedConfig = props.kind === "invoice" ? (props.qualifiedDiscounts ?? null) : null;
+  const parseOptions = useMemo(() => ({ locale, qualifiedDiscounts: qualifiedConfig }), [locale, qualifiedConfig]);
   const clientErrors = useMemo(() => {
-    const parsed = kind.parse(payload, { locale });
+    const parsed = kind.parse(payload, parseOptions);
     return parsed.ok ? {} : parsed.errors;
-  }, [payload, locale, kind]);
+  }, [payload, parseOptions, kind]);
 
   // The preview shows every line that can already be read, even while others are unfinished.
   const ratesById = useMemo(() => new Map(taxRates.map((r) => [r.id, r])), [taxRates]);
@@ -241,9 +258,14 @@ export function DocumentEditor(props: DocumentEditorProps) {
         },
       });
     }
+    // The qualified discount shows in the preview once its fields are complete (D19).
+    const qualifiedParsed = state.qualifiedDiscount
+      ? parseQualifiedDiscount(state.qualifiedDiscount, qualifiedConfig, { hasLineDiscounts: false })
+      : null;
+    const qualified = qualifiedParsed?.ok ? qualifiedParsed.discount : null;
     let amounts;
     try {
-      amounts = calculateDocument({ taxMode, lines: rows.map((r) => ({ ...r.line })) });
+      amounts = calculateDocument({ taxMode, lines: rows.map((r) => ({ ...r.line })), qualifiedDiscount: qualifiedDiscountInput(qualified) });
     } catch {
       amounts = calculateDocument({ taxMode, lines: [] });
     }
@@ -272,9 +294,21 @@ export function DocumentEditor(props: DocumentEditorProps) {
       paymentInstructions: props.paymentInstructions,
       notice: props.notice,
       registration: props.registration ?? null,
+      qualifiedDiscount:
+        qualified && qualifiedConfig
+          ? {
+              label: qualified.label,
+              idLabel: qualified.idLabel,
+              idNumber: qualified.idNumber,
+              holderName: qualified.holderName,
+              taxExempt: qualified.taxExempt,
+              signature: qualifiedConfig.signature,
+              rows: qualifiedDiscountRows(amounts, qualified, qualifiedConfig.rows, formatRate(qualified.rateBps, locale)),
+            }
+          : null,
     });
     return { view, lineAmounts, totalMinor: amounts.totalMinor, total: formatMoney(amounts.totalMinor, state.currency, { locale }) };
-  }, [state, customer, locale, taxMode, ratesById, kind.endLabel, props.title, props.number, props.revision, props.business, props.notice, props.registration, props.paymentInstructions]);
+  }, [state, customer, locale, taxMode, ratesById, kind.endLabel, qualifiedConfig, props.title, props.number, props.revision, props.business, props.notice, props.registration, props.paymentInstructions]);
 
   // Show a field's problem once the person has left it, or once the server reported it.
   const visibleErrors = useMemo(() => {
@@ -285,13 +319,13 @@ export function DocumentEditor(props: DocumentEditorProps) {
 
   const validate = useCallback(
     (value: typeof payload) => {
-      const result = kind.parse(value, { locale });
+      const result = kind.parse(value, parseOptions);
       if (result.ok) return null;
       const first = Object.keys(result.errors)[0] ?? "";
       const line = /^lines\.(\d+)\./.exec(first);
       return line ? `Not saved yet: finish line ${Number(line[1]) + 1}.` : "Not saved yet: fix the highlighted fields.";
     },
-    [locale, kind],
+    [parseOptions, kind],
   );
 
   const save = useCallback(
@@ -616,6 +650,103 @@ export function DocumentEditor(props: DocumentEditorProps) {
             </Button>
           </div>
         </section>
+
+        {qualifiedConfig && (
+          // A qualified buyer's discount on the whole bill (D19; PH: RR 7-2024 Sec. 6 B.18).
+          <section aria-labelledby="doc-qualified" className="grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs">
+            <div className="grid gap-1">
+              <h2 id="doc-qualified" className="font-semibold">
+                Special discount
+              </h2>
+              <p id="doc-qualified-hint" className="text-sm text-pretty text-muted-foreground">
+                {qualifiedConfig.hint}
+              </p>
+            </div>
+            {(() => {
+              const value = state.qualifiedDiscount ?? EMPTY_QUALIFIED_DISCOUNT;
+              const chosen = qualifiedConfig.kinds.find((k) => k.code === value.kind) ?? null;
+              const change = (patch: Partial<RawQualifiedDiscount>) =>
+                update(
+                  { qualifiedDiscount: { ...value, ...patch } },
+                  Object.keys(patch).map((field) => QUALIFIED_DISCOUNT_FIELDS[field as keyof RawQualifiedDiscount]),
+                );
+              const fieldError = (field: keyof RawQualifiedDiscount) => visibleErrors[QUALIFIED_DISCOUNT_FIELDS[field]];
+              return (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-1.5 sm:col-span-2">
+                    <label htmlFor="doc-qualified-kind" className="text-sm font-medium">
+                      Buyer qualifies as
+                    </label>
+                    <NativeSelect
+                      id="doc-qualified-kind"
+                      value={value.kind}
+                      onChange={(e) => change({ kind: e.target.value })}
+                      onBlur={() => touch(QUALIFIED_DISCOUNT_FIELDS.kind)}
+                      aria-describedby={fieldError("kind") ? "doc-qualified-kind-error" : "doc-qualified-hint"}
+                      aria-invalid={fieldError("kind") ? true : undefined}
+                    >
+                      <option value="">No special discount</option>
+                      {qualifiedConfig.kinds.map((k) => (
+                        <option key={k.code} value={k.code}>
+                          {`${k.label} (${formatRate(k.rateBps, locale)}${k.taxExempt ? `, ${qualifiedConfig.taxExemptLabel}` : ""})`}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                    {fieldError("kind") && (
+                      <p id="doc-qualified-kind-error" className="text-sm text-destructive">
+                        {fieldError("kind")}
+                      </p>
+                    )}
+                  </div>
+                  {chosen && (
+                    <>
+                      <div className="grid gap-1.5">
+                        <label htmlFor="doc-qualified-id" className="text-sm font-medium">
+                          {chosen.idLabel}
+                        </label>
+                        <Input
+                          id="doc-qualified-id"
+                          value={value.idNumber}
+                          maxLength={QUALIFIED_DISCOUNT_LIMITS.idNumber}
+                          autoComplete="off"
+                          onChange={(e) => change({ idNumber: e.target.value })}
+                          onBlur={() => touch(QUALIFIED_DISCOUNT_FIELDS.idNumber)}
+                          aria-invalid={fieldError("idNumber") ? true : undefined}
+                          aria-describedby={fieldError("idNumber") ? "doc-qualified-id-error" : undefined}
+                        />
+                        {fieldError("idNumber") && (
+                          <p id="doc-qualified-id-error" className="text-sm text-destructive">
+                            {fieldError("idNumber")}
+                          </p>
+                        )}
+                      </div>
+                      <div className="grid gap-1.5">
+                        <label htmlFor="doc-qualified-name" className="text-sm font-medium">
+                          Name on the ID
+                        </label>
+                        <Input
+                          id="doc-qualified-name"
+                          value={value.holderName}
+                          maxLength={QUALIFIED_DISCOUNT_LIMITS.holderName}
+                          autoComplete="off"
+                          onChange={(e) => change({ holderName: e.target.value })}
+                          onBlur={() => touch(QUALIFIED_DISCOUNT_FIELDS.holderName)}
+                          aria-invalid={fieldError("holderName") ? true : undefined}
+                          aria-describedby={fieldError("holderName") ? "doc-qualified-name-error" : undefined}
+                        />
+                        {fieldError("holderName") && (
+                          <p id="doc-qualified-name-error" className="text-sm text-destructive">
+                            {fieldError("holderName")}
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+          </section>
+        )}
 
         <section aria-labelledby="doc-details" className="grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs">
           <h2 id="doc-details" className="font-semibold">

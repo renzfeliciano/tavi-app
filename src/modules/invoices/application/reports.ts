@@ -34,11 +34,16 @@ export type ReportedInvoice = {
   totalMinor: number;
   taxMinor: number;
   paidMinor: number;
-  /** Its lines by tax treatment, the `salesBreakdown` rule: they add up to the total. */
+  /**
+   * Its lines by tax treatment, the `salesBreakdown` rule, before any
+   * qualified discount: they add up to the total plus that discount.
+   */
   vatableMinor: number;
   vatMinor: number;
   zeroRatedMinor: number;
   exemptMinor: number;
+  /** A qualified buyer's discount (D19; PH: senior citizen, PWD, …), 0 without one. */
+  qualifiedDiscountMinor: number;
 };
 
 /** Bills issued from `from` to `to` (both included), oldest first. */
@@ -70,6 +75,8 @@ export async function invoicesIssuedBetween(
         totalMinor: invoices.totalMinor,
         taxMinor: invoices.taxTotalMinor,
         paidMinor: invoices.amountPaidMinor,
+        qualifiedDiscountMinor: invoices.qualifiedDiscountMinor,
+        taxExemptSale: sql<boolean>`coalesce((${invoices.qualifiedDiscount}->>'taxExempt')::boolean, false)`,
       })
       .from(invoices)
       .where(issued)
@@ -80,6 +87,7 @@ export async function invoicesIssuedBetween(
         rateBps: invoiceLines.taxRateBps,
         taxMinor: invoiceLines.taxMinor,
         totalMinor: invoiceLines.totalMinor,
+        qualifiedDiscountMinor: invoiceLines.qualifiedDiscountMinor,
       })
       .from(invoiceLines)
       .innerJoin(
@@ -89,8 +97,8 @@ export async function invoicesIssuedBetween(
       .where(issued),
   ]);
   const linesOf = Map.groupBy(lines, (line) => line.invoiceId);
-  return rows.map(({ registration, number, ...row }) => {
-    const breakdown = salesBreakdown("vat", linesOf.get(row.id) ?? []);
+  return rows.map(({ registration, number, taxExemptSale, ...row }) => {
+    const breakdown = salesBreakdown("vat", linesOf.get(row.id) ?? [], { taxExemptSale });
     const sums =
       breakdown.kind === "vat" ? breakdown : { vatableMinor: 0, vatMinor: 0, zeroRatedMinor: 0, exemptMinor: 0 };
     return {

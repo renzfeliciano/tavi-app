@@ -98,6 +98,16 @@ Taxpayers setting up electronic sales reporting may deduct an **additional 100% 
 4. **Structured data from day one.** TAVI already stores every invoice field as structured data (integer amounts, per-line tax snapshots, discounts), and payments will record withholding. That is the data the JSON requires (S4 IV.6.b), so a later JSON export is an addition, not a rebuild.
 5. **Downtime fallback** (S4 IV.11) implies TAVI will eventually need a way to record manual invoice numbers and link replacement e-invoices to them.
 
+## 3a. What TAVI does now (D19, 8 Oct 2026)
+
+The founder decided to finish invoice mode from the regulation text rather than wait for the RDO and CPA (D19). As built:
+
+- **REPRINT (S1, Sec. 6 B.21):** the first PDF of an issued registered invoice is the original; every later PDF, by the business or the customer, prints "REPRINT" at the top.
+- **Qualified discounts (S1, Sec. 6 B.18):** a bill can carry a senior citizen's or PWD's 20% discount (VAT-exempt), a solo parent's 10% (VAT-exempt), or a national athlete's or coach's or Medal of Valor awardee's 20% (VAT kept on the full price). The discount is on the price before VAT, never combined with item discounts, and printed with the buyer's ID number, name, the discount and VAT-exemption breakdown and a signature line. Rates and VAT treatment follow RA 9994 / RR 7-2010, RA 10754 / RR 5-2017, RA 11861 / RR 1-2023, RA 10699 / RR 13-2020 and RA 9049, as summarised by PwC PH and others. The 5% basic-necessities discount isn't offered.
+- **E-invoicing (S4 IV.6):** registered invoices can be downloaded as structured JSON, one at a time or for a period, with the minimum invoice contents, discounts and the tax withheld. The field names are TAVI's own (the official list is on the EIS Certification Portal), kept in one mapping file so they can be switched to the BIR's. TAVI isn't certified and transmits nothing to the BIR. A business that must e-invoice still needs its own PTI and EIS certification, or an ESP.
+
+The questions below are still worth asking when a CPA or the RDO is available, because the answers could change these choices.
+
 ## 4. Questions for the RDO and a CPA
 
 1. Our users are small service businesses. If a **micro** taxpayer uses TAVI (a web app) to issue its invoices, must it register TAVI as a **CAS** (AC/PTU), or is another registration route expected for cloud invoicing software?

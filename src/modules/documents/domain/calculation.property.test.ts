@@ -21,9 +21,14 @@ const lineArb: fc.Arbitrary<LineInput> = fc.record({
   discount: discountArb,
   tax: taxArb,
 });
+const qualifiedArb = fc.oneof(
+  fc.constant(null),
+  fc.record({ rateBps: fc.integer({ min: 0, max: 10_000 }), taxExempt: fc.boolean() }),
+);
 const documentArb: fc.Arbitrary<DocumentInput> = fc.record({
   taxMode: fc.constantFrom("inclusive" as const, "exclusive" as const),
   lines: fc.array(lineArb, { maxLength: 30 }),
+  qualifiedDiscount: qualifiedArb,
 });
 
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
@@ -37,6 +42,8 @@ describe("calculateDocument properties", () => {
         expect(doc.subtotalMinor).toBe(sum(doc.lines.map((l) => l.grossMinor)));
         expect(doc.discountTotalMinor).toBe(sum(doc.lines.map((l) => l.discountMinor)));
         expect(doc.taxTotalMinor).toBe(sum(doc.lines.map((l) => l.taxMinor)));
+        expect(doc.qualifiedDiscountTotalMinor).toBe(sum(doc.lines.map((l) => l.qualifiedDiscountMinor)));
+        expect(doc.taxWaivedTotalMinor).toBe(sum(doc.lines.map((l) => l.taxWaivedMinor)));
       }),
     );
   });
@@ -50,7 +57,17 @@ describe("calculateDocument properties", () => {
           doc.discountTotalMinor,
           doc.taxTotalMinor,
           doc.totalMinor,
-          ...doc.lines.flatMap((l) => [l.grossMinor, l.discountMinor, l.netMinor, l.taxMinor, l.totalMinor]),
+          doc.qualifiedDiscountTotalMinor,
+          doc.taxWaivedTotalMinor,
+          ...doc.lines.flatMap((l) => [
+            l.grossMinor,
+            l.discountMinor,
+            l.netMinor,
+            l.taxMinor,
+            l.totalMinor,
+            l.qualifiedDiscountMinor,
+            l.taxWaivedMinor,
+          ]),
         ];
         for (const amount of amounts) {
           expect(Number.isSafeInteger(amount)).toBe(true);
@@ -69,12 +86,16 @@ describe("calculateDocument properties", () => {
       fc.property(documentArb, (input) => {
         const doc = calculateDocument(input);
         for (const l of doc.lines) {
+          // A qualified discount comes off after tax is worked out; waived tax
+          // is the tax the sale would have carried (D19).
           if (input.taxMode === "exclusive") {
-            expect(l.totalMinor).toBe(l.netMinor + l.taxMinor);
+            expect(l.totalMinor).toBe(l.netMinor + l.taxMinor - l.qualifiedDiscountMinor);
           } else {
-            expect(l.totalMinor).toBe(l.netMinor);
-            expect(l.taxMinor).toBeLessThanOrEqual(l.netMinor);
+            expect(l.totalMinor).toBe(l.netMinor - l.taxWaivedMinor - l.qualifiedDiscountMinor);
+            expect(l.taxMinor + l.taxWaivedMinor).toBeLessThanOrEqual(l.netMinor);
           }
+          if (!input.qualifiedDiscount) expect([l.qualifiedDiscountMinor, l.taxWaivedMinor]).toEqual([0, 0]);
+          if (l.taxWaivedMinor > 0) expect(l.taxMinor).toBe(0);
         }
       }),
     );

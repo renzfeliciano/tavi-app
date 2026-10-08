@@ -6,6 +6,7 @@ import { newInvoiceDefaults } from "@/modules/invoices";
 import { DocumentEditor } from "../../_documents/document-editor";
 import { editorContext } from "../../_documents/editor-props";
 import { deleteDraftInvoiceAction, saveInvoiceDraftAction, sendInvoiceAction } from "../actions";
+import { EMPTY_QUALIFIED_DISCOUNT } from "@/modules/invoices/client";
 
 export const metadata: Metadata = { title: "New invoice" };
 
@@ -38,6 +39,7 @@ export default async function NewInvoicePage() {
           notes: defaults.notes,
           terms: defaults.terms,
           lines: [],
+          qualifiedDiscount: EMPTY_QUALIFIED_DISCOUNT,
         }}
       />
     </>

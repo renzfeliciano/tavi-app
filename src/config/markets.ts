@@ -91,6 +91,8 @@ export type MarketProfile = {
     titles: readonly string[];
     /** Printed at the foot of each registered invoice: {number} {date} {start} {end}. */
     footer: string;
+    /** Printed prominently at the top of every print after the first (PH: RR 7-2024 Sec. 6 B.21, D19). */
+    reprint: string;
     /** How a registered invoice names its sales breakdown (PH: RR 7-2024 Sec. 6 B.13–B.17). */
     sales: {
       vatable: string;
@@ -110,6 +112,27 @@ export type MarketProfile = {
      * whether a buyer is VAT-registered, so it reminds rather than blocks.
      */
     buyerTaxId: { currency: string; thresholdMinor: number; reminder: string };
+  } | null;
+  /**
+   * Discounts the law grants qualified buyers on a whole sale, or null where
+   * there are none (D19). PH: senior citizens, PWDs, solo parents, national
+   * athletes and coaches and Medal of Valor awardees, printed with the
+   * buyer's ID number, the discount and VAT-exemption breakdown and a
+   * signature line (RR 7-2024 Sec. 6 B.18). The discount is taken on the
+   * price before tax; `taxExempt` sales also drop the tax.
+   */
+  qualifiedDiscounts: {
+    kinds: readonly { code: string; label: string; idLabel: string; rateBps: number; taxExempt: boolean }[];
+    /** Shown under the choice in the editor. */
+    hint: string;
+    /** Marks the kinds that also drop the tax, in the editor's list (PH: "VAT-exempt"). */
+    taxExemptLabel: string;
+    /** Shown when an item also has its own discount: the law gives one or the other. */
+    notWithLineDiscounts: string;
+    /** The printed breakdown (B.18.b); {label} is the kind and {rate} its rate. */
+    rows: { totalSales: string; lessTax: string; netOfTax: string; lessDiscount: string; addTax: string; totalDue: string };
+    /** Under the buyer's signature line (B.18.c). */
+    signature: string;
   } | null;
   /** Printed in bold on documents that aren't registered invoices (PH: RR 7-2024 Sec. 6 B.15), or null. */
   supplementaryDocumentNotice: string | null;
@@ -192,6 +215,7 @@ export const MARKETS = {
       seriesHint: "The serial numbers your RDO approved for your invoices.",
       titles: ["Invoice", "Service Invoice", "Sales Invoice", "Billing Invoice", "Commercial Invoice"],
       footer: "Acknowledgement Certificate / PTU No. {number} · Date issued {date} · Approved series {start} to {end}",
+      reprint: "REPRINT",
       sales: {
         vatable: "VATable Sales",
         vat: "VAT Amount",
@@ -207,6 +231,34 @@ export const MARKETS = {
         thresholdMinor: 100_000,
         reminder: "If this customer is VAT-registered, add their TIN to their details first: the BIR requires it on invoices of ₱1,000 or more.",
       },
+    },
+    qualifiedDiscounts: {
+      // Rates and VAT treatment from the laws and their revenue regulations,
+      // as read by the founder (D19). Not legal advice.
+      kinds: [
+        // RA 9994 (Expanded Senior Citizens Act), RR 7-2010: 20% and VAT-exempt.
+        { code: "senior_citizen", label: "Senior citizen", idLabel: "OSCA / SC ID No.", rateBps: 2000, taxExempt: true },
+        // RA 10754 (PWD benefits), RR 5-2017: 20% and VAT-exempt.
+        { code: "pwd", label: "Person with disability", idLabel: "PWD ID No.", rateBps: 2000, taxExempt: true },
+        // RA 11861 (Expanded Solo Parents Welfare Act), RR 1-2023: 10% and VAT-exempt.
+        { code: "solo_parent", label: "Solo parent", idLabel: "Solo Parent ID No.", rateBps: 1000, taxExempt: true },
+        // RA 10699 (National Athletes and Coaches), RR 13-2020: 20%; VAT stays on the full price.
+        { code: "naac", label: "National athlete or coach", idLabel: "PNSTM ID No.", rateBps: 2000, taxExempt: false },
+        // RA 9049 (Medal of Valor awardees and dependents): 20%; no VAT exemption in the law.
+        { code: "mov", label: "Medal of Valor awardee", idLabel: "MOV ID No.", rateBps: 2000, taxExempt: false },
+      ],
+      hint: "For a buyer the law entitles to a discount. It applies to every item, on the price before VAT; senior citizens, PWDs and solo parents also don't pay VAT. Only for goods and services the law covers.",
+      taxExemptLabel: "VAT-exempt",
+      notWithLineDiscounts: "The law gives the higher of the two discounts, not both. Remove the item discounts, or choose no special discount.",
+      rows: {
+        totalSales: "Total Sales (VAT Inclusive)",
+        lessTax: "Less: VAT",
+        netOfTax: "Amount Net of VAT",
+        lessDiscount: "Less: {label} discount ({rate})",
+        addTax: "Add: VAT",
+        totalDue: "Total Amount Due",
+      },
+      signature: "Signature over printed name",
     },
     supplementaryDocumentNotice: "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.",
     units: { product: "pc", service: "hour" },

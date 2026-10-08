@@ -78,7 +78,9 @@ export default function PrivacyPage() {
           <li>
             <strong className="font-semibold">Your business&apos;s records:</strong> customers, products and services,
             quotes, bills and payments. These usually contain your customers&apos; names, contact details, addresses and
-            sometimes TINs (see the two roles above).
+            sometimes TINs (see the two roles above). When a bill carries a discount the law grants a buyer (for
+            example a senior citizen, a person with disability or a solo parent), it also holds the number and name on
+            the buyer&apos;s ID.
           </li>
           <li>
             <strong className="font-semibold">When a customer uses a link:</strong> when someone opens, approves or
@@ -96,8 +98,9 @@ export default function PrivacyPage() {
           </li>
         </LegalList>
         <p>
-          A TIN that belongs to an individual can be sensitive personal information under the law. It&apos;s
-          processed because tax regulations require it on certain documents.
+          A TIN that belongs to an individual, and an ID that shows a person is a senior citizen or has a disability,
+          can be sensitive personal information under the law. They&apos;re processed because tax regulations require
+          them on certain documents.
         </p>
       </LegalSection>
 

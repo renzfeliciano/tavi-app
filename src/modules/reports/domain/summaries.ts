@@ -24,11 +24,16 @@ export type SalesRow = {
   totalMinor: number;
   taxMinor: number;
   paidMinor: number;
-  /** Its lines by tax treatment (the invoices module's `salesBreakdown` rule); together they make the total. */
+  /**
+   * Its lines by tax treatment (the invoices module's `salesBreakdown` rule),
+   * before any qualified discount; less that discount, they make the total.
+   */
   vatableMinor: number;
   vatMinor: number;
   zeroRatedMinor: number;
   exemptMinor: number;
+  /** A qualified buyer's discount (D19; PH: senior citizen, PWD, …), 0 without one. */
+  qualifiedDiscountMinor: number;
 };
 
 export type SalesSummary = {
@@ -37,7 +42,7 @@ export type SalesSummary = {
   /** Of those issued, the registered invoices (invoice mode, D13). */
   registered: { count: number; totalMinor: number };
   cancelled: { count: number; totalMinor: number };
-  breakdown: { vatableMinor: number; vatMinor: number; zeroRatedMinor: number; exemptMinor: number };
+  breakdown: { vatableMinor: number; vatMinor: number; zeroRatedMinor: number; exemptMinor: number; qualifiedDiscountMinor: number };
 };
 
 /** An active payment received in the period; voided payments never count. */
@@ -129,7 +134,7 @@ export function summarizeSales(rows: readonly SalesRow[]): SalesSummary[] {
       issued: { count: 0, totalMinor: 0, netMinor: 0, taxMinor: 0 },
       registered: { count: 0, totalMinor: 0 },
       cancelled: { count: 0, totalMinor: 0 },
-      breakdown: { vatableMinor: 0, vatMinor: 0, zeroRatedMinor: 0, exemptMinor: 0 },
+      breakdown: { vatableMinor: 0, vatMinor: 0, zeroRatedMinor: 0, exemptMinor: 0, qualifiedDiscountMinor: 0 },
     }),
     (summary, row) => {
       if (row.cancelled) {
@@ -149,6 +154,7 @@ export function summarizeSales(rows: readonly SalesRow[]): SalesSummary[] {
       summary.breakdown.vatMinor += row.vatMinor;
       summary.breakdown.zeroRatedMinor += row.zeroRatedMinor;
       summary.breakdown.exemptMinor += row.exemptMinor;
+      summary.breakdown.qualifiedDiscountMinor += row.qualifiedDiscountMinor;
     },
   );
 }

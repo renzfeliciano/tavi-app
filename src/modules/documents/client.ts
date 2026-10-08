@@ -9,6 +9,7 @@ export {
   type LineDiscount,
   type LineInput,
   type LineTax,
+  type QualifiedDiscountInput,
   type TaxGroup,
   type TaxMode,
 } from "./domain/calculation";

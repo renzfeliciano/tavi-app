@@ -95,7 +95,7 @@ describe("reports", () => {
         issued: { count: 1, totalMinor: 112_000, netMinor: 100_000, taxMinor: 12_000 },
         registered: { count: 0, totalMinor: 0 },
         cancelled: { count: 1, totalMinor: 50_000 },
-        breakdown: { vatableMinor: 100_000, vatMinor: 12_000, zeroRatedMinor: 0, exemptMinor: 0 },
+        breakdown: { vatableMinor: 100_000, vatMinor: 12_000, zeroRatedMinor: 0, exemptMinor: 0, qualifiedDiscountMinor: 0 },
       },
     ]);
   });

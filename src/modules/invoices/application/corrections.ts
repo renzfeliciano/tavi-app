@@ -1,15 +1,25 @@
 import { eq, sql } from "drizzle-orm";
 import { type Database, getDb } from "@/db";
 import { assertCan, type OrgActor } from "@/modules/authz";
-import { quantityToNumeric } from "@/modules/documents";
 import { getDocumentSettings } from "@/modules/organizations";
 import { addDays, todayIn } from "@/shared/dates/calendar";
 import { issuedEditProblems, parseInvoiceReason } from "../domain/corrections";
 import { parseInvoiceDraft } from "../domain/invoice-draft";
+import type { QualifiedDiscountConfig } from "../domain/qualified-discount";
 import { issuedInvoiceStatus } from "../domain/issuing";
 import { transitionInvoice } from "../domain/transitions";
 import { invoiceLines, invoices } from "../schema";
-import { audit, calculate, copyLines, type InvoiceCommandResult, loadHeader, loadLines, resolveDraft } from "./invoices";
+import {
+  audit,
+  calculate,
+  copyLines,
+  headerAmounts,
+  type InvoiceCommandResult,
+  lineRows,
+  loadHeader,
+  loadLines,
+  resolveDraft,
+} from "./invoices";
 
 // Correcting an issued invoice (§B.4): edit before any payment (D7), void or
 // cancel with a reason (D6), and void & duplicate for anything else. Numbers
@@ -33,12 +43,12 @@ export async function editIssuedInvoice(
   actor: OrgActor,
   id: string,
   input: unknown,
-  { locale }: { locale: string },
+  { locale, qualifiedDiscounts = null }: { locale: string; qualifiedDiscounts?: QualifiedDiscountConfig | null },
   db: Database = getDb(),
   now: Date = new Date(),
 ): Promise<EditIssuedInvoiceResult> {
   assertCan(actor, "invoices.write");
-  const parsed = parseInvoiceDraft(input, { locale });
+  const parsed = parseInvoiceDraft(input, { locale, qualifiedDiscounts });
   if (!parsed.ok) return parsed;
   const draft = parsed.draft;
 
@@ -61,7 +71,7 @@ export async function editIssuedInvoice(
     db,
   );
   if (!resolved.ok) return resolved;
-  const calculated = calculate(current.taxMode, resolved.lines);
+  const calculated = calculate(current.taxMode, resolved.lines, draft.qualifiedDiscount);
   if (!calculated.ok) return calculated;
   const { amounts } = calculated;
   const settings = await getDocumentSettings(actor, db);
@@ -85,40 +95,14 @@ export async function editIssuedInvoice(
         dueDate: draft.dueDate,
         notes: draft.notes,
         terms: draft.terms,
-        subtotalMinor: amounts.subtotalMinor,
-        discountTotalMinor: amounts.discountTotalMinor,
-        taxTotalMinor: amounts.taxTotalMinor,
-        totalMinor: amounts.totalMinor,
+        ...headerAmounts(amounts, draft.qualifiedDiscount),
         status,
         revision,
         editedAt: sql`now()`,
       })
       .where(eq(invoices.id, locked.id));
     await tx.delete(invoiceLines).where(eq(invoiceLines.invoiceId, locked.id));
-    const newLines = resolved.lines.map((line, position) => {
-      const a = amounts.lines[position]!;
-      return {
-        organizationId: actor.organizationId,
-        invoiceId: locked.id,
-        position,
-        sourceKind: line.source?.kind ?? null,
-        sourceId: line.source?.id ?? null,
-        description: line.description,
-        unitLabel: line.unitLabel,
-        quantity: quantityToNumeric(line.quantity),
-        unitPriceMinor: line.unitPriceMinor,
-        discountKind: line.discount?.kind ?? null,
-        discountValue:
-          line.discount === null ? null : line.discount.kind === "percent" ? line.discount.bps : line.discount.amountMinor,
-        taxRateId: line.tax?.id ?? null,
-        taxRateName: line.tax?.name ?? null,
-        taxRateBps: line.tax?.rateBps ?? null,
-        grossMinor: a.grossMinor,
-        discountMinor: a.discountMinor,
-        taxMinor: a.taxMinor,
-        totalMinor: a.totalMinor,
-      };
-    });
+    const newLines = lineRows({ organizationId: actor.organizationId, invoiceId: locked.id }, resolved.lines, amounts);
     await tx.insert(invoiceLines).values(newLines);
 
     // The full before/after, so every change to an issued document can be read back (D7).
@@ -129,6 +113,7 @@ export async function editIssuedInvoice(
       terms: h.terms,
       totalMinor: h.totalMinor,
       taxTotalMinor: h.taxTotalMinor,
+      qualifiedDiscount: h.qualifiedDiscount,
       lines: lines.map((l) => ({ description: l.description, quantity: l.quantity, unitPriceMinor: l.unitPriceMinor, totalMinor: l.totalMinor })),
     });
     await audit(tx, actor, "invoice.edited", locked.id, {
@@ -137,7 +122,13 @@ export async function editIssuedInvoice(
       toRevision: revision,
       before: snapshot(locked, currentLines),
       after: snapshot(
-        { ...locked, ...draft, totalMinor: amounts.totalMinor, taxTotalMinor: amounts.taxTotalMinor },
+        {
+          ...locked,
+          ...draft,
+          totalMinor: amounts.totalMinor,
+          taxTotalMinor: amounts.taxTotalMinor,
+          qualifiedDiscount: draft.qualifiedDiscount,
+        },
         newLines.map((l) => ({ ...l, quantity: l.quantity })),
       ),
     });
@@ -245,6 +236,10 @@ export async function voidAndDuplicateInvoice(
         discountTotalMinor: invoice.discountTotalMinor,
         taxTotalMinor: invoice.taxTotalMinor,
         totalMinor: invoice.totalMinor,
+        // The buyer's qualified discount goes with the items (D19).
+        qualifiedDiscount: invoice.qualifiedDiscount,
+        qualifiedDiscountMinor: invoice.qualifiedDiscountMinor,
+        taxWaivedMinor: invoice.taxWaivedMinor,
         createdBy: actor.userId,
       })
       .returning({ id: invoices.id });

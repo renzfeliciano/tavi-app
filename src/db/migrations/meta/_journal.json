@@ -162,6 +162,13 @@
       "when": 1790938936096,
       "tag": "0022_reports_issue_date_index",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791443948746,
+      "tag": "0023_invoice_mode_d19",
+      "breakpoints": true
     }
   ]
 }

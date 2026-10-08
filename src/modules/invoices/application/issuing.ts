@@ -121,7 +121,24 @@ export async function issueInvoice(
     // lines as locked and the seller's tax registration.
     const seller = market.taxRegistrations.find((r) => r.code === profile.taxRegistration)?.invoiceSales;
     const registered = claimed
-      ? { ...claimed, ...(seller ? { sales: salesBreakdown(seller, (await loadLines(tx, locked.id)).map((l) => ({ rateBps: l.taxRateBps, taxMinor: l.taxMinor, totalMinor: l.totalMinor }))) } : {}) }
+      ? {
+          ...claimed,
+          ...(seller
+            ? {
+                sales: salesBreakdown(
+                  seller,
+                  (await loadLines(tx, locked.id)).map((l) => ({
+                    rateBps: l.taxRateBps,
+                    taxMinor: l.taxMinor,
+                    totalMinor: l.totalMinor,
+                    qualifiedDiscountMinor: l.qualifiedDiscountMinor,
+                  })),
+                  // A senior citizen's (or other tax-exempt) sale is a VAT-exempt sale (B.18, D19).
+                  { taxExemptSale: locked.qualifiedDiscount?.taxExempt ?? false },
+                ),
+              }
+            : {}),
+        }
       : null;
     const number = registered
       ? formatSerial(registered.serial, registered.seriesEnd)

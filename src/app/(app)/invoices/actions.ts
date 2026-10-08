@@ -23,7 +23,7 @@ const GONE = "This invoice no longer exists.";
 /** Autosave: creates the draft on the first save, then updates it. */
 export async function saveInvoiceDraftAction(id: string | null, draft: unknown): Promise<SaveDraftResponse> {
   const ctx = await requireOrgContext();
-  const result = await saveInvoiceDraft(ctx, id, draft, { locale: ctx.locale });
+  const result = await saveInvoiceDraft(ctx, id, draft, { locale: ctx.locale, qualifiedDiscounts: ctx.market.qualifiedDiscounts });
   // No revalidatePath: invoice pages render per request anyway (see the quote autosave).
   if (result.ok) return { ok: true, id: result.invoice.id, savedAt: Date.now() };
   if ("errors" in result) return { ok: false, errors: result.errors };
@@ -57,7 +57,7 @@ export async function sendInvoiceAction(
   const parsedDelivery = parseDelivery(delivery);
   if (!parsedDelivery.ok) return parsedDelivery;
   const { email } = parsedDelivery;
-  const saved = await saveInvoiceDraft(ctx, id, draft, { locale: ctx.locale });
+  const saved = await saveInvoiceDraft(ctx, id, draft, { locale: ctx.locale, qualifiedDiscounts: ctx.market.qualifiedDiscounts });
   if (!saved.ok) {
     if ("errors" in saved) return { ok: false, errors: saved.errors };
     return { ok: false, error: "notEditable" in saved ? "This invoice was already sent." : GONE };
@@ -113,7 +113,7 @@ const closedResponse = (result: Awaited<ReturnType<typeof voidInvoice>>): Correc
 /** Saves changes to a sent, unpaid invoice as its next revision (D7). */
 export async function editIssuedInvoiceAction(id: string, draft: unknown): Promise<SaveIssuedResponse> {
   const ctx = await requireOrgContext();
-  const result = await editIssuedInvoice(ctx, id, draft, { locale: ctx.locale });
+  const result = await editIssuedInvoice(ctx, id, draft, { locale: ctx.locale, qualifiedDiscounts: ctx.market.qualifiedDiscounts });
   revalidatePath("/invoices");
   if (result.ok) return result;
   if ("errors" in result) return { ok: false, errors: result.errors };

@@ -35,7 +35,7 @@ export const LEGAL = {
    * (YYYY-MM-DD). Sign-up records the version a person agreed to; bump it
    * when either document changes in a way people should agree to again.
    */
-  version: "2026-10-02",
+  version: "2026-10-08",
   jurisdiction: {
     country: "the Philippines",
     privacyLaw: "Data Privacy Act of 2012 (Republic Act No. 10173)",

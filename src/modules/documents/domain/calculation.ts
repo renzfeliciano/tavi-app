@@ -11,6 +11,16 @@ import { QUANTITY_SCALE } from "./quantity";
 //                            : lineNet − round(lineNet × 10000 / (10000 + rate))
 //   lineTotal    = exclusive ? lineNet + lineTax : lineNet
 //
+// A qualified discount (PH: senior citizens, PWDs, solo parents, national
+// athletes and coaches, Medal of Valor awardees; RR 7-2024 Sec. 6 B.18, D19)
+// applies to every line, on the price before tax:
+//
+//   lineTaxRegular = the lineTax above (what the sale would carry)
+//   base           = exclusive ? lineNet : lineNet − lineTaxRegular
+//   qualified      = round(base × rate / 10000)
+//   taxExempt      → lineTax = 0, taxWaived = lineTaxRegular, lineTotal = base − qualified
+//   otherwise      → lineTax = lineTaxRegular (on the undiscounted price), lineTotal = base + lineTax − qualified
+//
 // Rounding is half away from zero, per line; document totals are sums of the
 // lines, so a customer can check every figure. Products are computed in BigInt
 // (price × quantity can exceed 2^53 on the way) and every result must be a
@@ -29,14 +39,29 @@ export type LineInput = {
   tax: LineTax | null;
 };
 
-export type DocumentInput = { taxMode: TaxMode; lines: readonly LineInput[] };
+/**
+ * A discount the law grants a qualified buyer on the whole sale, and whether
+ * the law also exempts that sale from tax (D19).
+ */
+export type QualifiedDiscountInput = { rateBps: number; taxExempt: boolean };
+
+export type DocumentInput = {
+  taxMode: TaxMode;
+  lines: readonly LineInput[];
+  qualifiedDiscount?: QualifiedDiscountInput | null;
+};
 
 export type LineAmounts = {
   grossMinor: number;
   discountMinor: number;
+  /** grossMinor − discountMinor: the line's amount as priced, before any qualified discount. */
   netMinor: number;
   taxMinor: number;
   totalMinor: number;
+  /** The qualified discount on this line (0 without one). */
+  qualifiedDiscountMinor: number;
+  /** Tax the line would have carried, waived by a tax-exempt qualified discount (0 otherwise). */
+  taxWaivedMinor: number;
 };
 
 export type TaxGroup = {
@@ -53,7 +78,9 @@ export type DocumentAmounts = {
   discountTotalMinor: number;
   taxTotalMinor: number;
   totalMinor: number;
-  /** Tax per name and rate, in order of first use. */
+  qualifiedDiscountTotalMinor: number;
+  taxWaivedTotalMinor: number;
+  /** Tax per name and rate, in order of first use; tax-exempt sales carry none. */
   taxes: TaxGroup[];
 };
 
@@ -90,7 +117,7 @@ function validate(line: LineInput) {
   if (line.tax) assertInteger(line.tax.rateBps, "Tax rate", 0, 10_000);
 }
 
-function calculateLine(line: LineInput, taxMode: TaxMode): LineAmounts {
+function calculateLine(line: LineInput, taxMode: TaxMode, qualified: QualifiedDiscountInput | null): LineAmounts {
   validate(line);
   const gross = roundDiv(BigInt(line.unitPriceMinor) * BigInt(line.quantity), SCALE);
 
@@ -107,7 +134,19 @@ function calculateLine(line: LineInput, taxMode: TaxMode): LineAmounts {
     const rate = BigInt(line.tax.rateBps);
     tax = taxMode === "exclusive" ? roundDiv(net * rate, BPS) : net - roundDiv(net * BPS, BPS + rate);
   }
-  const total = taxMode === "exclusive" ? net + tax : net;
+  let total = taxMode === "exclusive" ? net + tax : net;
+
+  let qualifiedDiscount = 0n;
+  let waived = 0n;
+  if (qualified) {
+    const base = taxMode === "exclusive" ? net : net - tax;
+    qualifiedDiscount = roundDiv(base * BigInt(qualified.rateBps), BPS);
+    if (qualified.taxExempt) {
+      waived = tax;
+      tax = 0n;
+    }
+    total = base + tax - qualifiedDiscount;
+  }
 
   return {
     grossMinor: toSafe(gross, "A line amount"),
@@ -115,22 +154,28 @@ function calculateLine(line: LineInput, taxMode: TaxMode): LineAmounts {
     netMinor: toSafe(net, "A line amount"),
     taxMinor: toSafe(tax, "A tax amount"),
     totalMinor: toSafe(total, "A line total"),
+    qualifiedDiscountMinor: toSafe(qualifiedDiscount, "A discount"),
+    taxWaivedMinor: toSafe(waived, "A tax amount"),
   };
 }
 
-export function calculateDocument({ taxMode, lines }: DocumentInput): DocumentAmounts {
-  const amounts = lines.map((line) => calculateLine(line, taxMode));
+export function calculateDocument({ taxMode, lines, qualifiedDiscount = null }: DocumentInput): DocumentAmounts {
+  if (qualifiedDiscount) assertInteger(qualifiedDiscount.rateBps, "Qualified discount", 0, 10_000);
+  const amounts = lines.map((line) => calculateLine(line, taxMode, qualifiedDiscount));
 
-  const totals = { subtotal: 0n, discount: 0n, tax: 0n, total: 0n };
+  const totals = { subtotal: 0n, discount: 0n, tax: 0n, total: 0n, qualified: 0n, waived: 0n };
   const groups = new Map<string, { name: string; rateBps: number; taxable: bigint; tax: bigint }>();
   amounts.forEach((a, i) => {
     totals.subtotal += BigInt(a.grossMinor);
     totals.discount += BigInt(a.discountMinor);
     totals.tax += BigInt(a.taxMinor);
     totals.total += BigInt(a.totalMinor);
+    totals.qualified += BigInt(a.qualifiedDiscountMinor);
+    totals.waived += BigInt(a.taxWaivedMinor);
 
     const tax = lines[i]?.tax;
-    if (!tax) return;
+    // A tax-exempt sale carries no tax, so it joins no group.
+    if (!tax || qualifiedDiscount?.taxExempt) return;
     const key = `${tax.name}\u0000${tax.rateBps}`;
     const group = groups.get(key) ?? { name: tax.name, rateBps: tax.rateBps, taxable: 0n, tax: 0n };
     group.taxable += BigInt(taxMode === "exclusive" ? a.netMinor : a.netMinor - a.taxMinor);
@@ -144,6 +189,8 @@ export function calculateDocument({ taxMode, lines }: DocumentInput): DocumentAm
     discountTotalMinor: toSafe(totals.discount, "The discount total"),
     taxTotalMinor: toSafe(totals.tax, "The tax total"),
     totalMinor: toSafe(totals.total, "The total"),
+    qualifiedDiscountTotalMinor: toSafe(totals.qualified, "The discount total"),
+    taxWaivedTotalMinor: toSafe(totals.waived, "The tax total"),
     taxes: [...groups.values()].map((g) => ({
       name: g.name,
       rateBps: g.rateBps,

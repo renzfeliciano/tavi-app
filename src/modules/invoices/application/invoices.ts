@@ -19,6 +19,11 @@ import { clearQuoteConversion, type CustomerSnapshot } from "@/modules/quotes";
 import { addDays, type CalendarDate, todayIn } from "@/shared/dates/calendar";
 import { escapeLikePattern } from "@/shared/text/search";
 import { type InvoiceDraft, parseInvoiceDraft } from "../domain/invoice-draft";
+import {
+  type QualifiedDiscountConfig,
+  qualifiedDiscountInput,
+  type QualifiedDiscountSnapshot,
+} from "../domain/qualified-discount";
 import type { InvoiceStatus } from "../domain/status";
 import { transitionInvoice } from "../domain/transitions";
 import { invoiceLines, invoices } from "../schema";
@@ -47,10 +52,16 @@ export type InvoiceHeader = {
   paymentInstructions: string | null;
   /** Set on registered invoices (invoice mode, 1.12); null on billing statements. */
   registration: InvoiceRegistrationSnapshot | null;
+  /** PDFs made of it as a registered invoice (D19); after the first, each says "REPRINT". */
+  printCount: number;
+  /** A qualified buyer's discount on the whole bill (D19), or null. */
+  qualifiedDiscount: QualifiedDiscountSnapshot | null;
   subtotalMinor: number;
   discountTotalMinor: number;
   taxTotalMinor: number;
   totalMinor: number;
+  qualifiedDiscountMinor: number;
+  taxWaivedMinor: number;
   amountPaidMinor: number;
   sentAt: Date | null;
   viewedAt: Date | null;
@@ -80,6 +91,8 @@ export type InvoiceLine = {
   discountMinor: number;
   taxMinor: number;
   totalMinor: number;
+  qualifiedDiscountMinor: number;
+  taxWaivedMinor: number;
 };
 
 export type InvoiceDetail = InvoiceHeader & {
@@ -130,10 +143,14 @@ export const headerColumns = {
   customerSnapshot: invoices.customerSnapshot,
   paymentInstructions: invoices.paymentInstructions,
   registration: invoices.registration,
+  printCount: invoices.printCount,
+  qualifiedDiscount: invoices.qualifiedDiscount,
   subtotalMinor: invoices.subtotalMinor,
   discountTotalMinor: invoices.discountTotalMinor,
   taxTotalMinor: invoices.taxTotalMinor,
   totalMinor: invoices.totalMinor,
+  qualifiedDiscountMinor: invoices.qualifiedDiscountMinor,
+  taxWaivedMinor: invoices.taxWaivedMinor,
   amountPaidMinor: invoices.amountPaidMinor,
   sentAt: invoices.sentAt,
   viewedAt: invoices.viewedAt,
@@ -212,6 +229,8 @@ export async function loadLines(tx: Executor, invoiceId: string): Promise<Invoic
       discountMinor: invoiceLines.discountMinor,
       taxMinor: invoiceLines.taxMinor,
       totalMinor: invoiceLines.totalMinor,
+      qualifiedDiscountMinor: invoiceLines.qualifiedDiscountMinor,
+      taxWaivedMinor: invoiceLines.taxWaivedMinor,
     })
     .from(invoiceLines)
     .where(eq(invoiceLines.invoiceId, invoiceId))
@@ -221,7 +240,8 @@ export async function loadLines(tx: Executor, invoiceId: string): Promise<Invoic
 
 /** Stored lines as rows for another invoice (conversion, duplicate): the same snapshot and amounts. */
 export function copyLines(
-  lines: readonly Omit<InvoiceLine, "position">[],
+  lines: readonly (Omit<InvoiceLine, "position" | "qualifiedDiscountMinor" | "taxWaivedMinor"> &
+    Partial<Pick<InvoiceLine, "qualifiedDiscountMinor" | "taxWaivedMinor">>)[],
   target: { organizationId: string; invoiceId: string },
 ) {
   return lines.map((line, position) => ({
@@ -288,15 +308,62 @@ export async function resolveDraft(
 export function calculate(
   taxMode: TaxMode,
   lines: readonly LineInput[],
+  qualifiedDiscount: QualifiedDiscountSnapshot | null = null,
 ): { ok: true; amounts: DocumentAmounts } | { ok: false; errors: Record<string, string> } {
   try {
-    return { ok: true, amounts: calculateDocument({ taxMode, lines }) };
+    return { ok: true, amounts: calculateDocument({ taxMode, lines, qualifiedDiscount: qualifiedDiscountInput(qualifiedDiscount) }) };
   } catch (error) {
     if (error instanceof RangeError) {
       return { ok: false, errors: { lines: "This invoice is too large to total. Split it into smaller invoices." } };
     }
     throw error;
   }
+}
+
+/** A draft's totals and qualified discount as stored on the invoice. */
+export function headerAmounts(amounts: DocumentAmounts, qualifiedDiscount: QualifiedDiscountSnapshot | null) {
+  return {
+    qualifiedDiscount,
+    subtotalMinor: amounts.subtotalMinor,
+    discountTotalMinor: amounts.discountTotalMinor,
+    taxTotalMinor: amounts.taxTotalMinor,
+    totalMinor: amounts.totalMinor,
+    qualifiedDiscountMinor: amounts.qualifiedDiscountTotalMinor,
+    taxWaivedMinor: amounts.taxWaivedTotalMinor,
+  };
+}
+
+/** Resolved draft lines as rows, each with its snapshot and computed amounts. */
+export function lineRows(
+  target: { organizationId: string; invoiceId: string },
+  lines: readonly ResolvedLine[],
+  amounts: DocumentAmounts,
+) {
+  return lines.map((line, position) => {
+    const a = amounts.lines[position]!;
+    return {
+      ...target,
+      position,
+      sourceKind: line.source?.kind ?? null,
+      sourceId: line.source?.id ?? null,
+      description: line.description,
+      unitLabel: line.unitLabel,
+      quantity: quantityToNumeric(line.quantity),
+      unitPriceMinor: line.unitPriceMinor,
+      discountKind: line.discount?.kind ?? null,
+      discountValue:
+        line.discount === null ? null : line.discount.kind === "percent" ? line.discount.bps : line.discount.amountMinor,
+      taxRateId: line.tax?.id ?? null,
+      taxRateName: line.tax?.name ?? null,
+      taxRateBps: line.tax?.rateBps ?? null,
+      grossMinor: a.grossMinor,
+      discountMinor: a.discountMinor,
+      taxMinor: a.taxMinor,
+      totalMinor: a.totalMinor,
+      qualifiedDiscountMinor: a.qualifiedDiscountMinor,
+      taxWaivedMinor: a.taxWaivedMinor,
+    };
+  });
 }
 
 /**
@@ -308,11 +375,11 @@ export async function saveInvoiceDraft(
   actor: OrgActor,
   id: string | null,
   input: unknown,
-  { locale }: { locale: string },
+  { locale, qualifiedDiscounts = null }: { locale: string; qualifiedDiscounts?: QualifiedDiscountConfig | null },
   db: Database = getDb(),
 ): Promise<SaveInvoiceDraftResult> {
   assertCan(actor, "invoices.write");
-  const parsed = parseInvoiceDraft(input, { locale });
+  const parsed = parseInvoiceDraft(input, { locale, qualifiedDiscounts });
   if (!parsed.ok) return parsed;
   const draft = parsed.draft;
 
@@ -332,7 +399,7 @@ export async function saveInvoiceDraft(
 
   const resolved = await resolveDraft(actor, draft, current ?? { customerId: null, taxRateIds: new Set() }, db);
   if (!resolved.ok) return resolved;
-  const calculated = calculate(taxMode, resolved.lines);
+  const calculated = calculate(taxMode, resolved.lines, draft.qualifiedDiscount);
   if (!calculated.ok) return calculated;
   const { amounts } = calculated;
 
@@ -343,10 +410,7 @@ export async function saveInvoiceDraft(
     dueDate: draft.dueDate,
     notes: draft.notes,
     terms: draft.terms,
-    subtotalMinor: amounts.subtotalMinor,
-    discountTotalMinor: amounts.discountTotalMinor,
-    taxTotalMinor: amounts.taxTotalMinor,
-    totalMinor: amounts.totalMinor,
+    ...headerAmounts(amounts, draft.qualifiedDiscount),
   };
 
   return db.transaction(async (tx): Promise<SaveInvoiceDraftResult> => {
@@ -369,32 +433,9 @@ export async function saveInvoiceDraft(
     }
 
     if (resolved.lines.length > 0) {
-      await tx.insert(invoiceLines).values(
-        resolved.lines.map((line, position) => {
-          const a = amounts.lines[position]!;
-          return {
-            organizationId: actor.organizationId,
-            invoiceId: invoice.id,
-            position,
-            sourceKind: line.source?.kind ?? null,
-            sourceId: line.source?.id ?? null,
-            description: line.description,
-            unitLabel: line.unitLabel,
-            quantity: quantityToNumeric(line.quantity),
-            unitPriceMinor: line.unitPriceMinor,
-            discountKind: line.discount?.kind ?? null,
-            discountValue:
-              line.discount === null ? null : line.discount.kind === "percent" ? line.discount.bps : line.discount.amountMinor,
-            taxRateId: line.tax?.id ?? null,
-            taxRateName: line.tax?.name ?? null,
-            taxRateBps: line.tax?.rateBps ?? null,
-            grossMinor: a.grossMinor,
-            discountMinor: a.discountMinor,
-            taxMinor: a.taxMinor,
-            totalMinor: a.totalMinor,
-          };
-        }),
-      );
+      await tx
+        .insert(invoiceLines)
+        .values(lineRows({ organizationId: actor.organizationId, invoiceId: invoice.id }, resolved.lines, amounts));
     }
     return { ok: true, invoice };
   });

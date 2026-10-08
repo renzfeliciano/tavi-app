@@ -1,5 +1,6 @@
 import { formatQuantity } from "@/modules/documents/client";
 import type { InvoiceDetail } from "@/modules/invoices";
+import { toRawQualifiedDiscount } from "@/modules/invoices/client";
 import { formatAmountForInput } from "@/shared/money";
 import { formatRateForInput } from "@/shared/numbers/percent";
 import type { DocumentEditorState } from "../../_documents/document-editor";
@@ -13,6 +14,7 @@ export function toEditorState(invoice: InvoiceDetail, locale: string): DocumentE
     endDate: invoice.dueDate,
     notes: invoice.notes ?? "",
     terms: invoice.terms ?? "",
+    qualifiedDiscount: toRawQualifiedDiscount(invoice.qualifiedDiscount),
     lines: invoice.lines.map((line) => ({
       key: `line-${line.position}`,
       description: line.description,

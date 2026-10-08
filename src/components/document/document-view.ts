@@ -47,8 +47,26 @@ export type DocumentView = {
   notice: string | null;
   /** Registered invoices only: the system registration at the foot (RR 7-2024 Sec. 6 B.21). */
   registration?: string | null;
+  /** Registered invoices' PDFs after the first: "REPRINT", printed prominently at the top (B.21, D19). */
+  reprint?: string | null;
   /** Registered invoices only: the sales breakdown (B.13, B.17) and the seller's statement, e.g. "EXEMPT" (B.16). */
   sales?: { rows: { label: string; value: string }[]; statement: string | null } | null;
+  /**
+   * A qualified buyer's discount (D19; PH: RR 7-2024 Sec. 6 B.18): who, their
+   * ID, and the line they sign on. Its breakdown replaces the usual totals.
+   */
+  qualifiedDiscount?: { holder: string; idLine: string; signature: string } | null;
+};
+
+/** A bill's qualified discount, ready to show: the breakdown rows in minor units (from qualifiedDiscountRows). */
+export type DocumentQualifiedDiscountInput = {
+  label: string;
+  idLabel: string;
+  idNumber: string;
+  holderName: string;
+  taxExempt: boolean;
+  signature: string;
+  rows: { label: string; amountMinor: number; emphasis?: boolean; deduction?: boolean }[];
 };
 
 /** A registered invoice's sales breakdown, in minor units, with each line's sale wording (B.14). */
@@ -84,7 +102,9 @@ export type DocumentViewInput = {
   paymentInstructions?: string | null;
   notice: string | null;
   registration?: string | null;
+  reprint?: string | null;
   sales?: DocumentSalesInput | null;
+  qualifiedDiscount?: DocumentQualifiedDiscountInput | null;
 };
 
 export function buildDocumentView(input: DocumentViewInput): DocumentView {
@@ -104,21 +124,41 @@ export function buildDocumentView(input: DocumentViewInput): DocumentView {
           : line.discount.kind === "percent"
             ? `−${formatRate(line.discount.bps, locale)}`
             : `−${money(a.discountMinor)}`,
-      // A registered invoice names zero-rated and exempt sales on the line (B.14).
-      tax: input.sales?.lineTax[i] ?? (line.tax ? `${line.tax.name} ${formatRate(line.tax.rateBps, locale)}` : null),
+      // A registered invoice names zero-rated and exempt sales on the line (B.14);
+      // a tax-exempt qualified discount (D19) makes the line's tax exempt.
+      tax:
+        input.sales?.lineTax[i] ??
+        (line.tax
+          ? input.qualifiedDiscount?.taxExempt && line.tax.rateBps > 0
+            ? `${line.tax.name}-exempt`
+            : `${line.tax.name} ${formatRate(line.tax.rateBps, locale)}`
+          : null),
       amount: money(a ? a.netMinor : 0),
     };
   });
 
-  const totals: DocumentView["totals"] = [{ label: "Subtotal", value: money(amounts.subtotalMinor) }];
-  if (amounts.discountTotalMinor > 0) totals.push({ label: "Discount", value: `−${money(amounts.discountTotalMinor)}` });
+  const qualified = input.qualifiedDiscount ?? null;
+  const totals: DocumentView["totals"] = [];
   const taxNotes: string[] = [];
-  for (const group of amounts.taxes) {
-    const label = `${group.name} ${formatRate(group.rateBps, locale)}`;
-    if (input.taxMode === "exclusive") totals.push({ label, value: money(group.taxMinor) });
-    else if (group.taxMinor > 0) taxNotes.push(`Includes ${label}: ${money(group.taxMinor)}`);
+  if (qualified) {
+    // B.18.b: the discount and tax-exemption breakdown, ending at the total due.
+    for (const row of qualified.rows) {
+      totals.push({
+        label: row.label,
+        value: row.deduction && row.amountMinor > 0 ? `−${money(row.amountMinor)}` : money(row.amountMinor),
+        ...(row.emphasis ? { emphasis: true } : {}),
+      });
+    }
+  } else {
+    totals.push({ label: "Subtotal", value: money(amounts.subtotalMinor) });
+    if (amounts.discountTotalMinor > 0) totals.push({ label: "Discount", value: `−${money(amounts.discountTotalMinor)}` });
+    for (const group of amounts.taxes) {
+      const label = `${group.name} ${formatRate(group.rateBps, locale)}`;
+      if (input.taxMode === "exclusive") totals.push({ label, value: money(group.taxMinor) });
+      else if (group.taxMinor > 0) taxNotes.push(`Includes ${label}: ${money(group.taxMinor)}`);
+    }
+    totals.push({ label: "Total", value: money(amounts.totalMinor), emphasis: true });
   }
-  totals.push({ label: "Total", value: money(amounts.totalMinor), emphasis: true });
 
   return {
     title: input.title,
@@ -135,6 +175,14 @@ export function buildDocumentView(input: DocumentViewInput): DocumentView {
     paymentInstructions: input.paymentInstructions ?? null,
     notice: input.notice,
     registration: input.registration ?? null,
+    reprint: input.reprint ?? null,
+    qualifiedDiscount: qualified
+      ? {
+          holder: `${qualified.label}: ${qualified.holderName}`,
+          idLine: `${qualified.idLabel} ${qualified.idNumber}`,
+          signature: qualified.signature,
+        }
+      : null,
     sales: input.sales
       ? { rows: input.sales.rows.map((r) => ({ label: r.label, value: money(r.amountMinor) })), statement: input.sales.statement }
       : null,
