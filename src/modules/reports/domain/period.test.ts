@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseReportPeriod, presetPeriod, REPORT_LIMITS } from "./period";
+import { parseReportPeriod, presetPeriod, previousPeriod, REPORT_LIMITS } from "./period";
 
 const today = "2026-10-02";
 
@@ -75,5 +75,37 @@ describe("parseReportPeriod", () => {
 
   it("takes the first of a repeated parameter", () => {
     expect(parseReportPeriod({ period: ["last-month", "this-year"] }, today).period.preset).toBe("last-month");
+  });
+});
+
+describe("previousPeriod", () => {
+  it("steps whole calendar months back by their own length", () => {
+    expect(previousPeriod({ preset: null, from: "2026-03-01", to: "2026-03-31" })).toEqual({
+      preset: null,
+      from: "2026-02-01",
+      to: "2026-02-28",
+    });
+    expect(previousPeriod({ preset: null, from: "2026-07-01", to: "2026-09-30" })).toMatchObject({
+      from: "2026-04-01",
+      to: "2026-06-30",
+    });
+    expect(previousPeriod({ preset: null, from: "2026-01-01", to: "2026-12-31" })).toMatchObject({
+      from: "2025-01-01",
+      to: "2025-12-31",
+    });
+  });
+
+  it("crosses the year boundary", () => {
+    expect(previousPeriod({ preset: null, from: "2026-01-01", to: "2026-01-31" })).toMatchObject({
+      from: "2025-12-01",
+      to: "2025-12-31",
+    });
+  });
+
+  it("uses the same number of days for any other range", () => {
+    expect(previousPeriod({ preset: null, from: "2026-08-15", to: "2026-09-14" })).toMatchObject({
+      from: "2026-07-15",
+      to: "2026-08-14",
+    });
   });
 });

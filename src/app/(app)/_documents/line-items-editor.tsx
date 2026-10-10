@@ -53,7 +53,7 @@ export function LineItemsEditor({
   onTouch,
 }: LineItemsEditorProps) {
   return (
-    <ol className="grid gap-3" aria-label="Line items">
+    <ol className="@container grid gap-3" aria-label="Line items">
       {lines.map((line, index) => {
         const n = index + 1;
         const key = (field: keyof RawLine) => `lines.${index}.${field}`;
@@ -68,7 +68,7 @@ export function LineItemsEditor({
         });
 
         return (
-          <li key={line.key} className="rounded-lg border border-border bg-card p-3 shadow-xs sm:p-4">
+          <li key={line.key} className="rounded-lg border border-border bg-card p-3 shadow-xs @lg:p-4">
             <div className="flex items-start gap-2">
               <span
                 aria-hidden="true"
@@ -124,7 +124,7 @@ export function LineItemsEditor({
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:ml-8 sm:grid-cols-[6rem_6rem_minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="mt-3 grid grid-cols-2 gap-3 @lg:ml-8 @lg:grid-cols-[6rem_6rem_minmax(0,1fr)_minmax(0,1fr)]">
               <div className="grid gap-1">
                 <label htmlFor={id("quantity")} className="text-xs text-muted-foreground">
                   Qty
@@ -186,7 +186,7 @@ export function LineItemsEditor({
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-end justify-between gap-3 sm:ml-8">
+            <div className="mt-3 flex flex-wrap items-end justify-between gap-3 @lg:ml-8">
               <div className="flex items-end gap-2">
                 <div className="grid gap-1">
                   <label htmlFor={id("discountKind")} className="text-xs text-muted-foreground">

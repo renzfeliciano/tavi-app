@@ -61,7 +61,7 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
     ]);
     return (
       <>
-        <BackLink href="/quotes">Quotes</BackLink>
+        <BackLink href="/quotes">{ctx.market.documents.quote.plural}</BackLink>
         <PageHeader
           title={quote.number ? `${title} ${quote.number}` : `Draft ${title.toLowerCase()}`}
           description="Changes save as you go."
@@ -102,7 +102,7 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
 
   return (
     <>
-      <BackLink href="/quotes">Quotes</BackLink>
+      <BackLink href="/quotes">{ctx.market.documents.quote.plural}</BackLink>
       <PageHeader
         title={quote.revision > 1 ? `${name} · Rev ${quote.revision}` : name}
         description={

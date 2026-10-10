@@ -1,5 +1,6 @@
 "use client";
 
+import { shareLink } from "@/lib/share-link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -491,12 +492,14 @@ export function DocumentEditor(props: DocumentEditorProps) {
       if (delivery.mode === "email") {
         toast.success(`${name} sent to ${response.emailedTo}.`);
       } else {
-        try {
-          await navigator.clipboard.writeText(response.url);
+        const outcome = await shareLink({ url: response.url, title: name, text: `${name}:` });
+        if (outcome === "copied") {
           toast.success(`${name} is ready. Link copied.`, { description: `Paste it into ${props.shareChannels}.` });
-        } catch {
+        } else if (outcome === "manual") {
           // No clipboard access (e.g. permissions): show the link to copy by hand.
           toast.success(`${name} is ready.`, { description: response.url, duration: 20_000 });
+        } else {
+          toast.success(`${name} is ready.`);
         }
       }
       router.push(`${kind.path}/${response.id}`);

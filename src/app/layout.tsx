@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
 import { Toaster } from "@/components/ui/sonner";
@@ -26,6 +26,8 @@ export const metadata: Metadata = {
   },
   description: brand.description,
   applicationName: brand.name,
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: brand.name, statusBarStyle: "default" },
   openGraph: {
     siteName: brand.name,
     title: `${brand.name} — ${brand.taglines.primary}`,
@@ -33,6 +35,8 @@ export const metadata: Metadata = {
     type: "website",
   },
 };
+
+export const viewport: Viewport = { themeColor: brand.emailColors.accent };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Every page renders per request so each one carries its own CSP nonce

@@ -1,4 +1,4 @@
-import { type CalendarDate, daysBetween, isCalendarDate } from "@/shared/dates/calendar";
+import { addDays, type CalendarDate, daysBetween, isCalendarDate } from "@/shared/dates/calendar";
 
 // Report periods (2.2, D18): calendar months, quarters and years around
 // today in the business's own time zone (the caller passes that day), or any
@@ -76,4 +76,22 @@ export function parseReportPeriod(
     return span.from === from && span.to === to;
   });
   return { period: { preset: preset ?? null, from, to }, error: null };
+}
+
+/**
+ * The period just before this one, for "compared with last month". Whole
+ * calendar months (a month, a quarter, a year) step back by that many months,
+ * so March compares with February, not with the last 31 days. Any other range
+ * compares with the same number of days directly before it.
+ */
+export function previousPeriod(period: ReportPeriod): ReportPeriod {
+  const fromYear = Number(period.from.slice(0, 4));
+  const fromMonth = Number(period.from.slice(5, 7));
+  const toYear = Number(period.to.slice(0, 4));
+  const toMonth = Number(period.to.slice(5, 7));
+  const count = (toYear - fromYear) * 12 + (toMonth - fromMonth) + 1;
+  const wholeMonths = period.from.slice(8) === "01" && period.to === months(toYear, toMonth, 1).to;
+  if (wholeMonths) return { preset: null, ...months(fromYear, fromMonth - count, count) };
+  const length = daysBetween(period.from, period.to) + 1;
+  return { preset: null, from: addDays(period.from, -length), to: addDays(period.from, -1) };
 }

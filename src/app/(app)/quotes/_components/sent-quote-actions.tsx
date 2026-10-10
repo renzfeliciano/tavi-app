@@ -1,5 +1,6 @@
 "use client";
 
+import { shareLink } from "@/lib/share-link";
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -75,12 +76,9 @@ export function SentQuoteActions({ id, status, name, shareChannels, convertedInv
       toast.error(result.error);
       return;
     }
-    try {
-      await navigator.clipboard.writeText(result.url);
-      toast.success("Link copied.", { description: `Paste it into ${shareChannels}.` });
-    } catch {
-      toast.success("Here's the link.", { description: result.url, duration: 20_000 });
-    }
+    const outcome = await shareLink({ url: result.url, title: name, text: `${name}:` });
+    if (outcome === "copied") toast.success("Link copied.", { description: `Paste it into ${shareChannels}.` });
+    else if (outcome === "manual") toast.success("Here's the link.", { description: result.url, duration: 20_000 });
   }
 
   async function run(kind: "revise" | "cancel") {

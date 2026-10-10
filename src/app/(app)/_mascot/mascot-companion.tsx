@@ -14,6 +14,8 @@ const STORAGE_KEY = "tavi:mascot-dismissed";
 /** The bubble stays this long, then the Stamp settles into the corner (tap it to read again). */
 const BUBBLE_MS = 12_000;
 const DONE_MS = 3_200;
+/** The editors are where the work happens; the note never opens itself over them (tap the Stamp to read it). */
+const EDITOR_PATH = /^\/(quotes|invoices)\/(new|[0-9a-f-]{36})(\/|$)/;
 
 const MOOD: Record<InsightKind, MascotExpression> = {
   critical: "concerned",
@@ -70,13 +72,13 @@ export function MascotCompanion({ insights }: { insights: MascotInsight[] }) {
   // A new thing to say opens the bubble; after a while it settles to the Stamp alone.
   useEffect(() => {
     if (!insightId) return;
-    const show = window.setTimeout(() => setOpen(true), 0);
+    const show = window.setTimeout(() => setOpen(!EDITOR_PATH.test(pathname)), 0);
     const settle = window.setTimeout(() => setOpen(false), BUBBLE_MS);
     return () => {
       window.clearTimeout(show);
       window.clearTimeout(settle);
     };
-  }, [insightId]);
+  }, [insightId, pathname]);
 
   // Something that needed attention is gone from the data: acknowledge it, briefly.
   useEffect(() => {

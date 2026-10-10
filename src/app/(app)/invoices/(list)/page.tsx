@@ -105,7 +105,7 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
                   customer={invoice.customerName ?? <MissingCustomer />}
                   meta={
                     <>
-                      <DocumentNumber number={invoice.number} />
+                      {invoice.number !== null && <DocumentNumber number={invoice.number} />}
                       <span>Due {formatCalendarDate(invoice.dueDate, ctx.locale)}</span>
                     </>
                   }

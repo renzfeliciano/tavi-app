@@ -4,6 +4,7 @@ export { type CsvCell, toCsv } from "./domain/csv";
 export {
   parseReportPeriod,
   presetPeriod,
+  previousPeriod,
   REPORT_LIMITS,
   REPORT_PERIODS,
   type ReportPeriod,

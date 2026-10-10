@@ -114,6 +114,19 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
             eInvoice={invoice.registration !== null && can(ctx, "reports.read")}
             canVoid={can(ctx, "invoices.void")}
             shareChannels={ctx.market.shareChannels}
+            reminder={
+              invoice.totalMinor > invoice.amountPaidMinor
+                ? {
+                    customerName: invoice.customerSnapshot?.displayName ?? null,
+                    businessName: view.business.name,
+                    balanceMinor: invoice.totalMinor - invoice.amountPaidMinor,
+                    currency: invoice.currency,
+                    locale: ctx.locale,
+                    dueDate: invoice.dueDate,
+                    today: todayIn(ctx.timezone),
+                  }
+                : null
+            }
           />
         }
       />

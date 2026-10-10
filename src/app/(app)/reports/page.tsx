@@ -18,6 +18,7 @@ import {
   type AgingBucket,
   parseReportPeriod,
   paymentsReport,
+  previousPeriod,
   REPORT_PERIODS,
   type ReportPeriod,
   type ReportPeriodPreset,
@@ -58,11 +59,14 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   if (!can(ctx, "reports.read")) notFound();
   const today = todayIn(ctx.timezone);
   const { period, error } = parseReportPeriod(await searchParams, today);
-  const [sales, payments, unpaid, profile] = await Promise.all([
+  const before = previousPeriod(period);
+  const [sales, payments, unpaid, profile, salesBefore, paymentsBefore] = await Promise.all([
     salesReport(ctx, { period, market: ctx.market }),
     paymentsReport(ctx, { period }),
     unpaidReport(ctx, { today, market: ctx.market }),
     getBusinessProfile(ctx),
+    salesReport(ctx, { period: before, market: ctx.market }),
+    paymentsReport(ctx, { period: before }),
   ]);
   const { market, locale } = ctx;
   const seller = market.taxRegistrations.find((r) => r.code === profile.taxRegistration)?.invoiceSales ?? null;
@@ -139,6 +143,12 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
                 ]}
                 currency={sales.summaries.length > 1 ? s.currency : null}
               />
+              <Compared
+                now={s.issued.totalMinor}
+                before={salesBefore.summaries.find((x) => x.currency === s.currency)?.issued.totalMinor ?? 0}
+                format={(minor) => amount(minor, s.currency)}
+                label={periodWord(period)}
+              />
               {seller === "vat" && salesLabels && (
                 <Rows
                   label={`Sales by tax treatment (${s.currency})`}
@@ -200,6 +210,12 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
                     : []),
                 ]}
                 currency={payments.summaries.length > 1 ? s.currency : null}
+              />
+              <Compared
+                now={s.receivedMinor}
+                before={paymentsBefore.summaries.find((x) => x.currency === s.currency)?.receivedMinor ?? 0}
+                format={(minor) => amount(minor, s.currency)}
+                label={periodWord(period)}
               />
               <Rows
                 label={`By method (${s.currency})`}
@@ -267,6 +283,45 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
         )}
       </ReportSection>
     </>
+  );
+}
+
+/** What to call the period before this one: "last month" for a month, otherwise "the previous period". */
+const periodWord = (period: ReportPeriod) =>
+  period.preset === "this-month" || period.preset === "last-month"
+    ? "the month before"
+    : period.preset === "this-quarter" || period.preset === "last-quarter"
+      ? "the quarter before"
+      : period.preset === "this-year" || period.preset === "last-year"
+        ? "the year before"
+        : "the previous period";
+
+/** How this period's total compares with the one before, in words. Quiet when there's nothing to compare. */
+function Compared({
+  now,
+  before,
+  format,
+  label,
+}: {
+  now: number;
+  before: number;
+  format: (minor: number) => ReactNode;
+  label: string;
+}) {
+  if (before === 0 && now === 0) return null;
+  if (before === 0) return <p className="text-sm text-muted-foreground">Nothing in {label} to compare with.</p>;
+  const change = now - before;
+  const percent = Math.round((Math.abs(change) / before) * 100);
+  return (
+    <p className="text-sm text-muted-foreground">
+      {change === 0 ? (
+        <>Same as {label}: {format(before)}.</>
+      ) : (
+        <>
+          {change > 0 ? "Up" : "Down"} {percent}% from {label}: {format(before)} then.
+        </>
+      )}
+    </p>
   );
 }
 

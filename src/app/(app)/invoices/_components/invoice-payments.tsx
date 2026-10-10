@@ -164,6 +164,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
         {props.payable && props.canRecord && (
           <Button
             type="button"
+            className="w-full sm:w-auto"
             onClick={() => {
               setRaw(blank());
               setErrors(EMPTY_ERRORS);

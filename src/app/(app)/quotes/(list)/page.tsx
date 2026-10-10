@@ -32,21 +32,24 @@ export default async function QuotesPage({ searchParams }: PageProps<"/quotes">)
   const status = isStatus(requested) ? requested : null;
   const page = pageParam(params.page);
   const list = await listQuotes(ctx, { search, status: status ?? undefined, page });
+  const { singular, plural } = ctx.market.documents.quote;
+  const description = `Price out work, send it as a link, and get it approved.`;
+  const newLabel = `New ${singular.toLowerCase()}`;
   const newQuote = (
     <Link href="/quotes/new" className={buttonVariants()}>
       <FilePlus2Icon aria-hidden="true" />
-      New quote
+      {newLabel}
     </Link>
   );
 
   if (list.total === 0) {
     return (
       <>
-        <PageHeader title="Quotes" description="Price out work, send it as a link, and get it approved." />
+        <PageHeader title={plural} description={description} />
         <SectionEmpty
-          title="No quotes yet"
-          description={`Quotes let customers approve work before you start. Send one as a link over ${ctx.market.shareChannels} and they can approve it from their phone, no account needed.`}
-          action={{ href: "/quotes/new", label: "New quote", icon: FilePlus2Icon }}
+          title={`No ${plural.toLowerCase()} yet`}
+          description={`${plural} let customers approve work before you start. Send one as a link over ${ctx.market.shareChannels} and they can approve it from their phone, no account needed.`}
+          action={{ href: "/quotes/new", label: newLabel, icon: FilePlus2Icon }}
         />
       </>
     );
@@ -55,8 +58,8 @@ export default async function QuotesPage({ searchParams }: PageProps<"/quotes">)
   return (
     <>
       <PageHeader
-        title="Quotes"
-        description="Price out work, send it as a link, and get it approved."
+        title={plural}
+        description={description}
         actions={newQuote}
       />
 
@@ -103,7 +106,7 @@ export default async function QuotesPage({ searchParams }: PageProps<"/quotes">)
                   customer={quote.customerName ?? <MissingCustomer />}
                   meta={
                     <>
-                      <DocumentNumber number={quote.number} />
+                      {quote.number !== null && <DocumentNumber number={quote.number} />}
                       {quote.revision > 1 && <span>Rev {quote.revision}</span>}
                       <span>{formatCalendarDate(quote.issueDate, ctx.locale)}</span>
                     </>

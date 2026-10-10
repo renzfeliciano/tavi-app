@@ -1,9 +1,11 @@
 "use client";
 
+import { reminderMessage } from "@/lib/reminder-message";
+import { shareLink } from "@/lib/share-link";
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ban, CopyPlusIcon, DownloadIcon, FileJsonIcon, FileXIcon, LinkIcon, PencilIcon } from "lucide-react";
+import { Ban, CopyPlusIcon, DownloadIcon, FileJsonIcon, FileXIcon, LinkIcon, PencilIcon, SendIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -39,6 +41,16 @@ type SentInvoiceActionsProps = {
   /** Void and cancel need the invoices.void capability (checked again on the server). */
   canVoid: boolean;
   shareChannels: string;
+  /** What's still owed, for the payment reminder. Nothing owed, no reminder. */
+  reminder: {
+    customerName: string | null;
+    businessName: string;
+    balanceMinor: number;
+    currency: string;
+    locale: string;
+    dueDate: string;
+    today: string;
+  } | null;
 };
 
 type Correction = "void" | "cancel" | "duplicate";
@@ -79,9 +91,11 @@ export function SentInvoiceActions({
   eInvoice,
   canVoid,
   shareChannels,
+  reminder,
 }: SentInvoiceActionsProps) {
   const router = useRouter();
   const [linking, setLinking] = useState(false);
+  const [reminding, setReminding] = useState(false);
   const [open, setOpen] = useState<Correction | null>(null);
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
@@ -101,12 +115,29 @@ export function SentInvoiceActions({
       toast.error(result.error);
       return;
     }
-    try {
-      await navigator.clipboard.writeText(result.url);
-      toast.success("Link copied.", { description: `Paste it into ${shareChannels}.` });
-    } catch {
-      toast.success("Here's the link.", { description: result.url, duration: 20_000 });
+    const outcome = await shareLink({ url: result.url, title: name, text: `${name}:` });
+    if (outcome === "copied") toast.success("Link copied.", { description: `Paste it into ${shareChannels}.` });
+    else if (outcome === "manual") toast.success("Here's the link.", { description: result.url, duration: 20_000 });
+  }
+
+  async function remind() {
+    if (!reminder) return;
+    setReminding(true);
+    const result = await createInvoiceLinkAction(id);
+    setReminding(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
     }
+    const text = reminderMessage({
+      ...reminder,
+      documentName: name,
+      paidMinor: amountPaidMinor,
+      url: result.url,
+    });
+    const outcome = await shareLink({ title: name, text });
+    if (outcome === "copied") toast.success("Reminder copied.", { description: `Paste it into ${shareChannels}.` });
+    else if (outcome === "manual") toast.success("Here's the reminder.", { description: text, duration: 30_000 });
   }
 
   function show(kind: Correction) {
@@ -161,6 +192,12 @@ export function SentInvoiceActions({
         <Button type="button" variant="outline" pending={linking} pendingLabel="Copying…" onClick={() => void copyLink()}>
           <LinkIcon aria-hidden="true" />
           Copy link
+        </Button>
+      )}
+      {!closed && reminder && reminder.balanceMinor > 0 && (
+        <Button type="button" variant="outline" pending={reminding} pendingLabel="Preparing…" onClick={() => void remind()}>
+          <SendIcon aria-hidden="true" />
+          Remind
         </Button>
       )}
       {canEdit && (

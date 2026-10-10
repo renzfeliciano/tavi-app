@@ -15,11 +15,12 @@ export default async function NewQuotePage() {
   const ctx = await requireOrgContext();
   const defaults = await newQuoteDefaults(ctx);
   const editor = await editorContext(ctx, "quote", defaults.currency);
+  const { plural } = ctx.market.documents.quote;
 
   return (
     <>
-      <BackLink href="/quotes">Quotes</BackLink>
-      <PageHeader title="New quote" description="Changes save as you go." />
+      <BackLink href="/quotes">{plural}</BackLink>
+      <PageHeader title={`New ${editor.title.toLowerCase()}`} description="Changes save as you go." />
       <DocumentEditor
         {...editor}
         kind="quote"
