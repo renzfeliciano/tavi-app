@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/empty-state";
 import { ListPager, ListSearch, ListViews, listHref, pageParam } from "@/components/list-controls";
 import { MoneyAmount } from "@/components/money-amount";
 import { buttonVariants } from "@/components/ui/button";
+import { categoryFor } from "@/config/categories";
 import { type CatalogItemKind, type CatalogStatus, listCatalogItems } from "@/modules/catalog";
 import { requireOrgContext } from "@/modules/identity";
 import { normalizeSearch } from "@/shared/text/search";
@@ -33,6 +34,11 @@ export default async function CatalogPage({ searchParams }: PageProps<"/catalog"
   const page = pageParam(params.page);
   const list = await listCatalogItems(ctx, kind, { search, status, page });
   const label = KIND_LABEL[kind];
+  // Starter names for the business's own kind of work: a head start, never prices or invented data.
+  const starters =
+    kind === "service" && ctx.organizationCategory && !search && status === "active" && list.items.length === 0
+      ? categoryFor(ctx.organizationCategory).starterItems
+      : [];
 
   return (
     <>
@@ -108,10 +114,29 @@ export default async function CatalogPage({ searchParams }: PageProps<"/catalog"
                 </Link>
               ) : (
                 status === "active" && (
-                  <Link href={newItemHref(kind)} className={buttonVariants()}>
-                    <PlusIcon aria-hidden="true" />
-                    Add {label.singular}
-                  </Link>
+                  <div className="grid justify-items-center gap-4">
+                    <Link href={newItemHref(kind)} className={buttonVariants()}>
+                      <PlusIcon aria-hidden="true" />
+                      Add {label.singular}
+                    </Link>
+                    {starters.length > 0 && (
+                      <div className="grid justify-items-center gap-2">
+                        <p className="text-sm text-muted-foreground">Or start from a common one. You set the price.</p>
+                        <ul className="flex flex-wrap justify-center gap-2">
+                          {starters.map((item) => (
+                            <li key={item.name}>
+                              <Link
+                                href={`${newItemHref(kind)}?name=${encodeURIComponent(item.name)}&unit=${encodeURIComponent(item.unit)}` as Route}
+                                className={buttonVariants({ variant: "outline", size: "sm" })}
+                              >
+                                {item.name}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 )
               )
             }

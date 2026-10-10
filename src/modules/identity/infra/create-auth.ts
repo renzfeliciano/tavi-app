@@ -1,3 +1,4 @@
+import { featureFlags } from "@/config/features";
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -127,6 +128,10 @@ export function createAuth(db: Database, config: AuthConfig) {
           // Notice (1.13b). The browser's checkbox is a convenience; this is
           // the rule. The time is the server's, never the client's.
           before: async (user) => {
+            // Enforced here, not in the form: a closed sign-up must also refuse direct API calls.
+            if (!featureFlags().registrationEnabled) {
+              throw new APIError("FORBIDDEN", { message: "Sign-up is closed right now. Please check back soon." });
+            }
             const termsVersion = acceptedTermsVersion(user.termsVersion);
             if (!termsVersion) {
               throw new APIError("BAD_REQUEST", { code: TERMS_NOT_ACCEPTED, message: TERMS_REQUIRED_MESSAGE });

@@ -14,6 +14,7 @@ const valid = {
   postalCode: "1600",
   taxId: "987-654-321-00000",
   currency: "",
+  category: "",
   notes: "Gate code 1234. Prefers Viber.",
 };
 
@@ -31,6 +32,7 @@ describe("customerInputSchema", () => {
       postalCode: "1600",
       taxId: "987-654-321-00000",
       currency: null,
+      category: null,
       notes: "Gate code 1234. Prefers Viber.",
     });
   });
@@ -63,5 +65,20 @@ describe("customerInputSchema", () => {
 
   it("lists every field the form posts", () => {
     expect([...CUSTOMER_FIELDS].sort()).toEqual(Object.keys(valid).sort());
+  });
+
+  describe("category (D21)", () => {
+    it("is optional: blank means untagged", () => {
+      const parsed = customerInputSchema.parse({ displayName: "Juan", category: "" });
+      expect(parsed.category).toBeNull();
+    });
+
+    it("accepts a known category", () => {
+      expect(customerInputSchema.parse({ displayName: "Juan", category: "food_beverage" }).category).toBe("food_beverage");
+    });
+
+    it("refuses an unknown category", () => {
+      expect(customerInputSchema.safeParse({ displayName: "Juan", category: "pirates" }).success).toBe(false);
+    });
   });
 });

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { CurrencyOption } from "@/config/currencies";
+import { CATEGORIES, CATEGORY_CODES } from "@/config/categories";
 import { CUSTOMER_LIMITS as LIMITS } from "@/modules/customers/client";
 import { type CustomerFormState, type CustomerFormValues, saveCustomer } from "../actions";
 
@@ -37,6 +38,7 @@ export const EMPTY_CUSTOMER: CustomerFormValues = {
   postalCode: "",
   taxId: "",
   currency: "",
+  category: "",
   notes: "",
 };
 
@@ -101,6 +103,24 @@ export function CustomerForm({ customerId, initialValues, copy, onSaved }: Custo
           </FormField>
           <FormField name="company" label="Company" optional error={error("company")}>
             {(p) => <Input {...p} defaultValue={v.company} maxLength={LIMITS.company} autoComplete="off" />}
+          </FormField>
+          <FormField
+            name="category"
+            label="Kind of customer"
+            optional
+            hint="Adds an icon to their row, so they are easier to spot."
+            error={error("category")}
+          >
+            {(p) => (
+              <NativeSelect {...p} defaultValue={v.category}>
+                <option value="">Not set</option>
+                {CATEGORY_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {CATEGORIES[code].label}
+                  </option>
+                ))}
+              </NativeSelect>
+            )}
           </FormField>
           <FormField name="email" label="Email" optional hint={`Where ${copy.documents} are sent.`} error={error("email")}>
             {(p) => <Input {...p} type="email" defaultValue={v.email} maxLength={LIMITS.email} autoComplete="off" />}

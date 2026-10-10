@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { ReceiptTextIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
@@ -6,6 +6,8 @@ import { SectionEmpty } from "@/components/app-shell/section-empty";
 import { DocumentNumber } from "@/components/document-number";
 import { EmptyState } from "@/components/empty-state";
 import { ListPager, ListSearch, ListViews, listHref, pageParam } from "@/components/list-controls";
+import { DocumentRow } from "../../_documents/document-row";
+import { MissingCustomer } from "@/components/missing-customer";
 import { MoneyAmount } from "@/components/money-amount";
 import { invoiceStatusPresentation } from "@/components/status/presentation";
 import { StatusBadge } from "@/components/status/status-badge";
@@ -98,27 +100,18 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
           <ul className="divide-y divide-border">
             {list.invoices.map((invoice) => (
               <li key={invoice.id}>
-                <Link
-                  href={`/invoices/${invoice.id}`}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-5 py-3.5 transition-colors duration-(--duration-fast) hover:bg-accent sm:grid-cols-[8rem_minmax(0,1fr)_auto_auto] sm:px-6"
-                >
-                  <span className="text-sm">
-                    <DocumentNumber number={invoice.number} />
-                  </span>
-                  <span className="col-start-1 row-start-2 min-w-0 sm:col-start-2 sm:row-start-1">
-                    <span className="block truncate font-medium">{invoice.customerName ?? "No customer yet"}</span>
-                    <span className="block text-sm text-muted-foreground">
-                      Due {formatCalendarDate(invoice.dueDate, ctx.locale)}
-                    </span>
-                  </span>
-                  <StatusBadge kind="invoice" status={invoice.status} className="justify-self-end" />
-                  <MoneyAmount
-                    amountMinor={invoice.totalMinor}
-                    currency={invoice.currency}
-                    locale={ctx.locale}
-                    className="row-start-2 justify-self-end font-medium sm:row-start-1"
-                  />
-                </Link>
+                <DocumentRow
+                  href={`/invoices/${invoice.id}` as Route}
+                  customer={invoice.customerName ?? <MissingCustomer />}
+                  meta={
+                    <>
+                      <DocumentNumber number={invoice.number} />
+                      <span>Due {formatCalendarDate(invoice.dueDate, ctx.locale)}</span>
+                    </>
+                  }
+                  status={<StatusBadge kind="invoice" status={invoice.status} />}
+                  amount={<MoneyAmount amountMinor={invoice.totalMinor} currency={invoice.currency} locale={ctx.locale} />}
+                />
               </li>
             ))}
           </ul>

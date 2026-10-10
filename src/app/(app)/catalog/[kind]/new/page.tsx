@@ -12,11 +12,16 @@ export async function generateMetadata({ params }: PageProps<"/catalog/[kind]/ne
   return { title: kind ? `Add ${KIND_LABEL[kind].singular}` : "Not found" };
 }
 
-export default async function NewCatalogItemPage({ params }: PageProps<"/catalog/[kind]/new">) {
+export default async function NewCatalogItemPage({ params, searchParams }: PageProps<"/catalog/[kind]/new">) {
   const kind = kindFromSegment((await params).kind);
+  const { name, unit } = await searchParams;
   if (!kind) notFound();
   const ctx = await requireOrgContext();
-  const [copy, values] = await Promise.all([catalogFormCopy(ctx), newItemValues(ctx, kind)]);
+  const [copy, base] = await Promise.all([catalogFormCopy(ctx), newItemValues(ctx, kind)]);
+  // A starter suggestion from the empty catalog fills the name (and the unit, when this market offers it).
+  const suggestedName = typeof name === "string" ? name.trim().slice(0, 120) : "";
+  const suggestedUnit = typeof unit === "string" && ctx.market.units.options.includes(unit) ? unit : null;
+  const values = { ...base, name: suggestedName || (base.name ?? ""), unitLabel: suggestedUnit ?? (base.unitLabel ?? "") };
 
   return (
     <>

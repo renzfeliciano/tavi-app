@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { StampImprint } from "@/components/brand/stamp-imprint";
 import { DocumentNumber } from "@/components/document-number";
 import { cn } from "@/lib/utils";
 import type { DocumentParty, DocumentView } from "./document-view";
@@ -35,13 +36,20 @@ export function Party({ label, party }: { label: string; party: DocumentParty })
 
 export function DocumentPaper({ view, className }: { view: DocumentView; className?: string }) {
   const { business } = view;
+  // The figure the reader came for: the emphasised total, shown in the summary card and as the closing band.
+  const due = view.totals.find((row) => row.emphasis) ?? null;
+  const detailTotals = view.totals.filter((row) => row !== due);
   return (
+    <div className="@container">
     <article
       aria-label={`${view.title}${view.number ? ` ${view.number}` : ""}`}
-      className={cn("rounded-lg border border-border bg-card p-6 text-foreground shadow-sm sm:p-8", className)}
+      className={cn(
+        "overflow-hidden rounded-lg border border-border border-t-8 border-t-foreground bg-card p-6 text-foreground shadow-sm @xl:p-10",
+        className,
+      )}
     >
-      <header className="flex flex-col-reverse gap-6 sm:flex-row sm:items-start sm:justify-between">
-        <div className="grid gap-1">
+      <header className="flex flex-col-reverse gap-6 @xl:flex-row @xl:items-start @xl:justify-between">
+        <div className="grid min-w-0 gap-1 [overflow-wrap:anywhere]">
           {business.logo && (
             <Image
               src={business.logo.src}
@@ -65,45 +73,60 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
             )}
           </div>
         </div>
-        <div className="grid gap-1 sm:text-right">
-          <h2 className="text-xl font-semibold tracking-tight">{view.title}</h2>
-          <p className="text-sm">
+        <div className="grid min-w-0 gap-1 @xl:text-right">
+          <h2 className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">{view.title}</h2>
+          <p className="text-xl">
             <DocumentNumber number={view.number} />
             {view.revision > 1 && <span className="text-muted-foreground"> · Rev {view.revision}</span>}
           </p>
         </div>
       </header>
 
-      <div className="mt-8 grid gap-6 border-t border-border pt-6 sm:grid-cols-[1fr_auto]">
-        {view.customer ? (
-          <Party label="For" party={view.customer} />
-        ) : (
-          <p className="text-sm text-muted-foreground italic">Choose a customer</p>
-        )}
-        <dl className="grid content-start grid-cols-[auto_auto] gap-x-4 gap-y-1 text-sm sm:justify-end">
-          {view.dates.map((d) => (
-            <div key={d.label} className="contents">
-              <dt className="text-muted-foreground">{d.label}</dt>
-              <dd className="text-right tabular-nums">{d.value}</dd>
+      <div className="mt-10 grid gap-6 @xl:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="grid min-w-0 content-between gap-4 [overflow-wrap:anywhere]">
+          {view.customer ? (
+            <Party label="Billed to" party={view.customer} />
+          ) : (
+            <p className="text-sm text-muted-foreground italic">Choose a customer</p>
+          )}
+          {view.imprint && <StampImprint label={view.imprint} className="justify-self-start" />}
+        </div>
+        <div className="grid min-w-0 content-start gap-3 @xl:min-w-60 rounded-lg bg-surface-sunken p-4 text-sm">
+          <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1">
+            {view.dates.map((d) => (
+              <div key={d.label} className="contents">
+                <dt className="text-muted-foreground">{d.label}</dt>
+                <dd className="text-right font-medium tabular-nums">{d.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {due && (
+            <div className="border-t border-border-strong pt-3">
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{due.label}</p>
+              <p className="text-xl font-semibold whitespace-nowrap tabular-nums @xl:text-2xl">{due.value}</p>
             </div>
-          ))}
-        </dl>
+          )}
+        </div>
       </div>
 
-      <table className="mt-8 w-full text-sm">
+      <table className="mt-10 w-full table-auto text-sm">
         <caption className="sr-only">Line items</caption>
         <thead>
-          <tr className="border-b border-border-strong text-left text-xs tracking-wide text-muted-foreground uppercase">
-            <th scope="col" className="py-2 pr-3 font-medium">
+          <tr className="border-y border-border-strong bg-surface-sunken text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <th scope="col" className="w-8 py-2.5 pr-1 pl-2 font-semibold">
+              <span aria-hidden="true">#</span>
+              <span className="sr-only">Line</span>
+            </th>
+            <th scope="col" className="py-2.5 pr-3 font-semibold">
               Description
             </th>
-            <th scope="col" className="hidden py-2 pr-3 text-right font-medium sm:table-cell">
+            <th scope="col" className="hidden py-2.5 pr-3 text-right font-semibold @xl:table-cell">
               Qty
             </th>
-            <th scope="col" className="hidden py-2 pr-3 text-right font-medium sm:table-cell">
+            <th scope="col" className="hidden py-2.5 pr-3 text-right font-semibold @xl:table-cell">
               Price
             </th>
-            <th scope="col" className="py-2 text-right font-medium">
+            <th scope="col" className="py-2.5 pr-2 text-right font-semibold">
               Amount
             </th>
           </tr>
@@ -111,16 +134,19 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
         <tbody>
           {view.lines.length === 0 ? (
             <tr>
-              <td colSpan={4} className="py-6 text-center text-muted-foreground italic">
+              <td colSpan={5} className="py-6 text-center text-muted-foreground italic">
                 No items yet
               </td>
             </tr>
           ) : (
             view.lines.map((line, i) => (
               <tr key={i} className="border-b border-border align-top">
-                <td className="py-3 pr-3">
-                  <p className="whitespace-pre-wrap">{line.description}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground sm:hidden">
+                <td className="py-3.5 pr-1 pl-2 text-muted-foreground tabular-nums" aria-hidden="true">
+                  {i + 1}
+                </td>
+                <td className="py-3.5 pr-3">
+                  <p className="font-medium whitespace-pre-wrap [overflow-wrap:anywhere]">{line.description}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground @xl:hidden">
                     {line.quantity} {line.unit} × {line.unitPrice}
                   </p>
                   {(line.discount || line.tax) && (
@@ -129,37 +155,34 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
                     </p>
                   )}
                 </td>
-                <td className="hidden py-3 pr-3 text-right whitespace-nowrap tabular-nums sm:table-cell">
+                <td className="hidden py-3.5 pr-3 text-right whitespace-nowrap tabular-nums @xl:table-cell">
                   {line.quantity} {line.unit}
                 </td>
-                <td className="hidden py-3 pr-3 text-right whitespace-nowrap tabular-nums sm:table-cell">
+                <td className="hidden py-3.5 pr-3 text-right whitespace-nowrap tabular-nums @xl:table-cell">
                   {line.unitPrice}
                 </td>
-                <td className="py-3 text-right whitespace-nowrap tabular-nums">{line.amount}</td>
+                <td className="py-3.5 pr-2 text-right font-medium whitespace-nowrap tabular-nums">{line.amount}</td>
               </tr>
             ))
           )}
         </tbody>
       </table>
 
-      <div className="mt-4 ml-auto grid w-full max-w-72 gap-1.5">
-        <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 text-sm">
-          {view.totals.map((row) => (
+      <div className="mt-6 ml-auto grid w-full max-w-80 gap-1.5">
+        <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 px-2 text-sm">
+          {detailTotals.map((row) => (
             <div key={row.label} className="contents">
-              <dt className={cn("text-muted-foreground", row.emphasis && "border-t border-border-strong pt-2 font-semibold text-foreground")}>
-                {row.label}
-              </dt>
-              <dd
-                className={cn(
-                  "text-right whitespace-nowrap tabular-nums",
-                  row.emphasis && "border-t border-border-strong pt-2 text-base font-semibold",
-                )}
-              >
-                {row.value}
-              </dd>
+              <dt className="text-muted-foreground">{row.label}</dt>
+              <dd className="text-right whitespace-nowrap tabular-nums">{row.value}</dd>
             </div>
           ))}
         </dl>
+        {due && (
+          <dl className="mt-1 flex items-baseline justify-between gap-6 rounded-md bg-foreground px-4 py-3 text-background">
+            <dt className="text-sm font-semibold">{due.label}</dt>
+            <dd className="text-lg font-semibold whitespace-nowrap tabular-nums">{due.value}</dd>
+          </dl>
+        )}
         {view.taxNotes.map((note) => (
           <p key={note} className="text-right text-xs text-muted-foreground">
             {note}
@@ -184,7 +207,7 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
 
       {view.qualifiedDiscount && (
         // RR 7-2024 Sec. 6 B.18: the buyer's ID number and their signature (D19).
-        <section aria-label="Qualified discount" className="mt-8 grid gap-4 text-sm sm:grid-cols-2 sm:items-end">
+        <section aria-label="Qualified discount" className="mt-8 grid gap-4 text-sm @xl:grid-cols-2 @xl:items-end">
           <div>
             <p className="font-medium">{view.qualifiedDiscount.holder}</p>
             <p className="text-muted-foreground">{view.qualifiedDiscount.idLine}</p>
@@ -197,24 +220,24 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
       )}
 
       {view.paymentInstructions && (
-        <section aria-label="How to pay" className="mt-8 rounded-lg border border-border bg-surface-sunken p-4 text-sm">
+        <section aria-label="How to pay" className="mt-10 rounded-lg border border-border border-l-4 border-l-stamp bg-surface-sunken p-4 text-sm">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">How to pay</p>
-          <p className="mt-1 whitespace-pre-wrap">{view.paymentInstructions}</p>
+          <p className="mt-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{view.paymentInstructions}</p>
         </section>
       )}
 
       {(view.notes || view.terms) && (
-        <footer className="mt-8 grid gap-4 border-t border-border pt-6 text-sm sm:grid-cols-2">
+        <footer className="mt-8 grid gap-6 border-t border-border pt-6 text-sm @xl:grid-cols-2">
           {view.notes && (
             <div>
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Notes</p>
-              <p className="mt-1 whitespace-pre-wrap">{view.notes}</p>
+              <p className="mt-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{view.notes}</p>
             </div>
           )}
           {view.terms && (
             <div>
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Terms</p>
-              <p className="mt-1 whitespace-pre-wrap">{view.terms}</p>
+              <p className="mt-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{view.terms}</p>
             </div>
           )}
         </footer>
@@ -227,5 +250,6 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
         <p className="mt-8 border-t border-border pt-4 text-center text-xs text-muted-foreground">{view.registration}</p>
       )}
     </article>
+    </div>
   );
 }

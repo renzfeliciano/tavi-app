@@ -11,7 +11,7 @@ type Organization = typeof organizations.$inferSelect;
 
 export type CreateOrganizationResult =
   | { ok: true; organization: Organization }
-  | { ok: false; fieldErrors: Partial<Record<"name" | "currency" | "country", string[]>> };
+  | { ok: false; fieldErrors: Partial<Record<"name" | "currency" | "country" | "category", string[]>> };
 
 /**
  * Creates a business and makes `userId` its owner, in one transaction.
@@ -52,10 +52,11 @@ export async function createOrganizationForUser(
 }
 
 /** The row for a new business in `country`, with its market's defaults. */
-export function newOrganizationValues(input: { name: string; currency: string; country: string }) {
+export function newOrganizationValues(input: { name: string; currency: string; country: string; category?: string | null }) {
   const market = marketFor(input.country);
   return {
     name: input.name,
+    category: input.category ?? null,
     countryCode: market.country,
     defaultCurrency: input.currency,
     locale: market.locale,
@@ -69,6 +70,8 @@ export function newOrganizationValues(input: { name: string; currency: string; c
 export type ResolvedMembership = {
   organizationId: string;
   organizationName: string;
+  /** What kind of business it is (a code from `config/categories`), if they said. */
+  organizationCategory: string | null;
   role: Role;
   /** The business's market and formatting settings. */
   countryCode: string;
@@ -91,6 +94,7 @@ export async function resolveMembership(
     .select({
       organizationId: memberships.organizationId,
       organizationName: organizations.name,
+      organizationCategory: organizations.category,
       role: memberships.role,
       countryCode: organizations.countryCode,
       currency: organizations.defaultCurrency,

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { UserPlusIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { SectionEmpty } from "@/components/app-shell/section-empty";
+import { CategoryTile } from "@/components/category-icon";
 import { EmptyState } from "@/components/empty-state";
 import { ListPager, ListSearch, ListViews, listHref, pageParam } from "@/components/list-controls";
 import { buttonVariants } from "@/components/ui/button";
@@ -100,11 +101,14 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
                   href={`/customers/${customer.id}`}
                   className="grid gap-1 px-5 py-3.5 transition-colors duration-(--duration-fast) hover:bg-accent sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)] sm:items-center sm:gap-4 sm:px-6"
                 >
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{customer.displayName}</span>
-                    {customer.company && (
-                      <span className="block truncate text-sm text-muted-foreground">{customer.company}</span>
-                    )}
+                  <span className="flex min-w-0 items-center gap-3">
+                    <CategoryTile code={customer.category} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{customer.displayName}</span>
+                      {customer.company && (
+                        <span className="block truncate text-sm text-muted-foreground">{customer.company}</span>
+                      )}
+                    </span>
                   </span>
                   <span className="min-w-0 text-sm text-muted-foreground">
                     <span className="block truncate">{customer.email ?? customer.phone ?? "No contact details"}</span>

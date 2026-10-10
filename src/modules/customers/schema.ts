@@ -25,6 +25,8 @@ export const customers = pgTable(
     taxId: text("tax_id"),
     /** Null: bill in the business's currency. */
     currency: char("currency", { length: 3 }),
+    /** What kind of customer: a code from config/categories (D21); null when untagged. */
+    category: text("category"),
     notes: text("notes"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     ...timestamps(),

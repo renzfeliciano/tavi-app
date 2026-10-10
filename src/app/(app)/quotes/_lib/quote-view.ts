@@ -19,5 +19,6 @@ export function quoteDocumentView(
     locale,
     // Quotations are supplementary documents (RR 7-2024 Sec. 6 B.15, D13).
     notice: market.supplementaryDocumentNotice,
+    imprint: quote.status === "APPROVED" ? "Approved" : null,
   });
 }

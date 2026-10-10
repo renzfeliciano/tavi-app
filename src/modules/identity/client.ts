@@ -6,5 +6,5 @@ export {
   PASSWORD_POLICY,
   passwordResetLifetime,
 } from "./domain/auth-policy";
-export { SESSION_POLICY } from "./domain/session-policy";
+export { clientIdleLimitMs, idleStatus, type IdleStatus, SESSION_POLICY } from "./domain/session-policy";
 export { TERMS_REQUIRED_MESSAGE, TERMS_REQUIRED_TO_CONTINUE } from "./domain/terms";

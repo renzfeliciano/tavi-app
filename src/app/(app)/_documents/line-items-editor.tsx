@@ -20,6 +20,8 @@ type LineItemsEditorProps = {
   taxRates: TaxRateChoice[];
   /** The market's units: the only ones a line can use. */
   units: readonly string[];
+  /** Placeholder for the description, e.g. "Aircon deep cleaning". */
+  example?: string | null;
   /** Errors to show, keyed `lines.<index>.<field>`. */
   errors: Record<string, string>;
   onChange: (key: string, patch: Partial<RawLine>) => void;
@@ -43,6 +45,7 @@ export function LineItemsEditor({
   currency,
   taxRates,
   units,
+  example,
   errors,
   onChange,
   onMove,
@@ -83,7 +86,7 @@ export function LineItemsEditor({
                   onChange={(e) => onChange(line.key, { description: e.target.value })}
                   maxLength={DOCUMENT_LIMITS.description}
                   rows={1}
-                  placeholder="What you're doing or selling"
+                  placeholder={example ? `e.g. ${example}` : "What you're doing or selling"}
                   className="min-h-9 resize-none"
                 />
                 <FieldError id={`${id("description")}-error`} message={error("description")} />

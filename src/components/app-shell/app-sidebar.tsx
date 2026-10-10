@@ -1,5 +1,6 @@
 "use client";
 
+import { CategoryIcon } from "@/components/category-icon";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PlusIcon } from "lucide-react";
@@ -14,7 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ShellAccount } from "./account";
 import { AccountBlock } from "./account-menu";
-import { isActive, type NavItem, newActions, primaryNavFor, settingsNav } from "./nav";
+import { isActive, type NavItem, newActionsFor, primaryNavFor, settingsNav, withDocumentNames } from "./nav";
 
 function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const active = isActive(pathname, item.href);
@@ -24,7 +25,7 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition-colors duration-(--duration-fast)",
+        "group relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition-colors duration-(--duration-fast)",
         active
           ? "bg-card text-foreground shadow-xs ring-1 ring-border"
           : "text-ink-subtle hover:bg-sidebar-accent hover:text-foreground",
@@ -38,6 +39,9 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
         )}
       />
       {item.label}
+      {active && (
+        <span aria-hidden="true" className="absolute inset-y-2 -left-3 w-[3px] rounded-r-full bg-stamp" />
+      )}
     </Link>
   );
 }
@@ -60,8 +64,11 @@ export function AppSidebar({
         <Link href="/dashboard" className="w-fit rounded-sm">
           <Wordmark size={19} />
         </Link>
-        <span className="truncate text-xs text-muted-foreground" title={account.organizationName}>
-          {account.organizationName}
+        <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground" title={account.organizationName}>
+          {account.organizationCategory && (
+            <CategoryIcon code={account.organizationCategory} className="size-3.5 shrink-0" />
+          )}
+          <span className="truncate">{account.organizationName}</span>
         </span>
       </div>
 
@@ -72,7 +79,7 @@ export function AppSidebar({
             New
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64">
-            {newActions.map((action) => {
+            {newActionsFor(account.documents).map((action) => {
               const Icon = action.icon;
               return (
                 <DropdownMenuItem
@@ -96,7 +103,7 @@ export function AppSidebar({
 
       <nav aria-label="Main" className="flex-1 overflow-y-auto px-3">
         <ul className="grid gap-0.5">
-          {primaryNavFor(account).map((item) => (
+          {withDocumentNames(primaryNavFor(account), account.documents).map((item) => (
             <li key={item.href}>
               <SidebarLink item={item} pathname={pathname} />
             </li>

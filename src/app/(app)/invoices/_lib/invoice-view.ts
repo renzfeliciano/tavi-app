@@ -33,6 +33,7 @@ export function invoiceDocumentView(
     registration: registration ? registrationFooter(registration, market, locale) : null,
     // RR 7-2024 Sec. 6 B.21 (top portion): "REPRINT" on every print after the first (D19).
     reprint: registration && copy === "reprint" ? (market.invoiceRegistration?.reprint ?? null) : null,
+    imprint: invoice.status === "PAID" ? "Paid" : null,
     // B.13–B.17, as computed when it was issued.
     sales: registration?.sales && market.invoiceRegistration ? salesBreakdownRows(registration.sales, market.invoiceRegistration.sales) : null,
   });

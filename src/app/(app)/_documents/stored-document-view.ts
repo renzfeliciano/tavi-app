@@ -82,6 +82,7 @@ export function storedDocumentView(
     notice: string | null;
     registration?: string | null;
     reprint?: string | null;
+    imprint?: string | null;
     sales?: DocumentSalesInput | null;
     paymentInstructions?: string | null;
   },
@@ -127,6 +128,7 @@ export function storedDocumentView(
     notice: options.notice,
     registration: options.registration ?? null,
     reprint: options.reprint ?? null,
+    imprint: options.imprint ?? null,
     sales: options.sales ?? null,
     qualifiedDiscount: qualifiedDiscountView(doc.qualifiedDiscount, amounts, options.market, options.locale),
   });

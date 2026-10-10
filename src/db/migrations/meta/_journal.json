@@ -169,6 +169,13 @@
       "when": 1791443948746,
       "tag": "0023_invoice_mode_d19",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791530348746,
+      "tag": "0024_categories",
+      "breakpoints": true
     }
   ]
 }

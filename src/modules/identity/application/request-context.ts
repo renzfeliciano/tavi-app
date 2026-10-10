@@ -73,6 +73,7 @@ export type OrgContext = {
   sessionId: string;
   organizationId: string;
   organizationName: string;
+  organizationCategory: string | null;
   role: Role;
   /** The business's market profile: wording, tax suggestions, formats. */
   market: MarketProfile;
@@ -105,6 +106,7 @@ export const requireOrgContext = cache(async (): Promise<OrgContext> => {
     sessionId: session.id,
     organizationId: membership.organizationId,
     organizationName: membership.organizationName,
+    organizationCategory: membership.organizationCategory,
     role: membership.role,
     market: marketFor(membership.countryCode),
     currency: membership.currency,

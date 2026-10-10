@@ -1,3 +1,4 @@
+import { categoryFor } from "@/config/categories";
 import "server-only";
 import type { DocumentView } from "@/components/document/document-view";
 import { letterhead } from "@/components/document/letterhead";
@@ -43,6 +44,8 @@ export async function editorContext(ctx: OrgContext, kind: DocumentKind, currenc
     defaultTaxRateId: rates.find((r) => r.isDefault && r.archivedAt === null)?.id ?? null,
     currencies: currencyOptions({ locale: ctx.locale, first: currency }),
     customerCopy: customerFormCopy(ctx),
+    /** A believable first line for this kind of business (D21): placeholder wording only. */
+    lineExample: ctx.organizationCategory ? categoryFor(ctx.organizationCategory).itemExample : null,
     title: registration?.title ?? ctx.market.documents[kind].singular,
     // Quotations and billing statements are supplementary documents (RR 7-2024
     // Sec. 6 B.15, D13); registered invoices print their registration instead (B.21).

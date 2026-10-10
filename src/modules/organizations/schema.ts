@@ -17,6 +17,8 @@ export const organizations = pgTable(
     // from their market profile (src/config/markets.ts).
     countryCode: char("country_code", { length: 2 }).notNull(),
     defaultCurrency: char("default_currency", { length: 3 }).notNull(),
+    /** What kind of work the business does: a code from config/categories (D21); null until chosen. */
+    category: text("category"),
     timezone: text("timezone").notNull(),
     locale: text("locale").notNull(),
     taxMode: text("tax_mode", { enum: ["inclusive", "exclusive"] }).notNull(),

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { FilePlus2Icon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
@@ -6,6 +6,8 @@ import { SectionEmpty } from "@/components/app-shell/section-empty";
 import { DocumentNumber } from "@/components/document-number";
 import { EmptyState } from "@/components/empty-state";
 import { ListPager, ListSearch, ListViews, listHref, pageParam } from "@/components/list-controls";
+import { DocumentRow } from "../../_documents/document-row";
+import { MissingCustomer } from "@/components/missing-customer";
 import { MoneyAmount } from "@/components/money-amount";
 import { quoteStatusPresentation } from "@/components/status/presentation";
 import { StatusBadge } from "@/components/status/status-badge";
@@ -61,14 +63,14 @@ export default async function QuotesPage({ searchParams }: PageProps<"/quotes">)
       <div className="mt-8 grid gap-3">
         <ListSearch
           action="/quotes"
-          label="Search quotes"
+          label={`Search ${ctx.market.documents.quote.plural.toLowerCase()}`}
           placeholder="Number or customer"
           value={search}
           keep={{ status: status?.toLowerCase() }}
         />
         <div className="-mx-4 overflow-x-auto px-4 pb-1">
           <ListViews
-            label="Quotes by status"
+            label={`${ctx.market.documents.quote.plural} by status`}
             views={[
               { href: quotesHref(search, null), label: "All", current: status === null },
               ...QUOTE_STATUSES.map((s) => ({
@@ -81,14 +83,14 @@ export default async function QuotesPage({ searchParams }: PageProps<"/quotes">)
         </div>
       </div>
 
-      <section aria-label="Quote list" className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+      <section aria-label={`${ctx.market.documents.quote.singular} list`} className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
         {list.quotes.length === 0 ? (
           <EmptyState
-            title={search ? `No quotes match “${search}”` : "No quotes here"}
-            description={search ? "Try the quote number or the customer's name." : "Quotes with this status will appear here."}
+            title={search ? `No ${ctx.market.documents.quote.plural.toLowerCase()} match “${search}”` : `No ${ctx.market.documents.quote.plural.toLowerCase()} here`}
+            description={search ? "Try the number or the customer's name." : "Nothing has this status yet."}
             action={
               <Link href={quotesHref(null, null)} className={buttonVariants({ variant: "outline" })}>
-                Show all quotes
+                Show all {ctx.market.documents.quote.plural.toLowerCase()}
               </Link>
             }
           />
@@ -96,28 +98,19 @@ export default async function QuotesPage({ searchParams }: PageProps<"/quotes">)
           <ul className="divide-y divide-border">
             {list.quotes.map((quote) => (
               <li key={quote.id}>
-                <Link
-                  href={`/quotes/${quote.id}`}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-5 py-3.5 transition-colors duration-(--duration-fast) hover:bg-accent sm:grid-cols-[8rem_minmax(0,1fr)_auto_auto] sm:px-6"
-                >
-                  <span className="text-sm">
-                    <DocumentNumber number={quote.number} />
-                    {quote.revision > 1 && <span className="text-muted-foreground"> · Rev {quote.revision}</span>}
-                  </span>
-                  <span className="col-start-1 row-start-2 min-w-0 sm:col-start-2 sm:row-start-1">
-                    <span className="block truncate font-medium">{quote.customerName ?? "No customer yet"}</span>
-                    <span className="block text-sm text-muted-foreground">
-                      {formatCalendarDate(quote.issueDate, ctx.locale)}
-                    </span>
-                  </span>
-                  <StatusBadge kind="quote" status={quote.status} className="justify-self-end" />
-                  <MoneyAmount
-                    amountMinor={quote.totalMinor}
-                    currency={quote.currency}
-                    locale={ctx.locale}
-                    className="row-start-2 justify-self-end font-medium sm:row-start-1"
-                  />
-                </Link>
+                <DocumentRow
+                  href={`/quotes/${quote.id}` as Route}
+                  customer={quote.customerName ?? <MissingCustomer />}
+                  meta={
+                    <>
+                      <DocumentNumber number={quote.number} />
+                      {quote.revision > 1 && <span>Rev {quote.revision}</span>}
+                      <span>{formatCalendarDate(quote.issueDate, ctx.locale)}</span>
+                    </>
+                  }
+                  status={<StatusBadge kind="quote" status={quote.status} />}
+                  amount={<MoneyAmount amountMinor={quote.totalMinor} currency={quote.currency} locale={ctx.locale} />}
+                />
               </li>
             ))}
           </ul>

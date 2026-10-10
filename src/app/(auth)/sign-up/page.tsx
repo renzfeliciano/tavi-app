@@ -1,7 +1,6 @@
 import type { Metadata, Route } from "next";
 import { redirect } from "next/navigation";
 import { AuthHeading } from "@/components/auth-shell";
-import { brand } from "@/config/brand";
 import { getCurrentSession } from "@/modules/identity";
 import { invitationReturnPath } from "@/modules/organizations";
 import { SignUpForm } from "./sign-up-form";
@@ -15,7 +14,8 @@ export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">
   return (
     <>
       <AuthHeading
-        title={`Create your ${brand.name} account`}
+        title="Create your account on"
+        withBrand
         description="Send your first quote in a few minutes. No card needed."
       />
       <SignUpForm next={next} />

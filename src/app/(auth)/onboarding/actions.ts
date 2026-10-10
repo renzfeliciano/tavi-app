@@ -5,8 +5,8 @@ import { activateOrganization, requireSession } from "@/modules/identity";
 import { createOrganizationForUser } from "@/modules/organizations";
 
 export type CreateBusinessState = {
-  fieldErrors?: { name?: string[]; currency?: string[]; country?: string[] };
-  values?: { name: string; currency: string; country: string };
+  fieldErrors?: { name?: string[]; currency?: string[]; country?: string[]; category?: string[] };
+  values?: { name: string; currency: string; country: string; category: string };
   /** New on every response, so the form re-mounts its fields with the returned values. */
   submission?: number;
 };
@@ -21,6 +21,7 @@ export async function createBusiness(
     name: String(formData.get("name") ?? ""),
     currency: String(formData.get("currency") ?? ""),
     country: String(formData.get("country") ?? ""),
+    category: String(formData.get("category") ?? ""),
   };
 
   const result = await createOrganizationForUser(user.id, values);

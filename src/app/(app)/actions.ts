@@ -6,7 +6,7 @@ import { listMyBusinesses } from "@/modules/organizations";
 
 export async function signOut(): Promise<void> {
   await signOutCurrentSession();
-  redirect("/sign-in");
+  redirect("/sign-in?reason=signed-out");
 }
 
 /** Switches this session to another of the person's businesses (D17). Never trusts the ID: it must be one of theirs. */

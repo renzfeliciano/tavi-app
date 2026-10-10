@@ -17,7 +17,7 @@ const lines: DocumentViewLineInput[] = [
 
 function view(
   taxMode: TaxMode,
-  overrides: { notice?: string | null; registration?: string | null; sales?: Parameters<typeof buildDocumentView>[0]["sales"] } = {},
+  overrides: { notice?: string | null; imprint?: string | null; registration?: string | null; sales?: Parameters<typeof buildDocumentView>[0]["sales"] } = {},
 ) {
   return buildDocumentView({
     title: "Quotation",
@@ -64,6 +64,11 @@ describe("buildDocumentView", () => {
   it("carries a registered invoice's registration line to the foot", () => {
     const v = view("inclusive", { notice: null, registration: "Acknowledgement Certificate / PTU No. 1" });
     expect(v).toMatchObject({ notice: null, registration: "Acknowledgement Certificate / PTU No. 1" });
+  });
+
+  it("carries the Stamp's imprint for a settled document, and none otherwise", () => {
+    expect(view("inclusive", { imprint: "Paid" }).imprint).toBe("Paid");
+    expect(view("inclusive").imprint).toBeNull();
   });
 
   it("prints a registered invoice's sales breakdown and marks exempt lines (B.13–B.14)", () => {

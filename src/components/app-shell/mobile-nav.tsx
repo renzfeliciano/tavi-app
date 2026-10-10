@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CategoryIcon } from "@/components/category-icon";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { EllipsisIcon, PlusIcon } from "lucide-react";
@@ -22,7 +23,8 @@ import {
   mobileMoreFor,
   mobileTabs,
   type NavItem,
-  newActions,
+  newActionsFor,
+  withDocumentNames,
 } from "./nav";
 
 const TAB =
@@ -81,13 +83,16 @@ function SheetLinkList({
 }
 
 /** Top bar (phones and tablets). */
-export function MobileTopBar({ organizationName }: { organizationName: string }) {
+export function MobileTopBar({ organizationName, category }: { organizationName: string; category: string | null }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-sm lg:hidden">
       <Link href="/dashboard" className="flex h-11 shrink-0 items-center rounded-sm">
         <Wordmark size={18} />
       </Link>
-      <span className="truncate text-sm text-muted-foreground">{organizationName}</span>
+      <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+        {category && <CategoryIcon code={category} className="size-3.5 shrink-0" />}
+        <span className="truncate">{organizationName}</span>
+      </span>
     </header>
   );
 }
@@ -107,20 +112,30 @@ export function MobileTabBar({
   const [moreOpen, setMoreOpen] = useState(false);
   const more = mobileMoreFor(account);
   const moreActive = more.some((item) => isActive(pathname, item.href));
-  const [home, quotes, invoices] = mobileTabs;
+  const [home, quotes, invoices] = withDocumentNames(mobileTabs, account.documents, { short: true });
 
   return (
-    <nav
-      aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden"
-    >
-      <div className="mx-auto flex max-w-lg items-stretch px-1">
+    // A floating pill, inset from the screen edges and the home indicator. The
+    // wrapper ignores touches so only the pill itself is tappable.
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
+      <nav
+        aria-label="Main"
+        className="pointer-events-auto mx-auto max-w-lg rounded-2xl border border-border bg-card/95 shadow-lg backdrop-blur-sm"
+      >
+      <div className="flex items-stretch px-1">
         {home && <Tab item={home} pathname={pathname} />}
         {quotes && <Tab item={quotes} pathname={pathname} />}
 
         <Sheet open={newOpen} onOpenChange={setNewOpen}>
-          <SheetTrigger className={cn(TAB, "text-foreground")}>
-            <span className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm">
+          <SheetTrigger className={cn(TAB, "group/new text-foreground")}>
+            <span
+              className={cn(
+                "grid size-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform duration-(--duration-fast) motion-reduce:transition-none",
+                // A rubber-stamp press: down on touch, and once more as the sheet opens.
+                "group-active/new:translate-y-0.5 group-active/new:scale-95",
+                newOpen && "animate-stamp-press",
+              )}
+            >
               <PlusIcon aria-hidden="true" className="size-5" />
             </span>
             New
@@ -130,7 +145,7 @@ export function MobileTabBar({
               <SheetTitle>Create something new</SheetTitle>
               <SheetDescription>Start with a quote, or bill finished work directly.</SheetDescription>
             </SheetHeader>
-            <SheetLinkList items={newActions} onNavigate={() => setNewOpen(false)} withDescriptions />
+            <SheetLinkList items={newActionsFor(account.documents)} onNavigate={() => setNewOpen(false)} withDescriptions />
           </SheetContent>
         </Sheet>
 
@@ -156,5 +171,6 @@ export function MobileTabBar({
         </Sheet>
       </div>
     </nav>
+    </div>
   );
 }

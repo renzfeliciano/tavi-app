@@ -11,7 +11,7 @@ import { customers } from "../schema";
 export type Customer = Omit<typeof customers.$inferSelect, "organizationId" | "createdAt">;
 export type CustomerSummary = Pick<
   Customer,
-  "id" | "displayName" | "company" | "email" | "phone" | "city" | "archivedAt"
+  "id" | "displayName" | "company" | "email" | "phone" | "city" | "category" | "archivedAt"
 >;
 
 export type CustomerStatus = "active" | "archived";
@@ -45,6 +45,7 @@ const summaryColumns = {
   email: customers.email,
   phone: customers.phone,
   city: customers.city,
+  category: customers.category,
   archivedAt: customers.archivedAt,
 };
 

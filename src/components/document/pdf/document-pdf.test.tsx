@@ -73,6 +73,12 @@ describe("DocumentPdf", () => {
     expect(pageCount(pdf)).toBe(1);
   });
 
+  it("stamps a settled document and still fits one page", async () => {
+    registerPdfFonts();
+    const pdf = await renderToBuffer(<DocumentPdf view={{ ...view(3), imprint: "Paid" }} />);
+    expect(pageCount(pdf)).toBe(1);
+  });
+
   it("breaks 60 lines across pages instead of cutting them off", async () => {
     registerPdfFonts();
     const pdf = await renderToBuffer(<DocumentPdf view={view(60)} />);

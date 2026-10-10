@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Stamp, redrawn</title>
+<style>
+  :root {
+    --paper: #f6f6fa; --sheet: #ffffff; --ink: #1f2130; --muted: #6b6e7c; --hair: #dcdbe4; --sunken: #f1f1f6;
+    --stamp: #4b3aa8; --stamp-deep: #3b2d8a;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body { margin: 0; color: var(--ink); font: 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+  main { max-width: 1040px; margin: 0 auto; padding: 28px 20px 96px; }
+  .serial { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--stamp); }
+  .mono { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--muted); }
+
+  /* masthead */
+  .mast { display: grid; grid-template-columns: 1.1fr .9fr; gap: 24px; align-items: end; padding: 20px 0 8px; }
+  .mast h1 { font-size: clamp(40px, 6.4vw, 68px); line-height: .98; letter-spacing: -.035em; margin: 14px 0 18px; font-weight: 600; }
+  .mast p { max-width: 44ch; color: #3d4052; margin: 0 0 10px; }
+  .stage { display: grid; justify-items: center; position: relative; padding-bottom: 6px; }
+  .stage .hint { position: absolute; right: 0; bottom: 6px; font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: right; }
+
+  /* numbered sections, ruled like a receipt booklet */
+  section { margin-top: 56px; }
+  section > h2 { display: flex; gap: 14px; align-items: baseline; margin: 0 0 18px; padding-top: 10px; border-top: 2px solid var(--ink); font-size: 20px; letter-spacing: -.01em; font-weight: 600; }
+  section > h2 .serial { font-size: 12px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .note { max-width: 52ch; color: #3d4052; }
+  .note p { margin: 0 0 10px; }
+
+  /* before / after */
+  .ba { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--hair); background: var(--sheet); }
+  .ba > div { padding: 22px 16px 14px; display: grid; justify-items: center; gap: 12px; }
+  .ba > div + div { border-left: 1px solid var(--hair); }
+
+  /* expression sheet */
+  .sheet { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); background: var(--sheet); }
+  .sheet > div { padding: 18px 4px 10px; display: grid; justify-items: center; gap: 8px; }
+  .sheet > div + div { border-left: 1px solid var(--hair); }
+  .sheet .use { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.3; min-height: 30px; padding: 0 6px; }
+
+  /* motion list */
+  .rules { list-style: none; padding: 0; margin: 0; counter-reset: r; }
+  .rules li { counter-increment: r; display: grid; grid-template-columns: 34px 1fr; padding: 10px 0; border-bottom: 1px solid var(--hair); }
+  .rules li::before { content: counter(r, decimal-leading-zero); font-family: var(--mono); font-size: 12px; color: var(--stamp); padding-top: 2px; }
+  .rules b { font-weight: 600; }
+
+  /* documents */
+  .docs { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+  .doc { position: relative; background: var(--sheet); border: 1px solid var(--hair); padding: 22px 22px 12px; font-size: 11px; line-height: 1.4; }
+  .doc .bar { position: absolute; inset: 0 0 auto 0; height: 6px; background: var(--ink); }
+  .doc .bar i { position: absolute; left: 22px; top: 0; width: 40px; height: 6px; background: var(--stamp); }
+  .doc header { display: flex; justify-content: space-between; margin-top: 4px; }
+  .doc .biz b { font-size: 13px; display: block; }
+  .doc .m { color: var(--muted); }
+  .doc .ttl { text-align: right; }
+  .doc .ttl small { display: block; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); font-weight: 600; font-size: 9px; }
+  .doc .ttl strong { font-size: 18px; color: var(--stamp); font-weight: 600; }
+  .doc .sum { display: grid; grid-template-columns: 1fr 190px; gap: 12px; margin-top: 14px; }
+  .doc .card { background: var(--sunken); padding: 9px 10px; }
+  .doc .card .amt { font-size: 18px; font-weight: 600; }
+  .doc .lbl { font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .doc table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+  .doc th { background: var(--sunken); text-align: left; font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 5px 6px; border-block: 1px solid #c9c8d4; }
+  .doc td { padding: 6px; border-bottom: 1px solid var(--hair); }
+  .doc th:last-child, .doc td:last-child { text-align: right; }
+  .doc .tot { margin: 10px 0 0 auto; width: 190px; }
+  .doc .band { background: var(--ink); color: #fff; padding: 7px 9px; display: flex; justify-content: space-between; font-weight: 600; font-size: 12px; }
+  .doc .imp { position: absolute; left: 66px; top: 318px; transform: rotate(-8deg); border: 3px solid var(--stamp); color: var(--stamp); padding: 3px 14px 2px; text-align: center; font-family: var(--mono); font-weight: 800; letter-spacing: .22em; font-size: 22px; line-height: 1.1; opacity: .9; mix-blend-mode: multiply; border-radius: 4px; }
+  .doc .imp small { display: block; font-size: 9px; letter-spacing: .2em; font-weight: 600; }
+  .doc .thanks { display: flex; gap: 12px; align-items: center; margin-top: 44px; padding: 8px 10px; border-left: 3px solid var(--stamp); background: var(--sunken); }
+  .doc footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--hair); margin-top: 34px; padding-top: 6px; font-size: 9px; color: var(--muted); }
+  .doc footer .brand { display: inline-flex; align-items: center; gap: 4px; }
+  .wm { display: inline-flex; align-items: flex-end; font-weight: 700; letter-spacing: -.02em; color: var(--ink); font-size: 12px; line-height: 1; }
+  .wm svg { width: 10px; height: 10px; margin-inline: 1px; color: var(--stamp); }
+
+  /* app plates */
+  .plates { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); background: var(--sheet); }
+  .plate { padding: 16px 14px 12px; display: grid; grid-template-rows: 170px auto; gap: 10px; }
+  .plate + .plate { border-left: 1px solid var(--hair); }
+  .plate .view { display: grid; place-items: center; text-align: center; align-content: center; gap: 4px; }
+  .plate h3 { margin: 6px 0 0; font-size: 14px; font-weight: 600; }
+  .plate p { margin: 0; color: var(--muted); font-size: 12px; max-width: 24ch; }
+  .plate .cap { font-size: 12px; color: var(--muted); }
+  .plate .cap b { color: var(--ink); font-weight: 600; }
+  .btn { display: inline-block; background: var(--stamp); color: #fff; padding: 6px 11px; font-weight: 600; font-size: 12px; margin-top: 6px; }
+  .field { width: 150px; height: 22px; border: 1px solid var(--hair); margin-top: 5px; }
+  .toast { display: flex; gap: 8px; align-items: center; background: var(--ink); color: #fff; padding: 8px 12px 8px 8px; font-size: 12px; max-width: 200px; text-align: left; }
+  .toast .ic { background: #fff; display: grid; place-items: center; width: 30px; height: 30px; flex: none; }
+  .phone { width: 190px; height: 170px; border: 1px solid var(--hair); background: var(--paper); position: relative; overflow: hidden; }
+  .phone .r { margin: 10px 10px 0; height: 22px; background: #fff; border: 1px solid var(--hair); }
+  .pill { position: absolute; left: 8px; right: 8px; bottom: 8px; background: #fff; border: 1px solid var(--hair); border-radius: 16px; box-shadow: 0 6px 16px rgba(31,33,48,.14); display: flex; justify-content: space-around; align-items: flex-end; padding: 6px 2px 5px; font-size: 8px; color: var(--muted); }
+  .pill div { display: grid; justify-items: center; gap: 2px; }
+  .pill .i { width: 12px; height: 12px; background: var(--hair); border-radius: 3px; }
+  .pill .nb { width: 34px; height: 34px; border-radius: 50%; background: var(--stamp); display: grid; place-items: center; margin-top: -14px; box-shadow: 0 3px 8px rgba(75,58,168,.4); }
+  .pill .n { color: var(--ink); font-weight: 600; }
+
+  .decide { border-top: 1px solid var(--hair); }
+
+  /* ---- the Stamp, alive ---- */
+  .stamp { display: block; overflow: visible; cursor: pointer; }
+  .stamp .eyes, .stamp .lids { transform-box: fill-box; transform-origin: center; }
+  .stamp .blinker { animation: blink 5.2s infinite; animation-delay: var(--d, 0s); transform-box: fill-box; transform-origin: center; }
+  .stamp .breath { animation: breathe 3.6s ease-in-out infinite; animation-delay: var(--d, 0s); transform-box: fill-box; transform-origin: 50% 100%; }
+  .stamp .pupil { transition: transform .22s cubic-bezier(.23,1,.32,1); }
+  .stamp .head { transition: transform .35s cubic-bezier(.23,1,.32,1); transform-box: view-box; }
+  .stamp .imprint { stroke-dasharray: 60; stroke-dashoffset: 60; }
+  .stamp.shown .imprint { stroke-dashoffset: 0; }
+  .stamp.press .body { animation: press .52s cubic-bezier(.23,1,.32,1); }
+  .stamp.press .imprint { animation: ink .42s .2s cubic-bezier(.23,1,.32,1) both; }
+  .stamp .hop { transform-box: fill-box; transform-origin: 50% 100%; }
+  .stamp:hover .hop { animation: hop .5s cubic-bezier(.23,1,.32,1); }
+  .stamp .zz { animation: float 3s ease-in-out infinite; }
+  .stamp .dots circle { animation: dot 1.6s infinite; }
+  .stamp .dots circle:nth-child(2) { animation-delay: .2s; }
+  .stamp .dots circle:nth-child(3) { animation-delay: .4s; }
+  .stamp .jump { animation: jump 1.8s cubic-bezier(.23,1,.32,1) infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  @keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.08); } }
+  @keyframes breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.015, 1.03); } }
+  @keyframes press { 0% { transform: translateY(0) scale(1,1); } 35% { transform: translateY(5px) scale(1.04,.9); } 100% { transform: translateY(0) scale(1,1); } }
+  @keyframes ink { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
+  @keyframes hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-3px) scale(.98, 1.03); } }
+  @keyframes float { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(-3px); opacity: .55; } }
+  @keyframes dot { 0%, 60%, 100% { opacity: .25; } 30% { opacity: 1; } }
+  @keyframes jump { 0%, 55%, 100% { transform: translateY(0) scale(1,1); } 15% { transform: translateY(1px) scale(1.04,.94); } 32% { transform: translateY(-5px) scale(.97,1.05); } }
+  .still .stamp * { animation: none !important; }
+  @media (prefers-reduced-motion: reduce) { .stamp * { animation: none !important; transition: none !important; } }
+
+  @media (max-width: 860px) {
+    .mast, .cols, .docs, .ba { grid-template-columns: 1fr; }
+    .sheet { grid-template-columns: repeat(4, 1fr); }
+    .sheet > div:nth-child(5) { border-left: 0; }
+    .sheet > div:nth-child(n+5) { border-top: 1px solid var(--hair); }
+    .plates { grid-template-columns: 1fr 1fr; }
+    .plate:nth-child(3) { border-left: 0; }
+    .plate:nth-child(n+3) { border-top: 1px solid var(--hair); }
+    .ba > div + div { border-left: 0; border-top: 1px solid var(--hair); }
+    .stage .hint { position: static; margin-top: 4px; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <div class="mono"><span class="serial">Nº 20</span> &nbsp;·&nbsp; Mascot draft &nbsp;·&nbsp; for approval &nbsp;·&nbsp; 10 Oct 2026</div>
+
+  <div class="mast">
+    <div>
+      <h1>The Stamp, with someone home.</h1>
+      <p>The current Stamp is a solid black silhouette with two dots. It reads as a chess piece. This version has a face you can read, eyes that follow your cursor, and a body that breathes and blinks.</p>
+      <p class="mono">Nothing here is built. Say what to change or cut.</p>
+    </div>
+    <div class="stage">
+      <div data-m="happy" data-h="300" data-imprint="1" data-hero="1"></div>
+      <div class="hint">move the cursor<br>click to stamp</div>
+    </div>
+  </div>
+
+  <section>
+    <h2><span class="serial">01</span> What changed</h2>
+    <div class="cols">
+      <div class="ba">
+        <div><div data-old="1"></div><span class="mono">Now</span></div>
+        <div><div data-m="neutral" data-h="150"></div><span class="mono">Redrawn</span></div>
+      </div>
+      <div class="note">
+        <p><b>A head you can read.</b> A wide dome with large eyes, a small mouth and light cheeks. The old one had no face to read, so every expression was a pair of dots.</p>
+        <p><b>Outlined, not filled.</b> A white head on an ink body, with one ink line weight throughout. It keeps its shape on bond paper, on white, and at 20px.</p>
+        <p><b>Same rules as before.</b> Flat colour, no limbs, no mouth-heavy faces, violet only where ink would go: the pad and the imprint.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="serial">02</span> Seven moods</h2>
+    <div class="sheet">
+      <div><div data-m="neutral" data-h="96"></div><span class="mono">neutral</span><span class="use">default, sign-in</span></div>
+      <div><div data-m="happy" data-h="96" data-imprint="1"></div><span class="mono">happy</span><span class="use">sent, approved, toasts</span></div>
+      <div><div data-m="curious" data-h="96"></div><span class="mono">curious</span><span class="use">empty lists</span></div>
+      <div><div data-m="waiting" data-h="96"></div><span class="mono">waiting</span><span class="use">awaiting reply</span></div>
+      <div><div data-m="concerned" data-h="96"></div><span class="mono">concerned</span><span class="use">errors, overdue never</span></div>
+      <div><div data-m="resting" data-h="96"></div><span class="mono">resting</span><span class="use">all caught up</span></div>
+      <div><div data-m="celebrating" data-h="96" data-imprint="1"></div><span class="mono">celebrating</span><span class="use">paid, once</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="serial">03</span> How it is alive</h2>
+    <div class="cols">
+      <ol class="rules">
+        <li><span><b>Blinks</b> every few seconds, each one out of step with the others.</span></li>
+        <li><span><b>Breathes.</b> A 1.5% swell in the body, slow enough to miss unless you look.</span></li>
+        <li><span><b>Watches the cursor.</b> The pupils and head lean toward it, a few pixels at most. On touch screens it glances around on its own.</span></li>
+        <li><span><b>Reacts.</b> A tap presses it down and the imprint draws in. Hover makes it hop once.</span></li>
+      </ol>
+      <div class="note">
+        <p>Motion stays small and never covers content. Money, totals and statuses never animate.</p>
+        <p>With "reduce motion" turned on, it is a still drawing: no blink, no follow, no hop.</p>
+        <p class="mono">This changes today's rule of "animates only on request, once". The new rule is: idle motion is allowed, large motion only for real moments (sent, approved, paid).</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="serial">04</span> On invoices</h2>
+    <div class="docs">
+      <div id="docSent"></div>
+      <div id="docPaid"></div>
+    </div>
+    <p class="note" style="margin-top:14px">The business's logo and name still lead. The Stamp appears in the footer credit on every document, and as a PAID or APPROVED imprint once a document reaches that moment. The imprint stays clear of line items and totals. In the PDF the mascot is still, as a PDF cannot move.</p>
+  </section>
+
+  <section>
+    <h2><span class="serial">05</span> In the app</h2>
+    <div class="plates">
+      <div class="plate"><div class="view"><div data-m="curious" data-h="84"></div><h3>No quotes yet</h3><p>Quotes let customers approve work before you start.</p><span class="btn">New quote</span></div><div class="cap"><b>Empty lists</b>, on every page</div></div>
+      <div class="plate"><div class="view"><div data-m="neutral" data-h="64"></div><span class="wm" style="font-size:18px;margin-top:4px">TA<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M2.5 9.5 L9.5 22 L22 1.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square"/></svg>I</span><div class="field"></div><div class="field"></div></div><div class="cap"><b>Sign in</b> and sign up</div></div>
+      <div class="plate"><div class="view"><div class="toast"><span class="ic" data-m="happy" data-h="26" data-bare="1"></span><span>Invoice INV-000042 sent to Juan Dela Cruz.</span></div></div><div class="cap"><b>Success toasts</b>. Errors stay plain</div></div>
+      <div class="plate"><div class="view"><div class="phone"><div class="r"></div><div class="r"></div><nav class="pill"><div><i class="i"></i>Home</div><div><i class="i"></i>Quotes</div><div class="n"><span class="nb" data-m="neutral" data-h="26" data-light="1" data-bare="1"></span>New</div><div><i class="i"></i>Bills</div><div><i class="i"></i>More</div></nav></div></div><div class="cap"><b>Floating nav</b>, on the New button</div></div>
+    </div>
+  </section>
+
+  <section class="decide">
+    <h2><span class="serial">06</span> To approve</h2>
+    <ol class="rules">
+      <li><span><b>The redrawn Stamp</b>, replacing the black silhouette everywhere.</span></li>
+      <li><span><b>Idle motion</b> as described in 03. This is the one rule I'd be changing.</span></li>
+      <li><span><b>Invoices:</b> footer Stamp, plus PAID and APPROVED imprints. I'd log it as decision D20 in the foundation proposal and update the brand skill.</span></li>
+      <li><span><b>App:</b> sign-in, success toasts and the nav New button are new. Everything else already uses the mascot.</span></li>
+    </ol>
+  </section>
+</main>
+
+<script>
+  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const INK = "#1f2130", VIO = "#4b3aa8";
+  let uid = 0;
+
+  // The redrawn Stamp. One 2.6 line weight, flat colour, no limbs.
+  function face(e) {
+    // returns {brows, eyes, mouth, extra, tilt, look}
+    const eye = (x, y, ry = 4.3, rx = 3.3) =>
+      `<g class="pupil" data-px="${x}" data-py="${y}"><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${INK}"/><circle cx="${x + 1.1}" cy="${y - 1.5}" r="1.15" fill="#fff"/></g>`;
+    const arcUp = (x) => `<path d="M${x - 3.6} 22.4 Q${x} 16.6 ${x + 3.6} 22.4" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`;
+    const arcDown = (x) => `<path d="M${x - 3.4} 20.6 Q${x} 24.2 ${x + 3.4} 20.6" fill="none" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`;
+    const smile = (w, d) => `<path d="M${32 - w} 29.4 Q32 ${29.4 + d} ${32 + w} 29.4" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`;
+    const brow = (x1, y1, x2, y2) => `<path d="M${x1} ${y1} L${x2} ${y2}" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`;
+    switch (e) {
+      case "happy":
+        return { eyes: `${arcUp(23.5)}${arcUp(40.5)}`, mouth: `<path d="M27.5 28.4 Q32 34 36.5 28.4 Z" fill="${INK}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>`, blink: false };
+      case "celebrating":
+        return { eyes: `${arcUp(23.5)}${arcUp(40.5)}`, mouth: `<path d="M26.5 27.8 Q32 36.5 37.5 27.8 Z" fill="${INK}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M29.6 31.6 Q32 29.8 34.4 31.6 Q32 34 29.6 31.6Z" fill="${VIO}" opacity=".9"/>`, blink: false };
+      case "curious":
+        return { eyes: `${eye(24, 21, 4.1, 3.2)}${eye(40, 21, 4.8, 3.7)}`, brows: `${brow(19.5, 14.8, 27.5, 13.4)}<path d="M36 12.6 Q40.5 9.8 45 12.6" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`, mouth: `<circle cx="32.5" cy="30" r="1.7" fill="none" stroke="${INK}" stroke-width="2"/>`, tilt: -7, look: [1.2, -.6] };
+      case "concerned":
+        return { eyes: `${eye(24, 22, 3.8, 3.1)}${eye(40, 22, 3.8, 3.1)}`, brows: `${brow(18.5, 16.6, 27, 13.4)}${brow(45.5, 16.6, 37, 13.4)}`, mouth: `<path d="M28.6 31.2 Q32 28 35.4 31.2" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`, tilt: 3 };
+      case "waiting":
+        return { eyes: `${eye(24, 21)}${eye(40, 21)}`, mouth: `<path d="M29 30 H35" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`, look: [1.3, -1.2],
+          extra: `<g class="dots" fill="${VIO}"><circle cx="58" cy="9" r="1.7"/><circle cx="62.6" cy="9" r="1.7"/><circle cx="67.2" cy="9" r="1.7"/></g>` };
+      case "resting":
+        return { eyes: `${arcDown(23.5)}${arcDown(40.5)}`, mouth: `<path d="M29.8 30 Q32 31.4 34.2 30" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>`, tilt: 2, nolook: true,
+          extra: `<g class="zz" fill="none" stroke="${VIO}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M55 8 h5 l-5 6 h5"/><path d="M61.5 1 h3.4 l-3.4 4.2 h3.4" opacity=".7"/></g>`, blink: false };
+      default:
+        return { eyes: `${eye(24, 21)}${eye(40, 21)}`, mouth: smile(2.8, 2.6) };
+    }
+  }
+
+  function mascot(e, h, opts = {}) {
+    const f = face(e), id = "s" + (++uid);
+    const w = h * 0.84; // viewBox 70 x 84
+    const light = !!opts.light;
+    const head = light ? "#ffffff" : "#ffffff", bodyC = light ? "#ffffff" : INK, strokeC = light ? "#ffffff" : INK;
+    const padC = light ? "#cfc8f5" : VIO;
+    const delay = (-(uid * 1.7) % 5).toFixed(2) + "s";
+    const imprint = opts.imprint ? `<path class="imprint" d="M21.5 73 L28.4 80.4 L43 67.2" fill="none" stroke="${VIO}" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="miter"/>` : "";
+    const sparks = e === "celebrating" ? `<g stroke="${VIO}" stroke-width="2.2" stroke-linecap="round" opacity=".85"><path d="M5 30 L1 25.5"/><path d="M3.5 38 H-1.5"/><path d="M59 30 L63 25.5"/><path d="M60.5 38 H65.5"/></g>` : "";
+    const headFill = light ? "#fff" : head;
+    const faceStroke = light ? VIO : INK;
+    let eyes = f.eyes, brows = f.brows || "", mouth = f.mouth;
+    if (light) { eyes = eyes.replaceAll(INK, VIO); brows = brows.replaceAll(INK, VIO); mouth = mouth.replaceAll(INK, VIO); }
+    const tilt = f.tilt || 0;
+    const blink = f.blink === false ? "" : "blinker";
+    return `<svg class="stamp ${opts.imprint ? "shown" : ""}" id="${id}" viewBox="-2 0 72 84" width="${w}" height="${h}" role="${opts.label ? "img" : "presentation"}" ${opts.label ? `aria-label="${opts.label}"` : 'aria-hidden="true"'} data-look="${f.nolook ? 0 : 1}" data-base="${(f.look || [0, 0]).join(",")}" data-tilt="${tilt}" style="--d:${delay}">
+      ${opts.bare ? "" : `<ellipse cx="32" cy="82.3" rx="19" ry="1.8" fill="${INK}" opacity=".10"/>`}
+      <g class="hop"><g class="body"><g class="breath">
+        <rect x="11" y="60.5" width="42" height="6.5" rx="2.4" fill="${padC}"/>
+        <rect x="8.5" y="44" width="47" height="18" rx="6.5" fill="${bodyC}"/>
+        <path d="M15.5 50 H27" stroke="${light ? "#cfc8f5" : "#fff"}" stroke-width="2.2" stroke-linecap="round" opacity="${light ? 1 : .28}"/>
+        <path d="M25.2 37 V45 H38.8 V37 Z" fill="${bodyC}"/>
+        <g class="head" style="transform-origin:32px 40px;transform:rotate(${tilt}deg)">
+          <path d="M9.5 24 C9.5 10 19.5 3 32 3 C44.5 3 54.5 10 54.5 24 C54.5 33.6 48.2 38.2 40 38.2 H24 C15.8 38.2 9.5 33.6 9.5 24 Z" fill="${headFill}" stroke="${strokeC}" stroke-width="2.6" stroke-linejoin="round"/>
+          <ellipse cx="18.2" cy="28" rx="3.6" ry="2.3" fill="${VIO}" opacity=".16"/><ellipse cx="45.8" cy="28" rx="3.6" ry="2.3" fill="${VIO}" opacity=".16"/>
+          <g class="${blink}">${eyes}</g>${brows}${mouth}
+        </g>
+      </g></g></g>
+      ${imprint}${sparks}${f.extra || ""}
+    </svg>`;
+  }
+
+  // The current mascot, for comparison.
+  function oldMascot(h) {
+    return `<svg viewBox="0 0 64 80" width="${h * .8}" height="${h}" aria-hidden="true"><circle cx="32" cy="16" r="12" fill="${INK}"/><g fill="#fff"><circle cx="27.5" cy="16" r="2.3"/><circle cx="36.5" cy="16" r="2.3"/></g><path d="M26.5 26.5 H37.5 L39.5 38 H24.5 Z" fill="${INK}"/><rect x="12" y="38" width="40" height="14" rx="3" fill="${INK}"/><rect x="14" y="52" width="36" height="4" rx="1" fill="${VIO}"/></svg>`;
+  }
+
+  document.querySelectorAll("[data-m]").forEach(el => {
+    el.innerHTML = mascot(el.dataset.m, +el.dataset.h, { imprint: !!el.dataset.imprint, light: !!el.dataset.light, bare: !!el.dataset.bare, label: el.dataset.hero ? "The Stamp, TAVI's mascot" : "" });
+    if (!el.style.display) el.style.display = "inline-block";
+  });
+  document.querySelectorAll("[data-old]").forEach(el => { el.innerHTML = oldMascot(150); });
+
+  // ---- alive: look at the pointer, glance when idle, press on click ----
+  const stamps = [...document.querySelectorAll("svg.stamp")];
+  let lastMove = 0, px = 0, py = 0;
+  function aim(svg, tx, ty) {
+    if (svg.dataset.look === "0") return;
+    const [bx, by] = svg.dataset.base.split(",").map(Number);
+    const r = svg.getBoundingClientRect();
+    const cx = r.left + r.width * .5, cy = r.top + r.height * .27;
+    let dx = tx - cx, dy = ty - cy; const d = Math.hypot(dx, dy) || 1;
+    const k = Math.min(1, d / 220);
+    const ox = (dx / d) * k * 1.9 + bx * (1 - k), oy = (dy / d) * k * 1.4 + by * (1 - k);
+    svg.querySelectorAll(".pupil").forEach(p => { p.style.transform = `translate(${ox.toFixed(2)}px, ${oy.toFixed(2)}px)`; });
+    const head = svg.querySelector(".head"), t = +svg.dataset.tilt;
+    head.style.transform = `rotate(${(t + (dx / Math.max(d, 1)) * k * 3.2).toFixed(2)}deg)`;
+  }
+  if (!REDUCED) {
+    addEventListener("pointermove", e => { lastMove = performance.now(); px = e.clientX; py = e.clientY; stamps.forEach(s => aim(s, px, py)); }, { passive: true });
+    setInterval(() => { // glance around when nobody is pointing
+      if (performance.now() - lastMove < 4000) return;
+      stamps.forEach(s => { if (Math.random() < .35) aim(s, innerWidth * Math.random(), innerHeight * (.2 + Math.random() * .6)); });
+    }, 2600);
+  }
+  stamps.forEach(s => s.addEventListener("click", () => {
+    if (REDUCED) { s.classList.toggle("shown"); return; }
+    s.classList.remove("press"); void s.getBoundingClientRect(); s.classList.add("press", "shown");
+    setTimeout(() => s.classList.remove("press"), 700);
+  }));
+  // the hero shows how the imprint draws in, once
+  const hero = document.querySelector('[data-hero] svg.stamp');
+  if (hero && !REDUCED) setTimeout(() => { hero.classList.remove("shown"); void hero.getBoundingClientRect(); hero.classList.add("press", "shown"); setTimeout(() => hero.classList.remove("press"), 700); }, 700);
+
+  // ---- invoices ----
+  const wm = `<span class="wm">TA<svg viewBox="0 0 24 24"><path d="M2.5 9.5 L9.5 22 L22 1.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square"/></svg>I</span>`;
+  function invoice(paid) {
+    const mini = mascot("neutral", 22, { bare: true });
+    return `<div class="doc"><div class="bar"><i></i></div>
+    <header><div class="biz"><b>Santos Aircon</b><span class="m">12 Rizal St, Pasig<br>VAT Reg TIN 123-456-789-00000</span></div>
+      <div class="ttl"><small>Billing statement</small><strong>INV-000042</strong></div></header>
+    <div class="sum"><div><div class="lbl">Billed to</div><b>Juan Dela Cruz</b><br><span class="m">88 Mabini Ave, Makati</span></div>
+      <div class="card"><div class="m">Issued 10 Oct 2026 · Due 24 Oct 2026</div><div class="lbl" style="margin-top:6px">${paid ? "Amount paid" : "Balance due"}</div><div class="amt">₱28,504.00</div></div></div>
+    <table><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody>
+      <tr><td>Split-type aircon deep cleaning</td><td>4 unit</td><td>₱7,200.00</td></tr>
+      <tr><td>Freon recharge R410A</td><td>2 unit</td><td>₱5,000.00</td></tr>
+      <tr><td>Condenser fan motor replacement</td><td>1 job</td><td>₱6,800.00</td></tr></tbody></table>
+    <div class="tot"><div class="band"><span>${paid ? "Total paid" : "Balance due"}</span><span>₱28,504.00</span></div></div>
+    ${paid ? `<div class="imp">PAID<small>12 OCT 2026</small></div><div class="thanks">${mascot("happy", 40, { bare: true, imprint: true })}<div><b>Thank you, Juan!</b><br><span class="m">Payment received. Keep this copy for your records.</span></div></div>` : ""}
+    <footer><span>Santos Aircon · INV-000042</span><span class="brand">Sent with ${wm}<span style="display:inline-flex;margin-left:3px">${mini}</span></span><span>Page 1 of 1</span></footer></div>`;
+  }
+  document.getElementById("docSent").innerHTML = invoice(false) + `<p class="mono" style="margin:8px 0 0">Sent: footer credit only</p>`;
+  document.getElementById("docPaid").innerHTML = invoice(true) + `<p class="mono" style="margin:8px 0 0">Paid: imprint and thank-you</p>`;
+  // docs are built after the first mascot pass: wire the new stamps too
+  document.querySelectorAll(".doc svg.stamp").forEach(s => { if (!stamps.includes(s)) { stamps.push(s); s.addEventListener("click", () => { s.classList.remove("press"); void s.getBoundingClientRect(); s.classList.add("press", "shown"); setTimeout(() => s.classList.remove("press"), 700); }); } });
+  if (new URLSearchParams(location.search).has("still")) document.body.classList.add("still");
+</script>
+</body>
+</html>

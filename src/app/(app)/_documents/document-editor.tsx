@@ -127,6 +127,8 @@ type DocumentEditorProps = {
   /** The units a line can use (`market.units.options`), offered as a list. */
   units: readonly string[];
   customerCopy: CustomerFormCopy;
+  /** Placeholder for a line description, e.g. "Aircon deep cleaning"; null for the generic one. */
+  lineExample: string | null;
   /** Where people paste a link, e.g. "Messenger or Viber". */
   shareChannels: string;
   /** Sending needs the sender's own email confirmed. */
@@ -642,6 +644,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
               currency={state.currency}
               taxRates={taxRates}
               units={units}
+              example={props.lineExample}
               errors={visibleErrors}
               onChange={changeLine}
               onMove={moveLine}

@@ -198,6 +198,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Keyboard focus on plain links (sidebar, settings rows, list rows) is always visible. */
+  a:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
   html {
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
@@ -244,6 +249,201 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* The Stamp's idle life (D20): small, slow, and off when motion is reduced. */
+.mascot-head {
+  transform-box: view-box;
+  transform-origin: 32px 40px;
+  transform: rotate(calc(var(--tilt, 0deg) + var(--look-tilt, 0) * 1deg));
+}
+.mascot-pupil {
+  transform: translate(calc(var(--look-x, 0) * 1px), calc(var(--look-y, 0) * 1px));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mascot-head {
+    transition: transform 350ms var(--ease-out);
+  }
+  .mascot-pupil {
+    transition: transform 220ms var(--ease-out);
+  }
+  .mascot[data-idle] .mascot-blink {
+    animation: mascot-blink 5.4s infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .mascot[data-idle] .mascot-breathe {
+    animation: mascot-breathe 3.8s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+  .mascot[data-idle] .mascot-head {
+    animation: mascot-glance 9s ease-in-out infinite;
+  }
+  /* Every so often it lifts and presses down, like a stamp being used. */
+  .mascot[data-idle]:not([data-calm]) {
+    animation: mascot-stamp 6.5s infinite;
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+  .mascot[data-expression="resting"] {
+    animation: none;
+  }
+  /* Sign-in: a glance toward the form when the email field is focused. */
+  .auth-shell:has(#email:focus) .mascot {
+    --look-x: 2;
+    --look-y: 0.5;
+    --look-tilt: 3;
+  }
+  /* Working: three small dots that take turns. */
+  .mascot-dots circle {
+    animation: mascot-dot 1.4s ease-in-out infinite;
+  }
+  .mascot-dots circle:nth-child(2) {
+    animation-delay: 0.18s;
+  }
+  .mascot-dots circle:nth-child(3) {
+    animation-delay: 0.36s;
+  }
+  @keyframes mascot-dot {
+    0%,
+    70%,
+    100% {
+      opacity: 0.3;
+    }
+    35% {
+      opacity: 1;
+    }
+  }
+  /* Typing a password: the Stamp looks away. */
+  .auth-shell:has(input[type="password"]:focus) .mascot-pupil {
+    transform: translateY(6px) scaleY(0.15);
+  }
+  @keyframes mascot-stamp {
+    0%,
+    78%,
+    100% {
+      transform: none;
+      animation-timing-function: var(--ease-out);
+    }
+    84% {
+      transform: translateY(-7px) scale(0.98, 1.03);
+    }
+    89% {
+      transform: translateY(2px) scale(1.05, 0.9);
+    }
+    94% {
+      transform: translateY(-1px) scale(0.99, 1.01);
+    }
+  }
+  @keyframes mascot-glance {
+    0%,
+    30%,
+    100% {
+      rotate: 0deg;
+    }
+    38%,
+    46% {
+      rotate: -5deg;
+    }
+    58%,
+    66% {
+      rotate: 5deg;
+    }
+    74% {
+      rotate: 0deg;
+    }
+  }
+  /* The sign-in greeting (D20): pop in, wave, leave. */
+  .welcome-greeting[data-phase="in"] .welcome-mascot {
+    animation: welcome-in 650ms var(--ease-out) both;
+  }
+  .welcome-greeting[data-phase="in"] .welcome-bubble {
+    animation: welcome-bubble 420ms var(--ease-out) 380ms both;
+  }
+  .welcome-greeting[data-phase="out"] {
+    animation: welcome-out 450ms var(--ease-in-out) both;
+  }
+  .welcome-greeting .mascot[data-idle] {
+    animation: none;
+  }
+  .welcome-greeting .mascot[data-idle] .mascot-head {
+    animation: welcome-wave 1100ms ease-in-out 600ms 1 both;
+  }
+  @keyframes welcome-in {
+    from {
+      opacity: 0;
+      transform: translateY(32px) scale(0.85);
+    }
+    60% {
+      transform: translateY(-6px) scale(1.03);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes welcome-bubble {
+    from {
+      opacity: 0;
+      transform: translateX(10px) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes welcome-out {
+    to {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+  @keyframes welcome-wave {
+    0%,
+    100% {
+      rotate: 0deg;
+    }
+    20% {
+      rotate: -9deg;
+    }
+    40% {
+      rotate: 8deg;
+    }
+    60% {
+      rotate: -6deg;
+    }
+    80% {
+      rotate: 4deg;
+    }
+  }
+  .farewell {
+    animation: farewell-in 220ms var(--ease-out) both;
+  }
+  @keyframes farewell-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes mascot-blink {
+    0%,
+    93%,
+    100% {
+      transform: scaleY(1);
+    }
+    96% {
+      transform: scaleY(0.08);
+    }
+  }
+  @keyframes mascot-breathe {
+    0%,
+    100% {
+      transform: scale(1, 1);
+    }
+    50% {
+      transform: scale(1.015, 1.03);
     }
   }
 }

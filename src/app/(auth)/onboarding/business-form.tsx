@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
+import { CategoryIcon } from "@/components/category-icon";
+import { CATEGORIES, CATEGORY_CODES } from "@/config/categories";
 import type { CurrencyOption } from "@/config/currencies";
 import { BUSINESS_PROFILE_LIMITS } from "@/modules/organizations/client";
 import { createBusiness, type CreateBusinessState } from "./actions";
@@ -41,6 +43,33 @@ export function BusinessForm({ currencies, countries, defaultCountry }: Business
           <FieldDescription id="name-hint">As it should appear on your quotes and invoices.</FieldDescription>
         )}
       </Field>
+      <fieldset className="grid gap-2" aria-describedby={errors.category ? "category-error" : undefined}>
+        <legend className="mb-1 text-sm font-medium">What kind of business is it?</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {CATEGORY_CODES.map((code) => (
+            <label
+              key={code}
+              className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-sm transition-colors duration-(--duration-fast) hover:bg-accent has-checked:border-stamp has-checked:bg-stamp-subtle has-focus-visible:ring-2 has-focus-visible:ring-ring"
+            >
+              <input
+                type="radio"
+                name="category"
+                value={code}
+                defaultChecked={state.values?.category === code}
+                required
+                className="sr-only"
+              />
+              <CategoryIcon code={code} className="text-ink-subtle" />
+              <span className="leading-tight">{CATEGORIES[code].label}</span>
+            </label>
+          ))}
+        </div>
+        {errors.category ? (
+          <FieldError id="category-error">{errors.category[0]}</FieldError>
+        ) : (
+          <FieldDescription>Adds a matching icon and example wording. It never changes your taxes or documents.</FieldDescription>
+        )}
+      </fieldset>
       <Field data-invalid={errors.currency ? "true" : undefined}>
         <FieldLabel htmlFor="currency">Currency</FieldLabel>
         <NativeSelect

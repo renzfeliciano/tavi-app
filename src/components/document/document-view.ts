@@ -49,6 +49,8 @@ export type DocumentView = {
   registration?: string | null;
   /** Registered invoices' PDFs after the first: "REPRINT", printed prominently at the top (B.21, D19). */
   reprint?: string | null;
+  /** The Stamp's imprint for a settled document: "Paid" or "Approved" (D20). Decorative; the status is also in the page's own text. */
+  imprint?: string | null;
   /** Registered invoices only: the sales breakdown (B.13, B.17) and the seller's statement, e.g. "EXEMPT" (B.16). */
   sales?: { rows: { label: string; value: string }[]; statement: string | null } | null;
   /**
@@ -103,6 +105,7 @@ export type DocumentViewInput = {
   notice: string | null;
   registration?: string | null;
   reprint?: string | null;
+  imprint?: string | null;
   sales?: DocumentSalesInput | null;
   qualifiedDiscount?: DocumentQualifiedDiscountInput | null;
 };
@@ -176,6 +179,7 @@ export function buildDocumentView(input: DocumentViewInput): DocumentView {
     notice: input.notice,
     registration: input.registration ?? null,
     reprint: input.reprint ?? null,
+    imprint: input.imprint ?? null,
     qualifiedDiscount: qualified
       ? {
           holder: `${qualified.label}: ${qualified.holderName}`,

@@ -39,7 +39,11 @@ No emoji in product UI copy. No gamification of money or debt.
 | Errors, failed send | `concerned` (calm, never panicked) | no |
 | Idle / nothing to do | `resting` | no |
 
-Never: continuous animation, speech bubbles, the mascot as the only carrier of meaning, reactions to amounts.
+Idle life (D20): it blinks, breathes, hops and glances now and then, and its eyes follow the pointer; `idle={false}` holds it still and `prefers-reduced-motion` stops it. The press + imprint is the only big motion, once, for real moments. Every page title carries a small Stamp (`PageHeader`); customer documents carry a still Stamp beside "Sent with TAVI" and a PAID / APPROVED imprint when settled.
+
+The Stamp also speaks in two places (D22): a short greeting after sign-in, and the companion bubble that points at real data (`_mascot/insights.ts`). It only says what a fact supports, one thing at a time, and always points at an existing screen. New insight = a new rule over a counted fact plus a test; never free text.
+
+Never: large or fast continuous animation, speech bubbles anywhere else, emoji in copy, the mascot as the only carrier of meaning, reactions to amounts.
 
 ## Customer-facing surfaces
 

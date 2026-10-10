@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/app-shell/page-header";
-import { BrandMascot } from "@/components/brand/brand-mascot";
 import { DocumentNumber } from "@/components/document-number";
 import { MoneyAmount } from "@/components/money-amount";
 import { buttonVariants } from "@/components/ui/button";
@@ -40,9 +39,22 @@ const DAY_MS = 86_400_000;
 // three-step checklist takes its place (§G.5); each step is ticked from the
 // business's own data.
 
-type Step = { title: string; description: string; href: Route; cta: string; done: boolean };
+type Step = {
+  title: string;
+  description: string;
+  href: Route;
+  cta: string;
+  done: boolean;
+  /** Why this step can't be finished yet, from the business's own state. */
+  blocked?: string;
+};
 
-function setupSteps(market: MarketProfile, progress: { hasCustomer: boolean; hasQuote: boolean; hasSentQuote: boolean }): Step[] {
+function setupSteps(
+  market: MarketProfile,
+  progress: { hasCustomer: boolean; hasQuote: boolean; hasSentQuote: boolean },
+  emailVerified: boolean,
+): Step[] {
+  const quote = market.documents.quote.singular.toLowerCase();
   return [
     {
       title: "Add your first customer",
@@ -52,32 +64,40 @@ function setupSteps(market: MarketProfile, progress: { hasCustomer: boolean; has
       done: progress.hasCustomer,
     },
     {
-      title: "Create a quote",
+      title: `Create a ${quote}`,
       description: `List the work and your price. ${brand.name} does the totals and tax.`,
       href: "/quotes/new",
-      cta: "New quote",
+      cta: `New ${quote}`,
       done: progress.hasQuote,
     },
     {
       title: "Send it",
       description: `Email it, or copy the link into ${market.shareChannels}. They can approve it from their phone.`,
       href: "/quotes",
-      cta: "Go to quotes",
+      cta: `Go to ${market.documents.quote.plural.toLowerCase()}`,
       done: progress.hasSentQuote,
+      blocked: !progress.hasQuote
+        ? `Create a ${quote} first.`
+        : !emailVerified
+          ? "Confirm your email first. Use the link we sent, or resend it above."
+          : undefined,
     },
   ];
 }
 
-function Checklist({ steps }: { steps: Step[] }) {
+function Checklist({ steps, quoteName }: { steps: Step[]; quoteName: string }) {
   const next = steps.findIndex((step) => !step.done);
+  const doneCount = steps.filter((step) => step.done).length;
   return (
     <section aria-labelledby="setup-heading" className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
       <div className="flex items-center gap-4 border-b border-border px-5 py-4 sm:px-6">
-        <BrandMascot expression="happy" size="sm" />
         <div className="grid gap-0.5">
           <h2 id="setup-heading" className="font-semibold">
-            Get ready to send your first quote
+            Get ready to send your first {quoteName}
           </h2>
+          <p className="font-mono text-xs text-muted-foreground tabular-nums">
+            {doneCount} of {steps.length} done
+          </p>
           <p className="text-sm text-pretty text-muted-foreground">
             Your logo and business details can wait.{" "}
             <Link href="/settings/business" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
@@ -114,12 +134,15 @@ function Checklist({ steps }: { steps: Step[] }) {
                 {step.title}
               </span>
               <span className="text-sm text-pretty text-muted-foreground">{step.description}</span>
+              {!step.done && step.blocked && (
+                <span className="text-sm text-pretty text-warning-strong">{step.blocked}</span>
+              )}
             </div>
             {step.done ? (
               <span className="col-start-2 inline-flex items-center gap-1 text-sm text-success-strong sm:col-start-3">
                 <CircleCheckIcon aria-hidden="true" className="size-4" /> Done
               </span>
-            ) : (
+            ) : step.blocked ? null : (
               <Link
                 href={step.href}
                 className={cn(
@@ -151,8 +174,8 @@ export default async function DashboardPage() {
   if (!progress.hasSentQuote) {
     return (
       <>
-        <PageHeader title={`Welcome to ${brand.name}`} description="Three steps to your first sent quote." />
-        <Checklist steps={setupSteps(market, progress)} />
+        <PageHeader title={`Welcome to ${brand.name}`} description={`Three steps to your first sent ${market.documents.quote.singular.toLowerCase()}.`} />
+        <Checklist steps={setupSteps(market, progress, ctx.emailVerified)} quoteName={market.documents.quote.singular.toLowerCase()} />
       </>
     );
   }

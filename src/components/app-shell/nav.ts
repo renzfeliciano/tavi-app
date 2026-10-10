@@ -96,3 +96,38 @@ export const newActions: readonly NewAction[] = [
 export function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
+
+type DocumentNames = {
+  quote: { singular: string; plural: string };
+  invoice: { singular: string; plural: string };
+};
+
+/**
+ * Navigation items worded the way the market names the documents (PH:
+ * "Quotations", "Billing statements"), so a link and the page it opens say
+ * the same thing. `short` keeps the phone tab bar to one word.
+ */
+export function withDocumentNames<T extends NavItem>(
+  items: readonly T[],
+  documents: DocumentNames,
+  { short = false }: { short?: boolean } = {},
+): T[] {
+  const word = (plural: string) => (short ? (plural.split(" ").at(-1) ?? plural) : plural);
+  const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+  return items.map((item) => {
+    if (item.href === "/quotes") return { ...item, label: capital(word(documents.quote.plural)) };
+    if (item.href === "/invoices") return { ...item, label: capital(word(documents.invoice.plural)) };
+    return item;
+  });
+}
+
+/** "New" menu entries worded for the market. */
+export function newActionsFor(documents: DocumentNames): NewAction[] {
+  return newActions.map((action) => {
+    if (action.href === "/quotes/new") return { ...action, label: `New ${documents.quote.singular.toLowerCase()}` };
+    if (action.href === "/invoices/new") return { ...action, label: `New ${documents.invoice.singular.toLowerCase()}` };
+    if (action.label === "Record payment")
+      return { ...action, description: `Open the ${documents.invoice.singular.toLowerCase()} it pays` };
+    return action;
+  });
+}

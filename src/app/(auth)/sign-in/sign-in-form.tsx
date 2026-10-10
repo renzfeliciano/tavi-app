@@ -4,6 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useAuthStage } from "@/components/auth-stage";
 import { FormAlert } from "@/components/form-alert";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
@@ -11,11 +12,13 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { brand } from "@/config/brand";
 import { authClient } from "@/lib/auth-client";
+import { markWelcome } from "@/lib/welcome-greeting";
 import { authErrorMessage } from "@/modules/identity/client";
 
 /** `next`: where to go after signing in (an invitation), else the dashboard. */
 export function SignInForm({ next }: { next?: Route } = {}) {
   const router = useRouter();
+  const { setStage } = useAuthStage();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +27,7 @@ export function SignInForm({ next }: { next?: Route } = {}) {
     const form = new FormData(event.currentTarget);
     setPending(true);
     setError(null);
+    setStage("working");
     const { error } = await authClient.signIn.email({
       email: String(form.get("email") ?? "").trim(),
       password: String(form.get("password") ?? ""),
@@ -31,8 +35,12 @@ export function SignInForm({ next }: { next?: Route } = {}) {
     if (error) {
       setError(authErrorMessage(error));
       setPending(false);
+      setStage("error");
       return;
     }
+    // A small nod while the dashboard (and its own skeleton) takes over; navigation never waits for it.
+    setStage("success");
+    markWelcome(window.sessionStorage);
     router.replace(next ?? "/dashboard");
     router.refresh();
   }
