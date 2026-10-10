@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "next dev --port 3200",
     "build": "next build",
+    "vercel-build": "node scripts/migrate-on-deploy.mjs && next build",
     "start": "next start --port 3200",
     "lint": "eslint --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
