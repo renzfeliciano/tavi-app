@@ -87,7 +87,7 @@ describe("themes (globals.css)", () => {
   });
 
   it("defines every colour token in dark that light defines", () => {
-    const themeless = new Set(["--radius", "--duration-fast", "--duration-normal", "--duration-slow", "color-scheme"]);
+    const themeless = new Set(["--radius", "--duration-fast", "--duration-normal", "--duration-slow", "--sidebar-w", "--sidebar-w-collapsed", "color-scheme"]);
     const missing = Object.keys(light).filter((name) => !themeless.has(name) && !(name in dark));
     expect(missing).toEqual([]);
     expect(Object.keys(dark).filter((name) => !(name in light))).toEqual([]);

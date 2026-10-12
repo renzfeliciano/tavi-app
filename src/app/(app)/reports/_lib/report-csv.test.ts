@@ -51,6 +51,10 @@ describe("paymentsCsv", () => {
       paidOn: "2026-09-30",
       method: "ewallet",
       reference: "=1+1",
+      institution: "GCash",
+      payerName: "Juan D.C.",
+      paidTime: "14:30",
+      chequeDate: null,
       currency: "PHP",
       amountMinor: 98_000,
       withheldMinor: 2_000,
@@ -60,8 +64,8 @@ describe("paymentsCsv", () => {
       customerTaxId: null,
     };
     expect(lines(paymentsCsv([payment], market))).toEqual([
-      "Date paid,Receipt,Bill,Customer,Customer TIN,Method,Reference,Currency,Received,Tax withheld (BIR Form 2307)",
-      `2026-09-30,REC-000001,INV-000001,Juan Dela Cruz,,${market.paymentMethodLabels.ewallet},'=1+1,PHP,980.00,20.00`,
+      "Date paid,Receipt,Bill,Customer,Customer TIN,Method,Reference,Bank or wallet,Paid by,Time paid,Date on cheque,Currency,Received,Tax withheld (BIR Form 2307)",
+      `2026-09-30,REC-000001,INV-000001,Juan Dela Cruz,,${market.paymentMethodLabels.ewallet},'=1+1,GCash,Juan D.C.,14:30,,PHP,980.00,20.00`,
     ]);
   });
 });

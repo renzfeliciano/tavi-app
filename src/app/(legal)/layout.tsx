@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Tagline } from "@/components/brand/tagline";
 import { Wordmark } from "@/components/brand/wordmark";
 import { ThemeMenu } from "@/components/theme/theme-toggle";
 import { LegalBack } from "@/components/legal/legal-back";
@@ -23,7 +24,9 @@ export default function LegalLayout({ children }: { children: ReactNode }) {
       <footer className="mx-auto mt-16 grid w-full max-w-2xl justify-items-center gap-3 border-t border-border pt-6">
         <LegalBack />
         <LegalLinks />
-        <p className="text-center text-xs text-muted-foreground">{brand.taglines.primary}</p>
+        <p className="text-center text-xs text-muted-foreground">
+          <Tagline />
+        </p>
       </footer>
     </div>
   );

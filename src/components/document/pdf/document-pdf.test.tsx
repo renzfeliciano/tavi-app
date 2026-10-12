@@ -17,6 +17,7 @@ const business = {
   contactLines: ["billing@santos.example"],
   taxId: { label: "VAT Reg TIN", value: "123-456-789-00000" },
   logo: null,
+  paymentQrs: [],
 };
 
 function view(lineCount: number) {
@@ -77,6 +78,23 @@ describe("DocumentPdf", () => {
     registerPdfFonts();
     const pdf = await renderToBuffer(<DocumentPdf view={{ ...view(3), imprint: "Paid" }} />);
     expect(pageCount(pdf)).toBe(1);
+  });
+
+  it("prints three payment QR codes with the payment box and still fits one page", async () => {
+    registerPdfFonts();
+    const qrs = [
+      { label: "GCash", value: "https://pay.example/gcash" },
+      { label: "Maya", value: "https://pay.example/maya" },
+      { label: "BDO", value: "00020101021228620011ph.ppmi.p2m0111BNORPHMMXXX" },
+    ];
+    const base = view(3);
+    const pdf = await renderToBuffer(<DocumentPdf view={{ ...base, business: { ...base.business, paymentQrs: qrs } }} />);
+    expect(pageCount(pdf)).toBe(1);
+    // QRs alone (no written instructions) and a quote-style document also render
+    const only = await renderToBuffer(
+      <DocumentPdf view={{ ...base, paymentInstructions: null, business: { ...base.business, paymentQrs: qrs.slice(0, 1) } }} />,
+    );
+    expect(only.subarray(0, 5).toString()).toBe("%PDF-");
   });
 
   it("breaks 60 lines across pages instead of cutting them off", async () => {

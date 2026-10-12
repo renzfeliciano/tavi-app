@@ -15,9 +15,11 @@ import {
   type TaxMode,
 } from "@/modules/documents";
 import { getDocumentSettings, type SellerSnapshot } from "@/modules/organizations";
+import { putInTrash } from "@/modules/trash";
 import { addDays, type CalendarDate, todayIn } from "@/shared/dates/calendar";
 import { escapeLikePattern } from "@/shared/text/search";
 import { type QuoteDraft, parseQuoteDraft } from "../domain/quote-draft";
+import { quoteTrashPayload } from "../domain/trash-payload";
 import type { QuoteStatus } from "../domain/status";
 import { transitionQuote } from "../domain/transitions";
 import { type CustomerSnapshot, quoteLines, quotes } from "../schema";
@@ -381,8 +383,17 @@ export async function saveQuoteDraft(
   });
 }
 
-/** Deletes a draft that was never sent (sent quotes keep their number and are cancelled instead). */
-export async function deleteDraftQuote(actor: OrgActor, id: string, db: Database = getDb()): Promise<QuoteCommandResult> {
+/**
+ * Deletes a draft that was never sent (sent quotes keep their number and are
+ * cancelled instead). The draft goes to the recycle bin (D27), where
+ * `restoreDeletedQuote` can bring it back for 30 days.
+ */
+export async function deleteDraftQuote(
+  actor: OrgActor,
+  id: string,
+  db: Database = getDb(),
+  now: Date = new Date(),
+): Promise<QuoteCommandResult> {
   assertCan(actor, "quotes.write");
   return db.transaction(async (tx): Promise<QuoteCommandResult> => {
     const quote = await loadHeader(tx, actor, id, true);
@@ -390,6 +401,23 @@ export async function deleteDraftQuote(actor: OrgActor, id: string, db: Database
     if (!transitionQuote(quote.status, "delete").ok || quote.number !== null) {
       return { ok: false, error: "Only drafts that were never sent can be deleted. Cancel this quote instead." };
     }
+    const lines = await loadLines(tx, quote.id);
+    const customerName = quote.customerId
+      ? ((await getCustomerNames(actor, [quote.customerId], db)).get(quote.customerId) ?? null)
+      : null;
+    await putInTrash(
+      tx,
+      actor,
+      {
+        kind: "quote",
+        originalId: quote.id,
+        customerName,
+        totalMinor: quote.totalMinor,
+        currency: quote.currency,
+        payload: quoteTrashPayload(quote, lines),
+      },
+      now,
+    );
     await tx.delete(quotes).where(eq(quotes.id, quote.id));
     await audit(tx, actor, "quote.deleted", quote.id, { totalMinor: quote.totalMinor, currency: quote.currency });
     return { ok: true };

@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
-import { char, check, index, integer, pgTable, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { char, check, date, index, integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "@/db/columns";
 import { users } from "@/modules/identity/schema";
 import { ROLES } from "@/modules/authz";
+import type { PaymentQr } from "./domain/payment-qr";
 
 // The tenant. Every tenant-owned row references an organization (§8).
 // It also holds the business profile printed on documents and the defaults new
@@ -26,6 +27,18 @@ export const organizations = pgTable(
     taxId: text("tax_id"),
     /** A market tax registration code (PH: vat, non_vat, non_vat_exempt); null until set (D13). */
     taxRegistration: text("tax_registration"),
+    /** How the business is registered with the tax authority and the body that registered its name (PH: BIR, DTI/SEC/CDA). Codes come from the market profile; the domain validates them. */
+    taxpayerType: text("taxpayer_type"),
+    incomeTaxOption: text("income_tax_option"),
+    taxOfficeCode: text("tax_office_code"),
+    taxRegisteredOn: date("tax_registered_on", { mode: "string" }),
+    lineOfBusiness: text("line_of_business"),
+    industryCode: text("industry_code"),
+    nameRegistrationAuthority: text("name_registration_authority"),
+    nameRegistrationNumber: text("name_registration_number"),
+    nameRegistrationScope: text("name_registration_scope"),
+    nameRegistrationValidFrom: date("name_registration_valid_from", { mode: "string" }),
+    nameRegistrationValidUntil: date("name_registration_valid_until", { mode: "string" }),
     email: text("email"),
     phone: text("phone"),
     addressLine1: text("address_line1"),
@@ -38,6 +51,8 @@ export const organizations = pgTable(
     defaultNotes: text("default_notes"),
     defaultTerms: text("default_terms"),
     paymentInstructions: text("payment_instructions"),
+    /** Up to three payment QR codes (what a customer scans to pay), printed on quotes and invoices. */
+    paymentQrs: jsonb("payment_qrs").$type<PaymentQr[]>().notNull().default(sql`'[]'::jsonb`),
     // Set when its only member closes their account: the records stay (tax
     // rules), its customer links close and daily jobs skip it.
     closedAt: timestamp("closed_at", { withTimezone: true }),
@@ -49,6 +64,7 @@ export const organizations = pgTable(
     check("organizations_currency_iso", sql`${t.defaultCurrency} ~ '^[A-Z]{3}$'`),
     check("organizations_tax_mode", sql`${t.taxMode} in ('inclusive', 'exclusive')`),
     check("organizations_quote_validity_days", sql`${t.quoteValidityDays} between 1 and 365`),
+    check("organizations_payment_qrs", sql`jsonb_typeof(${t.paymentQrs}) = 'array' and jsonb_array_length(${t.paymentQrs}) <= 3`),
     check("organizations_payment_terms_days", sql`${t.paymentTermsDays} between 0 and 365`),
   ],
 );

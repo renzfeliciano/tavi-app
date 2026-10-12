@@ -23,7 +23,7 @@ function view(
     title: "Quotation",
     number: null,
     revision: 1,
-    business: { name: "Santos Aircon", subtitle: null, addressLines: [], contactLines: [], taxId: null, logo: null },
+    business: { name: "Santos Aircon", subtitle: null, addressLines: [], contactLines: [], taxId: null, logo: null, paymentQrs: [] },
     customer: null,
     currency: "PHP",
     locale: "en-PH",

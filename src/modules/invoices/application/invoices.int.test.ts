@@ -25,8 +25,10 @@ import {
   sendQuote,
   sharedQuoteContentHash,
 } from "@/modules/quotes";
+import { listTrash } from "@/modules/trash";
 import { convertQuoteToInvoice } from "./conversion";
 import { deleteDraftInvoice, getInvoice, listInvoices, saveInvoiceDraft } from "./invoices";
+import { restoreDeletedInvoice } from "./trash";
 import { createInvoiceLink, getSharedInvoice, issueInvoice, recordSharedInvoiceOpen } from "./issuing";
 import { editIssuedInvoice, voidAndDuplicateInvoice } from "./corrections";
 import { saveInvoiceRegistration } from "./registration";
@@ -306,6 +308,83 @@ describe("deleteDraftInvoice", () => {
     expect(await deleteDraftInvoice(actor, draft.id, testDb())).toMatchObject({ ok: true });
     expect(await getInvoice(actor, draft.id, testDb())).toBeNull();
     expect(await deleteDraftInvoice(actor, issued.id, testDb())).toMatchObject({ ok: false });
+  });
+});
+
+describe("the recycle bin for draft invoices", () => {
+  const binned = async (actor: OrgActor, now: Date = NOW) => {
+    const [item] = await listTrash(actor, testDb(), now);
+    if (!item) throw new Error("nothing in the bin");
+    return item;
+  };
+
+  it("keeps a deleted draft and brings it back whole, under the same id", async () => {
+    const { actor, customerId } = await setup();
+    const draft = await draftInvoice(actor, customerId);
+    const before = await getInvoice(actor, draft.id, testDb());
+
+    expect(await deleteDraftInvoice(actor, draft.id, testDb(), NOW)).toMatchObject({ ok: true });
+    expect(await getInvoice(actor, draft.id, testDb())).toBeNull();
+    expect(await binned(actor)).toMatchObject({ kind: "invoice", customerName: "Juan Dela Cruz", totalMinor: draft.totalMinor });
+
+    const restored = await restoreDeletedInvoice(actor, (await binned(actor)).id, testDb(), NOW);
+    expect(restored).toEqual({ ok: true, invoiceId: draft.id, detachedFromQuote: false });
+    const after = await getInvoice(actor, draft.id, testDb());
+    expect(after).toMatchObject({ status: "DRAFT", number: null, customerId, totalMinor: draft.totalMinor, issueDate: "2026-10-01", dueDate: "2026-10-16" });
+    expect(after?.lines).toEqual(before?.lines);
+    expect(await listTrash(actor, testDb(), NOW)).toEqual([]);
+    expect((await listAllAuditEvents(testDb())).map((e) => e.action).slice(-2)).toEqual(["invoice.deleted", "invoice.restored"]);
+  });
+
+  it("puts a draft made from a quote back on that quote", async () => {
+    const { actor, customerId } = await setup();
+    const quoteId = await approvedQuote(actor, customerId);
+    const converted = await convertQuoteToInvoice(actor, quoteId, testDb(), NOW);
+    if (!converted.ok) throw new Error("convert");
+    await deleteDraftInvoice(actor, converted.invoiceId, testDb(), NOW);
+    expect((await getQuote(actor, quoteId, testDb()))?.convertedInvoiceId).toBeNull();
+
+    const restored = await restoreDeletedInvoice(actor, (await binned(actor)).id, testDb(), NOW);
+    expect(restored).toEqual({ ok: true, invoiceId: converted.invoiceId, detachedFromQuote: false });
+    expect((await getQuote(actor, quoteId, testDb()))?.convertedInvoiceId).toBe(converted.invoiceId);
+    expect((await getInvoice(actor, converted.invoiceId, testDb()))?.sourceQuoteId).toBe(quoteId);
+  });
+
+  it("restores a draft on its own when its quote has become another invoice since", async () => {
+    const { actor, customerId } = await setup();
+    const quoteId = await approvedQuote(actor, customerId);
+    const first = await convertQuoteToInvoice(actor, quoteId, testDb(), NOW);
+    if (!first.ok) throw new Error("convert");
+    await deleteDraftInvoice(actor, first.invoiceId, testDb(), NOW);
+    const second = await convertQuoteToInvoice(actor, quoteId, testDb(), NOW);
+    if (!second.ok) throw new Error("convert again");
+
+    const restored = await restoreDeletedInvoice(actor, (await binned(actor)).id, testDb(), NOW);
+    expect(restored).toEqual({ ok: true, invoiceId: first.invoiceId, detachedFromQuote: true });
+    expect((await getInvoice(actor, first.invoiceId, testDb()))?.sourceQuoteId).toBeNull();
+    expect((await getQuote(actor, quoteId, testDb()))?.convertedInvoiceId).toBe(second.invoiceId);
+  });
+
+  it("restores an item once, and not after it has lapsed or into another business", async () => {
+    const { actor, customerId } = await setup();
+    const other = await setup();
+    const draft = await draftInvoice(actor, customerId);
+    await deleteDraftInvoice(actor, draft.id, testDb(), NOW);
+    const { id } = await binned(actor);
+
+    expect(await restoreDeletedInvoice(other.actor, id, testDb(), NOW)).toEqual({ ok: false, notFound: true });
+    const later = new Date(NOW.getTime() + 31 * 24 * 60 * 60 * 1000);
+    expect(await restoreDeletedInvoice(actor, id, testDb(), later)).toEqual({ ok: false, notFound: true });
+    expect(await restoreDeletedInvoice(actor, id, testDb(), NOW)).toMatchObject({ ok: true });
+    expect(await restoreDeletedInvoice(actor, id, testDb(), NOW)).toEqual({ ok: false, notFound: true });
+  });
+
+  it("never lets an issued invoice into the bin", async () => {
+    const { actor, customerId } = await setup();
+    const issued = await draftInvoice(actor, customerId);
+    await issueInvoice(actor, issued.id, issueOptions(), testDb());
+    expect(await deleteDraftInvoice(actor, issued.id, testDb(), NOW)).toMatchObject({ ok: false });
+    expect(await listTrash(actor, testDb(), NOW)).toEqual([]);
   });
 });
 

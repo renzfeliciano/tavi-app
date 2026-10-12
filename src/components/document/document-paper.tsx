@@ -2,6 +2,7 @@ import { StampImprint } from "@/components/brand/stamp-imprint";
 import { DocumentNumber } from "@/components/document-number";
 import { cn } from "@/lib/utils";
 import { BusinessLogo } from "./business-logo";
+import { PaymentQrCode } from "./payment-qr";
 import type { DocumentParty, DocumentView } from "./document-view";
 
 // A quote or invoice as the customer sees it: a sheet of paper (DESIGN.md
@@ -211,10 +212,22 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
         </section>
       )}
 
-      {view.paymentInstructions && (
+      {(view.paymentInstructions || view.business.paymentQrs.length > 0) && (
         <section aria-label="How to pay" className="mt-10 rounded-lg border border-border border-l-4 border-l-stamp bg-surface-sunken p-4 text-sm">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">How to pay</p>
-          <p className="mt-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{view.paymentInstructions}</p>
+          {view.paymentInstructions && (
+            <p className="mt-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{view.paymentInstructions}</p>
+          )}
+          {view.business.paymentQrs.length > 0 && (
+            <ul className={`flex flex-wrap gap-4 ${view.paymentInstructions ? "mt-4" : "mt-2"}`}>
+              {view.business.paymentQrs.map((qr, index) => (
+                <li key={index} className="grid w-28 justify-items-center gap-1 text-center">
+                  <PaymentQrCode value={qr.value} label={qr.label} className="size-28 rounded-sm border border-border" />
+                  <span className="text-xs font-medium [overflow-wrap:anywhere]">{qr.label}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 

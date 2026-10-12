@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import QRCode from "qrcode";
 import sharp from "sharp";
 import { asVisitor, createBusiness, signUp, strongPassword, uniqueEmail } from "./helpers";
 
@@ -31,7 +32,9 @@ test.afterAll(async () => {
 test("the dashboard and settings lead to the business profile", async () => {
   await page.getByRole("link", { name: "Add them now" }).click();
   await expect(page).toHaveURL(/\/settings\/business$/);
-  await page.getByRole("link", { name: "Settings" }).filter({ visible: true }).last().click();
+  // Settings lives in the account menu at the foot of the sidebar, not in the nav.
+  await page.getByRole("button", { name: /Maria Santos/ }).click();
+  await page.getByRole("link", { name: "Settings" }).click();
   await expect(page.getByRole("link", { name: /Business profile/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Tax rates/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Document numbers/ })).toBeVisible();
@@ -84,7 +87,8 @@ test("logo: uploads, refuses an SVG, and can be removed", async () => {
   await expect(toast("Logo updated.")).toBeVisible();
   const logo = page.getByRole("img", { name: "Santos Aircon logo" });
   await expect(logo).toBeVisible();
-  expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(600);
+  // Visible comes before decoded, so wait for the picture itself.
+  await expect.poll(() => logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(600);
 
   await input.setInputFiles({
     name: "evil.svg",
@@ -97,6 +101,35 @@ test("logo: uploads, refuses an SVG, and can be removed", async () => {
   await page.getByRole("button", { name: "Remove" }).click();
   await expect(toast("Logo removed.")).toBeVisible();
   await expect(page.getByText("No logo yet")).toBeVisible();
+});
+
+
+test("payment QR codes: reads a screenshot, previews it, saves and keeps it", async () => {
+  await page.goto("/settings/business");
+  const link = "https://pay.example/santos-aircon";
+  const screenshot = await QRCode.toBuffer(link, { type: "png", width: 400, margin: 4 });
+
+  await page.getByRole("button", { name: "Add a QR code" }).click();
+  await page.getByLabel("Name", { exact: true }).fill("GCash");
+  // Go through the "Upload screenshot" button, as a person does: it records which QR the file is for.
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Upload screenshot" }).click();
+  await (await chooser).setFiles({ name: "gcash.png", mimeType: "image/png", buffer: screenshot });
+  // The screenshot is read in the browser; only its text lands in the field.
+  await expect(page.getByLabel("Payment link or QR code text")).toHaveValue(link);
+  await expect(page.getByRole("img", { name: "GCash QR code" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Save QR codes" }).click();
+  await expect(toast("Payment QR codes saved.")).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByLabel("Payment link or QR code text")).toHaveValue(link);
+  await expect(page.getByRole("img", { name: "GCash QR code" })).toBeVisible();
+
+  // A bad link is refused next to the field, and nothing is saved.
+  await page.getByLabel("Payment link or QR code text").fill("http://not-secure.example");
+  await page.getByRole("button", { name: "Save QR codes" }).click();
+  await expect(page.getByText(/starts with https/)).toBeVisible();
 });
 
 test("logo: a very wide logo is fitted inside its preview box and can be cancelled", async () => {
@@ -187,13 +220,19 @@ test("document numbers: preview while typing, save, and keep counting", async ()
 test("theme: dark applies at once, survives a reload, and System goes back to the browser's choice", async () => {
   await page.goto("/settings");
   const html = page.locator("html");
+  // The theme switch lives in the account menu at the foot of the sidebar; it stays open after a choice.
   const choose = async (name: string) => {
-    await page.getByRole("button", { name: "Theme" }).locator("visible=true").first().click();
-    await page.getByRole("menuitemradio", { name }).click();
+    const theme = page.getByRole("radiogroup", { name: "Theme" });
+    if (!(await theme.isVisible())) await page.getByRole("button", { name: /Maria Santos/ }).click();
+    await theme.getByRole("radio", { name }).click();
   };
 
   await choose("Dark");
   await expect(html).toHaveAttribute("data-theme", "dark");
+  // The page shows dark at once; the choice is saved a moment later. Wait for the saved cookie so the reload can't cut it off.
+  await expect
+    .poll(async () => (await page.context().cookies()).find((c) => c.name === "tavi-theme")?.value)
+    .toBe("dark");
 
   await page.reload();
   await expect(html).toHaveAttribute("data-theme", "dark");

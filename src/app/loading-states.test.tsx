@@ -8,6 +8,13 @@ import { describe, expect, it } from "vitest";
 // Every page has its own loading.tsx: a skeleton in that page's layout, built
 // from src/components/skeletons.tsx (DESIGN.md, "Loading").
 
+// Pages that show the skeleton without the TAVI page loader on top: customer
+// links carry the business's branding, the sign-in pages have their own
+// Stamp beside the form, and the public home is a first impression that
+// should not wait behind an animation.
+const WITHOUT_LOADER = ["q/", "i/", "(home)", "(auth)/sign-in", "(auth)/sign-up", "(auth)/forgot-password", "(auth)/reset-password"];
+const hasNoLoader = (folder: string) => WITHOUT_LOADER.some((prefix) => folder.startsWith(prefix));
+
 const APP = dirname(fileURLToPath(import.meta.url));
 
 function filesIn(dir: string): string[] {
@@ -70,8 +77,7 @@ describe("loading states", () => {
     const status = getByRole("status");
     const loader = status.querySelector(".page-loader");
 
-    // Customer links (a quote or invoice someone was sent) keep the plain skeleton.
-    if (folder.startsWith("q/") || folder.startsWith("i/")) {
+    if (hasNoLoader(folder)) {
       expect(loader).toBeNull();
       return;
     }

@@ -1,6 +1,7 @@
 import { markOverdueInvoices } from "@/modules/invoices";
 import { listOrganizationClocks } from "@/modules/organizations";
 import { expireQuotesPastValidity } from "@/modules/quotes";
+import { purgeExpiredTrash } from "@/modules/trash";
 import { todayIn } from "@/shared/dates/calendar";
 import { env } from "@/shared/env";
 import { logger } from "@/shared/logger";
@@ -10,6 +11,8 @@ import { isAuthorizedCronRequest } from "@/shared/security/cron";
 // its own time zone's, so lapsed quotes become EXPIRED and late invoices
 // OVERDUE on the right calendar day. Idempotent: running it twice changes
 // nothing more. Commands re-check dates themselves, so a late run is harmless.
+// It also removes recycle bin items older than 30 days (D27), for every business
+// including closed ones.
 // Requires `Authorization: Bearer $CRON_SECRET`.
 export async function GET(request: Request) {
   if (!isAuthorizedCronRequest(request.headers.get("authorization"), env.CRON_SECRET)) {
@@ -32,6 +35,14 @@ export async function GET(request: Request) {
     }
   }
 
-  (failed > 0 ? logger.warn : logger.info)("daily status job run", { expiredQuotes, overdueInvoices, failed });
-  return Response.json({ expiredQuotes, overdueInvoices, failed }, { headers: { "Cache-Control": "no-store" } });
+  let purgedFromTrash = 0;
+  try {
+    purgedFromTrash = await purgeExpiredTrash(undefined, now);
+  } catch (error) {
+    failed += 1;
+    logger.error("recycle bin cleanup failed", { error });
+  }
+
+  (failed > 0 ? logger.warn : logger.info)("daily status job run", { expiredQuotes, overdueInvoices, purgedFromTrash, failed });
+  return Response.json({ expiredQuotes, overdueInvoices, purgedFromTrash, failed }, { headers: { "Cache-Control": "no-store" } });
 }

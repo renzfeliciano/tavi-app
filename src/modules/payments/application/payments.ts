@@ -16,9 +16,12 @@ import { getBusinessProfile, getDocumentSettings } from "@/modules/organizations
 import { type CalendarDate, formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { formatMoney } from "@/shared/money";
 import { tooLong } from "@/shared/validation/messages";
+import { parseAckRecipients } from "../domain/ack-recipients";
 import { parseIdempotencyKey } from "../domain/idempotency";
 import { parsePaymentInput, type RawPayment } from "../domain/payment-input";
-import { payments } from "../schema";
+import { paymentProofRows } from "../domain/payment-proof";
+import { payments, withholdingCertificatePayments } from "../schema";
+import { auditCertificate } from "./certificate-audit";
 
 // Recording and voiding payments (§B.5). Each runs in one transaction with the
 // invoice locked first, so two people recording at once can't overpay it; the
@@ -36,6 +39,13 @@ export type Payment = {
   paidOn: CalendarDate;
   method: PaymentMethod;
   reference: string | null;
+  /** Bank or wallet, as typed. */
+  institution: string | null;
+  payerName: string | null;
+  /** HH:MM, as typed. */
+  paidTime: string | null;
+  /** The date written on a cheque; may be after paidOn. */
+  chequeDate: CalendarDate | null;
   notes: string | null;
   receiptNumber: string;
   voidedAt: Date | null;
@@ -52,6 +62,10 @@ const columns = {
   paidOn: payments.paidOn,
   method: payments.method,
   reference: payments.reference,
+  institution: payments.institution,
+  payerName: payments.payerName,
+  paidTime: payments.paidTime,
+  chequeDate: payments.chequeDate,
   notes: payments.notes,
   receiptNumber: payments.receiptNumber,
   voidedAt: payments.voidedAt,
@@ -92,12 +106,14 @@ export type RecordPaymentResult =
   | { ok: false; error: string };
 
 export type RecordPaymentOptions = {
-  /** Email the customer a payment acknowledgement (needs an email on the invoice). */
-  acknowledge: boolean;
+  /** Who gets a payment acknowledgement email (none to record without emailing). */
+  recipients: readonly string[];
   /** The business's market: methods, withheld tax and document wording. */
   market: MarketProfile;
   /** This attempt's idempotency key; a repeat with the same key returns the first result. */
   idempotencyKey?: string | null;
+  /** The app's public address, where the acknowledgement email loads its logo from. */
+  appUrl?: string;
   now?: Date;
 };
 
@@ -105,17 +121,20 @@ export async function recordPayment(
   actor: OrgActor,
   invoiceId: string,
   raw: RawPayment,
-  { acknowledge, market, idempotencyKey: rawKey, now = new Date() }: RecordPaymentOptions,
+  { recipients: rawRecipients, market, idempotencyKey: rawKey, appUrl, now = new Date() }: RecordPaymentOptions,
   db: Database = getDb(),
 ): Promise<RecordPaymentResult> {
   assertCan(actor, "payments.record");
   if (!isUuid(invoiceId)) return { ok: false, notFound: true };
   const idempotencyKey = parseIdempotencyKey(rawKey);
   if (idempotencyKey === false) return { ok: false, error: "That request wasn't valid. Please try again." };
+  const parsedRecipients = parseAckRecipients(rawRecipients);
+  if (!parsedRecipients.ok) return { ok: false, errors: { recipients: parsedRecipients.error } };
+  const recipients = parsedRecipients.emails;
   const [settings, profile] = await Promise.all([getDocumentSettings(actor, db), getBusinessProfile(actor, db)]);
   const today = todayIn(settings.timezone, now);
   // Checked before anything is recorded, so the person can retry without the email (§I).
-  if (acknowledge && !(await documentEmailsAllowed(db, actor.organizationId, now))) {
+  if (recipients.length > 0 && !(await documentEmailsAllowed(db, actor.organizationId, now, recipients.length))) {
     return { ok: false, error: documentEmailLimitMessage("Record it without emailing the acknowledgement") };
   }
 
@@ -173,6 +192,10 @@ export async function recordPayment(
         paidOn: input.paidOn,
         method: input.method,
         reference: input.reference,
+        institution: input.institution,
+        payerName: input.payerName,
+        paidTime: input.paidTime,
+        chequeDate: input.chequeDate,
         notes: input.notes,
         receiptNumber,
         idempotencyKey,
@@ -193,11 +216,12 @@ export async function recordPayment(
       currency: invoice.currency,
       method: input.method,
       invoiceStatus: status,
+      acknowledgementsQueued: recipients.length,
     });
 
-    const to = invoice.customerSnapshot?.email;
-    if (acknowledge && to) {
+    if (recipients.length > 0) {
       const money = (minor: number) => formatMoney(minor, invoice.currency, { locale: settings.locale });
+      for (const to of recipients) {
       await enqueueEmail(
         tx,
         paymentAcknowledgementEmail({
@@ -213,13 +237,20 @@ export async function recordPayment(
               ? { label: market.taxWithheld.label, amount: money(input.withheldMinor) }
               : null,
           paidOn: formatCalendarDate(input.paidOn, settings.locale),
+          details: paymentProofRows(
+            { method: input.method, reference: input.reference, institution: input.institution, payerName: input.payerName, paidTime: input.paidTime, chequeDate: input.chequeDate },
+            market,
+            (date) => formatCalendarDate(date, settings.locale),
+          ),
           balance: remaining > 0 ? money(remaining) : null,
           // Payment acknowledgements are supplementary documents (RR 7-2024 Sec. 6 B.15, D13).
           notice: market.supplementaryDocumentNotice,
           disclaimer: market.documents.receipt.disclaimer ?? null,
+          ...(appUrl ? { appUrl } : {}),
         }),
         { organizationId: actor.organizationId },
       );
+      }
     }
     return { ok: true, paymentId: payment.id, receiptNumber, status, balanceMinor: remaining };
   });
@@ -231,7 +262,7 @@ export type VoidPaymentResult =
   | { ok: false; notFound: true }
   | { ok: false; error: string };
 
-const MAX_REASON = 500;
+export const MAX_REASON = 500;
 
 /** Voids a payment with a reason (never deleted); the invoice's status is recomputed (§B.5). */
 export async function voidPayment(
@@ -265,6 +296,17 @@ export async function voidPayment(
       .update(payments)
       .set({ voidedAt: sql`now()`, voidReason: reason, voidedBy: actor.userId })
       .where(eq(payments.id, payment.id));
+    // A voided payment can't be on a 2307: it goes back off the certificate, and the log says so.
+    const unlinked = await tx
+      .delete(withholdingCertificatePayments)
+      .where(eq(withholdingCertificatePayments.paymentId, payment.id))
+      .returning({ certificateId: withholdingCertificatePayments.certificateId });
+    for (const link of unlinked) {
+      await auditCertificate(tx, actor, "withholding_certificate.payment_unlinked", link.certificateId, {
+        certificateId: link.certificateId,
+        paymentId: payment.id,
+      });
+    }
     const after = await settledOn(tx, invoice.id);
     const status = await settleInvoice(tx, actor, invoice, { ...after, today: todayIn(settings.timezone, now) });
     await audit(tx, actor, "payment.voided", payment.id, {
@@ -339,7 +381,7 @@ export async function listPaymentsForSharedInvoice(
   organizationId: string,
   invoiceId: string,
   db: Database = getDb(),
-): Promise<Pick<Payment, "paidOn" | "amountMinor" | "withheldMinor" | "currency" | "method" | "reference" | "receiptNumber">[]> {
+): Promise<Pick<Payment, "paidOn" | "amountMinor" | "withheldMinor" | "currency" | "method" | "reference" | "institution" | "payerName" | "paidTime" | "chequeDate" | "receiptNumber">[]> {
   return db
     .select({
       paidOn: payments.paidOn,
@@ -348,6 +390,10 @@ export async function listPaymentsForSharedInvoice(
       currency: payments.currency,
       method: payments.method,
       reference: payments.reference,
+      institution: payments.institution,
+      payerName: payments.payerName,
+      paidTime: payments.paidTime,
+      chequeDate: payments.chequeDate,
       receiptNumber: payments.receiptNumber,
     })
     .from(payments)

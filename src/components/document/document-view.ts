@@ -32,7 +32,11 @@ export type DocumentView = {
   title: string;
   number: string | null;
   revision: number;
-  business: DocumentParty & { logo: { src: string; width: number; height: number } | null };
+  business: DocumentParty & {
+    logo: { src: string; width: number; height: number } | null;
+    /** What the customer scans to pay: each is drawn as a QR code from `value`. Same on every document. */
+    paymentQrs: { label: string; value: string }[];
+  };
   customer: DocumentParty | null;
   dates: { label: string; value: string }[];
   lines: DocumentViewLine[];

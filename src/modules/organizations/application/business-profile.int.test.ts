@@ -8,7 +8,7 @@ import {
   testDb,
 } from "@/db/testing";
 import { ForbiddenError, type OrgActor, type Role } from "@/modules/authz";
-import { getBusinessProfile, updateBusinessProfile } from "./business-profile";
+import { getBusinessProfile, updateBusinessProfile, updatePaymentQrs } from "./business-profile";
 
 const validInput = {
   name: "Acme Aircon Services",
@@ -33,7 +33,7 @@ const validInput = {
 
 async function actorFor(role: Role = "owner"): Promise<OrgActor> {
   const org = await createTestOrganization();
-  const user = await createTestUser();
+  const user = await createTestUser(testDb(), { email: `${crypto.randomUUID()}@example.com` });
   return { organizationId: org.id, userId: user.id, role };
 }
 
@@ -145,5 +145,65 @@ describe("updateBusinessProfile", () => {
       testDb(),
     );
     expect(otherProfile).toMatchObject({ name: "Other Business", legalName: null, taxMode: "inclusive" });
+  });
+});
+
+describe("payment QR codes", () => {
+  const gcash = { label: " GCash ", value: "https://pay.example.com/juan", enabled: true };
+
+  it("starts with none, and saves up to three, trimmed, in order", async () => {
+    const actor = await actorFor("admin");
+    expect((await getBusinessProfile(actor, testDb())).paymentQrs).toEqual([]);
+
+    const result = await updatePaymentQrs(actor, [gcash, { label: "Maya", value: "https://pay.maya.example/j", enabled: false }], testDb());
+
+    expect(result).toEqual({ ok: true });
+    expect((await getBusinessProfile(actor, testDb())).paymentQrs).toEqual([
+      { label: "GCash", value: "https://pay.example.com/juan", enabled: true },
+      { label: "Maya", value: "https://pay.maya.example/j", enabled: false },
+    ]);
+  });
+
+  it("audits that they changed, never what they hold, and only when they did", async () => {
+    const actor = await actorFor();
+    await updatePaymentQrs(actor, [gcash], testDb());
+    await updatePaymentQrs(actor, [gcash], testDb());
+
+    const events = await listAllAuditEvents(testDb());
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ action: "organization.updated", entityId: actor.organizationId });
+    expect(events[0]?.metadata).toEqual({ changed: ["paymentQrs"] });
+  });
+
+  it("returns what is wrong with each row, and saves nothing", async () => {
+    const actor = await actorFor();
+    const result = await updatePaymentQrs(actor, [{ label: "", value: "http://insecure.example" }], testDb());
+    expect(result).toMatchObject({ ok: false, errors: { "0.label": expect.any(String), "0.value": expect.any(String) } });
+    expect((await getBusinessProfile(actor, testDb())).paymentQrs).toEqual([]);
+  });
+
+  it("can be cleared", async () => {
+    const actor = await actorFor();
+    await updatePaymentQrs(actor, [gcash], testDb());
+    expect(await updatePaymentQrs(actor, [], testDb())).toEqual({ ok: true });
+    expect((await getBusinessProfile(actor, testDb())).paymentQrs).toEqual([]);
+  });
+
+  it("refuses members, and only touches the actor's own business", async () => {
+    const member = await actorFor("member");
+    await expect(updatePaymentQrs(member, [gcash], testDb())).rejects.toBeInstanceOf(ForbiddenError);
+
+    const actor = await actorFor();
+    const other = await createTestOrganization(testDb(), { name: "Other Business" });
+    await updatePaymentQrs(actor, [gcash], testDb());
+    const otherProfile = await getBusinessProfile({ organizationId: other.id, userId: actor.userId, role: "owner" }, testDb());
+    expect(otherProfile.paymentQrs).toEqual([]);
+  });
+
+  it("a profile save doesn't touch them", async () => {
+    const actor = await actorFor();
+    await updatePaymentQrs(actor, [gcash], testDb());
+    await updateBusinessProfile(actor, validInput, testDb());
+    expect((await getBusinessProfile(actor, testDb())).paymentQrs).toHaveLength(1);
   });
 });

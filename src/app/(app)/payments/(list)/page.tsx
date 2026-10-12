@@ -12,15 +12,15 @@ import { formatCalendarDate } from "@/shared/dates/calendar";
 
 export const metadata: Metadata = { title: "Payments" };
 
-// Money received across all invoices, newest first. A payment is recorded
-// from its invoice (it needs the balance), so the empty state points there.
+// Money received across all billing statements, newest first. A payment is recorded
+// from its billing statement (it needs the balance), so the empty state points there.
 export default async function PaymentsPage({ searchParams }: PageProps<"/payments">) {
   const ctx = await requireOrgContext();
   const { market } = ctx;
   const page = pageParam((await searchParams).page);
   const list = await listPayments(ctx, { page });
-  const description = "Money you've received, across all invoices.";
   const invoices = market.documents.invoice.plural.toLowerCase();
+  const description = `Money you've received, across all ${invoices}.`;
 
   if (list.total === 0) {
     return (

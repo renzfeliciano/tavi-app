@@ -1,4 +1,5 @@
 import type { Route } from "next";
+import type { ShellFacts } from "./facts";
 import {
   BanknoteIcon,
   ChartColumnIcon,
@@ -8,10 +9,10 @@ import {
   type LucideIcon,
   PackageIcon,
   ReceiptTextIcon,
-  SettingsIcon,
   UserPlusIcon,
   UsersIcon,
   WalletIcon,
+  WrenchIcon,
 } from "lucide-react";
 
 export type NavItem = {
@@ -35,33 +36,12 @@ export const primaryNav: readonly NavItem[] = [
 /** Sales, payments and unpaid bills (D18): only for people who can read reports. */
 export const reportsNav: NavItem = { href: "/reports", label: "Reports", icon: ChartColumnIcon };
 
-export const settingsNav: NavItem = {
-  href: "/settings",
-  label: "Settings",
-  icon: SettingsIcon,
-};
-
-/** The phone tab bar holds four destinations plus "New"; the rest live under More. */
+/** The phone tab bar: three destinations, "New" in the middle and "Menu" (the drawer, which holds everything else). */
 export const mobileTabs: readonly NavItem[] = [
   { href: "/dashboard", label: "Home", icon: HouseIcon },
   { href: "/quotes", label: "Quotes", icon: FileTextIcon },
   { href: "/invoices", label: "Invoices", icon: ReceiptTextIcon },
 ];
-
-export const mobileMore: readonly NavItem[] = [
-  { href: "/customers", label: "Customers", icon: UsersIcon },
-  { href: "/payments", label: "Payments", icon: WalletIcon },
-  { href: "/catalog", label: "Products & Services", icon: PackageIcon },
-  settingsNav,
-];
-
-/** The primary destinations this person can open: Reports joins them when allowed. */
-export const primaryNavFor = (account: { canReadReports: boolean }): readonly NavItem[] =>
-  account.canReadReports ? [...primaryNav, reportsNav] : primaryNav;
-
-/** The More sheet for this person: Reports sits before Settings when allowed. */
-export const mobileMoreFor = (account: { canReadReports: boolean }): readonly NavItem[] =>
-  account.canReadReports ? [...mobileMore.slice(0, -1), reportsNav, settingsNav] : mobileMore;
 
 /** Quick actions behind "New" (§25). */
 export const newActions: readonly NewAction[] = [
@@ -130,4 +110,65 @@ export function newActionsFor(documents: DocumentNames): NewAction[] {
       return { ...action, description: `Open the ${documents.invoice.singular.toLowerCase()} it pays` };
     return action;
   });
+}
+
+export type NavGroup = {
+  id: "overview" | "sales" | "manage";
+  /** The small heading above the group; null for the first, which needs none. */
+  label: string | null;
+  items: NavItem[];
+};
+
+/**
+ * The sidebar's groups: the dashboard on its own, then what you sell (quotations,
+ * billing statements, payments), then what you manage (customers, catalog,
+ * reports when allowed). Settings is not here: it lives in the account menu. Worded the way the market names documents.
+ */
+export function navGroupsFor(account: { canReadReports: boolean; documents: DocumentNames }): NavGroup[] {
+  const named = (items: readonly NavItem[]) => withDocumentNames(items, account.documents);
+  const [dashboard, quotes, invoices, payments, customers, catalog] = primaryNav;
+  return [
+    { id: "overview", label: null, items: named([dashboard!]) },
+    { id: "sales", label: "Sales", items: named([quotes!, invoices!, payments!]) },
+    {
+      id: "manage",
+      label: "Manage",
+      items: named([customers!, catalog!, ...(account.canReadReports ? [reportsNav] : [])]),
+    },
+  ];
+}
+
+export type NavBadge = {
+  /** The figure on the badge, capped ("99+"). */
+  text: string;
+  /** Spoken after the link's name: "3 overdue". */
+  label: string;
+  /** `alert` is for what needs doing; `quiet` is just a count. */
+  tone: "alert" | "quiet";
+};
+
+const capped = (count: number) => (count > 99 ? "99+" : String(count));
+
+/** The count shown beside a link, from real data: overdue billing statements, draft quotations. */
+export function badgeFor(href: string, facts: Pick<ShellFacts, "overdueCount" | "draftCount"> | null): NavBadge | null {
+  if (!facts) return null;
+  if (href === "/invoices" && facts.overdueCount) {
+    return { text: capped(facts.overdueCount), label: `${facts.overdueCount} overdue`, tone: "alert" };
+  }
+  if (href === "/quotes" && facts.draftCount) {
+    return { text: capped(facts.draftCount), label: `${facts.draftCount} ${facts.draftCount === 1 ? "draft" : "drafts"}`, tone: "quiet" };
+  }
+  return null;
+}
+
+/** The "New" menu in the order people reach for it: the two documents, a customer, then something to sell. */
+export function newMenuFor(documents: DocumentNames): NewAction[] {
+  const [quote, invoice, customer] = newActionsFor(documents);
+  return [
+    quote!,
+    invoice!,
+    customer!,
+    { href: "/catalog/services/new" as Route, label: "Service", description: "Something you do, priced once", icon: WrenchIcon },
+    { href: "/catalog/products/new" as Route, label: "Product", description: "Something you sell, priced once", icon: PackageIcon },
+  ];
 }

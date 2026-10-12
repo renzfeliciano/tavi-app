@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { asVisitor, latestInvitationPath, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, freshInvitationPath, latestEmailStatus, strongPassword, uniqueEmail } from "./helpers";
 
 // Team invitations (Phase 2.1, D17): the shared owner invites a new person,
 // who signs up from the link and joins; then the owner removes them.
@@ -21,10 +21,12 @@ test("invite someone, they sign up from the link and join, then they're removed"
   await page.getByRole("button", { name: "Send invitation" }).click();
   await expect(page.getByText(`Invitation sent to ${email}.`)).toBeVisible();
   await expect(page.getByRole("region", { name: "Invitations" }).getByText(email)).toBeVisible();
+  // The email goes out right after the response; it is not left for the daily cron.
+  await expect.poll(() => latestEmailStatus(email)).toBe("sent");
 
   // The invited person, in their own browser.
   const invitee = await (await browser.newContext({ storageState: { cookies: [], origins: [] } })).newPage();
-  await invitee.goto(await latestInvitationPath(email));
+  await invitee.goto(await freshInvitationPath(email));
   await expect(invitee.getByRole("heading", { name: "Join Acme Aircon Services" })).toBeVisible();
   expect((await axe(invitee)).violations).toEqual([]);
   await invitee.getByRole("link", { name: "Create an account" }).click();

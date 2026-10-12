@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireOrgContext } from "@/modules/identity";
 import { flushOutboxAfterResponse } from "@/modules/notifications";
+import { env } from "@/shared/env";
 import { type RawPayment, recordPayment, voidPayment } from "@/modules/payments";
 
 const GONE = "This invoice no longer exists.";
@@ -15,15 +16,15 @@ export type RecordPaymentResponse =
 export async function recordPaymentAction(
   invoiceId: string,
   raw: RawPayment,
-  acknowledge: boolean,
+  recipients: string[],
   idempotencyKey?: string,
 ): Promise<RecordPaymentResponse> {
   const ctx = await requireOrgContext();
-  const result = await recordPayment(ctx, invoiceId, raw, { acknowledge, market: ctx.market, idempotencyKey });
+  const result = await recordPayment(ctx, invoiceId, raw, { recipients, market: ctx.market, idempotencyKey, appUrl: env.APP_URL });
   revalidatePath("/invoices");
   revalidatePath("/payments");
   if (result.ok) {
-    if (acknowledge) flushOutboxAfterResponse();
+    if (recipients.length > 0) flushOutboxAfterResponse();
     return { ok: true, receiptNumber: result.receiptNumber, paymentId: result.paymentId, paidInFull: result.status === "PAID" };
   }
   if ("errors" in result) return { ok: false, errors: result.errors };

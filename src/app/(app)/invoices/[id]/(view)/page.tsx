@@ -8,8 +8,8 @@ import { StatusBadge } from "@/components/status/status-badge";
 import { can } from "@/modules/authz";
 import { requireOrgContext } from "@/modules/identity";
 import { getInvoice, invoiceTitle, isPayable } from "@/modules/invoices";
-import { listInvoicePayments } from "@/modules/payments";
-import { todayIn } from "@/shared/dates/calendar";
+import { listInvoicePayments, paymentProofRows } from "@/modules/payments";
+import { formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { customerForDocumentAction } from "../../../_documents/actions";
 import { DocumentEditor } from "../../../_documents/document-editor";
 import { documentBusiness, editorContext } from "../../../_documents/editor-props";
@@ -148,6 +148,8 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
           canVoid={can(ctx, "payments.void")}
           customerEmail={invoice.customerSnapshot?.email ?? null}
           methodLabels={ctx.market.paymentMethodLabels}
+          detailLabels={ctx.market.paymentDetailLabels}
+          chequeDateLabel={ctx.market.chequeDateLabel}
           taxWithheld={ctx.market.taxWithheld}
           receiptTitle={ctx.market.documents.receipt.singular}
           payments={(await listInvoicePayments(ctx, invoice.id)).map((p) => ({
@@ -155,7 +157,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
             receiptNumber: p.receiptNumber,
             paidOn: p.paidOn,
             method: p.method,
-            reference: p.reference,
+            details: paymentProofRows(p, ctx.market, (date) => formatCalendarDate(date, ctx.locale)),
             amountMinor: p.amountMinor,
             withheldMinor: p.withheldMinor,
             voidReason: p.voidReason,

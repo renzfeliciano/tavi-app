@@ -1,17 +1,16 @@
 import type { AcknowledgementView } from "@/components/document/acknowledgement-paper";
 import type { DocumentView } from "@/components/document/document-view";
-import type { MarketProfile, PaymentMethod } from "@/config/markets";
+import type { MarketProfile } from "@/config/markets";
 import type { CustomerSnapshot } from "@/modules/quotes";
+import { type PaymentProof, paymentProofRows } from "@/modules/payments/client";
 import { formatCalendarDate } from "@/shared/dates/calendar";
 import { formatMoney } from "@/shared/money";
 
 /** A payment as its acknowledgement (§B.5): the web page and the PDF share this. */
 export function acknowledgementView(
-  payment: {
+  payment: PaymentProof & {
     receiptNumber: string;
     paidOn: string;
-    method: PaymentMethod;
-    reference: string | null;
     amountMinor: number;
     withheldMinor: number;
     currency: string;
@@ -50,7 +49,7 @@ export function acknowledgementView(
     details: [
       { label: "Date received", value: formatCalendarDate(payment.paidOn, locale) },
       { label: "Method", value: market.paymentMethodLabels[payment.method] },
-      ...(payment.reference ? [{ label: "Reference", value: payment.reference }] : []),
+      ...paymentProofRows(payment, market, (date) => formatCalendarDate(date, locale)),
       { label: "For", value: invoiceName },
       ...(payment.withheldMinor > 0 && market.taxWithheld
         ? [{ label: market.taxWithheld.label, value: money(payment.withheldMinor) }]

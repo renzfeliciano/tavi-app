@@ -4,6 +4,7 @@ import { LegalDocument, LegalList, LegalSection } from "@/components/legal/legal
 import { brand } from "@/config/brand";
 import { LEGAL, LEGAL_PATHS, legalDetail } from "@/config/legal";
 import { SESSION_POLICY } from "@/modules/identity/client";
+import { TRASH_RETENTION_DAYS } from "@/modules/trash/client";
 import { describeDuration } from "@/shared/format/duration";
 
 export const metadata: Metadata = { title: "Privacy Notice" };
@@ -72,12 +73,14 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong className="font-semibold">Your business:</strong> what you enter in its profile, such as its name,
-            registered name, tax identification number (TIN), address, contact details, logo, payment instructions and
-            tax registration details.
+            registered name, tax identification number (TIN), address, contact details, logo, payment instructions, the payment QR codes you add (we keep the link or code inside the QR,
+            not a picture), tax registration details and, if you add them, your registration details (taxpayer type, tax office, line of business, business name registration) and
+            copies of your registration certificates. Only owners and admins can see the certificates.
           </li>
           <li>
             <strong className="font-semibold">Your business&apos;s records:</strong> customers, products and services,
-            quotes, bills and payments. These usually contain your customers&apos; names, contact details, addresses and
+            quotes, bills and payments (including the payment details you type, such as a reference or cheque number, the
+            bank or wallet and the name of whoever paid). These usually contain your customers&apos; names, contact details, addresses and
             sometimes TINs (see the two roles above). When a bill carries a discount the law grants a buyer (for
             example a senior citizen, a person with disability or a solo parent), it also holds the number and name on
             the buyer&apos;s ID.
@@ -176,6 +179,10 @@ export default function PrivacyPage() {
             After an account is closed: the person&apos;s name, email and sign-in are removed straight away. A closed
             business&apos;s records are kept, out of use, for as long as tax rules require it to keep its issued
             documents and payments, and then deleted; the activity history goes with them.
+          </li>
+          <li>
+            A draft quote or bill you delete: kept in your recycle bin for {TRASH_RETENTION_DAYS} days so you can bring it back, then
+            removed for good. Owners and admins can remove it sooner.
           </li>
           <li>
             Signed-in devices: until you sign out or the session ends. Rate-limit counters: up to a day. Emails:

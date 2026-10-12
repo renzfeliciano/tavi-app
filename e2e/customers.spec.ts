@@ -27,7 +27,8 @@ test.afterAll(async () => {
 test("an empty list leads to adding the first customer", async () => {
   await page.goto("/customers");
   await expect(page.getByRole("heading", { name: "No customers yet" })).toBeVisible();
-  await page.getByRole("link", { name: "Add customer" }).click();
+  // The sidebar's Today card offers the same link, so look in the page itself.
+  await page.locator("#main").getByRole("link", { name: "Add customer" }).click();
   await expect(page).toHaveURL(/\/customers\/new$/);
 });
 

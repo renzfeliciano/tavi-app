@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -132,7 +133,7 @@ export function SentQuoteActions({ id, status, name, shareChannels, convertedInv
       )}
 
       <Dialog open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
-        <DialogContent>
+        <DialogContent mascot={confirm === "revise" ? "curious" : "concerned"} tone={confirm === "revise" ? "default" : "danger"}>
           <DialogHeader>
             <DialogTitle>{confirm === "revise" ? `Revise ${name}?` : `Cancel ${name}?`}</DialogTitle>
             <DialogDescription>
@@ -141,14 +142,16 @@ export function SentQuoteActions({ id, status, name, shareChannels, convertedInv
                 : "The customer's link stops working and it can't be approved. Its number stays used."}
             </DialogDescription>
           </DialogHeader>
-          {confirm === "cancel" && (
-            <div className="grid gap-1.5">
-              <label htmlFor={reasonId} className="text-sm font-medium">
-                Reason <span className="font-normal text-muted-foreground">(optional)</span>
-              </label>
-              <Textarea id={reasonId} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} maxLength={500} />
-            </div>
-          )}
+          <DialogBody className="grid gap-4">
+            {confirm === "cancel" && (
+              <div className="grid gap-1.5">
+                <label htmlFor={reasonId} className="text-sm font-medium">
+                  Reason <span className="font-normal text-muted-foreground">(optional)</span>
+                </label>
+                <Textarea id={reasonId} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} maxLength={500} />
+              </div>
+            )}
+          </DialogBody>
           <DialogFooter>
             <DialogClose render={<Button type="button" variant="outline" />}>Keep it</DialogClose>
             <Button

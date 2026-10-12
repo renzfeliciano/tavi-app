@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BrandMascot } from "@/components/brand/brand-mascot";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -111,11 +110,8 @@ export function IdleGuard() {
   const seconds = remaining === null ? 0 : Math.ceil(remaining / 1000);
   return (
     <Dialog open={remaining !== null} onOpenChange={(open) => !open && stay()}>
-      <DialogContent showCloseButton={false} className="items-center text-center">
-        <div className="mx-auto">
-          <BrandMascot expression="waiting" size="lg" />
-        </div>
-        <DialogHeader className="items-center">
+      <DialogContent showCloseButton={false} mascot="waiting">
+        <DialogHeader>
           <DialogTitle>Still there?</DialogTitle>
           <DialogDescription>
             For your security, you&apos;ll be signed out in {seconds} {seconds === 1 ? "second" : "seconds"}. Anything you

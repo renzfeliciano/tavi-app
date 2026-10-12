@@ -161,7 +161,7 @@ export function AsyncCombobox<T>({
                   <Combobox.Item
                     key={itemKey(item)}
                     value={item}
-                    className="flex cursor-default items-start gap-2 rounded-md px-2 py-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground pointer-coarse:py-3"
+                    className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground pointer-coarse:py-3"
                   >
                     {renderItem ? renderItem(item) : itemLabel(item)}
                   </Combobox.Item>

@@ -53,6 +53,7 @@ import {
   type TaxMode,
 } from "@/modules/documents/client";
 import { parseInvoiceDraft } from "@/modules/invoices/client";
+import { TRASH_RETENTION_DAYS } from "@/modules/trash/client";
 import { parseQuoteDraft } from "@/modules/quotes/client";
 import { formatAmountForInput, formatMoney } from "@/shared/money";
 import { formatRate } from "@/shared/numbers/percent";
@@ -479,7 +480,10 @@ export function DocumentEditor(props: DocumentEditorProps) {
       return;
     }
     setDirty(false);
-    toast.success("Draft deleted.");
+    toast.success("Draft deleted.", {
+      description: `It's in the recycle bin for ${TRASH_RETENTION_DAYS} days, in case you need it back.`,
+      action: { label: "View", onClick: () => router.push("/recycle-bin") },
+    });
     router.push(kind.path);
   };
 
@@ -595,7 +599,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
               <button
                 type="button"
                 onClick={() => setAddCustomerOpen(true)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-primary hover:bg-accent pointer-coarse:py-3"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-primary-text hover:bg-accent pointer-coarse:py-3"
               >
                 <PlusIcon aria-hidden="true" className="size-4" />
                 Add a new customer
@@ -908,7 +912,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
       />
 
       <Dialog open={confirmSave} onOpenChange={(open) => !savingIssued && setConfirmSave(open)}>
-        <DialogContent>
+        <DialogContent mascot="curious">
           <DialogHeader>
             <DialogTitle>{`Update ${props.title} ${props.number ?? ""}?`.replace(" ?", "?")}</DialogTitle>
             <DialogDescription>
@@ -925,12 +929,12 @@ export function DocumentEditor(props: DocumentEditorProps) {
       </Dialog>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <DialogContent>
+        <DialogContent mascot="concerned" tone="danger">
           <DialogHeader>
-            <DialogTitle>{documentId ? "Delete this draft?" : `Discard this ${kind.noun}?`}</DialogTitle>
+            <DialogTitle>{documentId ? "Delete this draft?" : `Discard this ${props.title.toLowerCase()}?`}</DialogTitle>
             <DialogDescription>
               {documentId
-                ? "The draft and its items are removed. This can't be undone."
+                ? `It moves to the recycle bin, where you can restore it for ${TRASH_RETENTION_DAYS} days.`
                 : "Nothing has been saved yet, so there's nothing to keep."}
             </DialogDescription>
           </DialogHeader>

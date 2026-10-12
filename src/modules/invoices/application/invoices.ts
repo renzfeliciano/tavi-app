@@ -16,9 +16,11 @@ import {
 } from "@/modules/documents";
 import { getDocumentSettings, type SellerSnapshot } from "@/modules/organizations";
 import { clearQuoteConversion, type CustomerSnapshot } from "@/modules/quotes";
+import { putInTrash } from "@/modules/trash";
 import { addDays, type CalendarDate, todayIn } from "@/shared/dates/calendar";
 import { escapeLikePattern } from "@/shared/text/search";
 import { type InvoiceDraft, parseInvoiceDraft } from "../domain/invoice-draft";
+import { invoiceTrashPayload } from "../domain/trash-payload";
 import {
   type QualifiedDiscountConfig,
   qualifiedDiscountInput,
@@ -451,12 +453,14 @@ export async function saveInvoiceDraft(
 /**
  * Deletes a draft that was never issued (issued invoices keep their number
  * and are voided or cancelled instead). A draft converted from a quote frees
- * that quote to be converted again.
+ * that quote to be converted again. The draft goes to the recycle bin (D27),
+ * where `restoreDeletedInvoice` can bring it back for 30 days.
  */
 export async function deleteDraftInvoice(
   actor: OrgActor,
   id: string,
   db: Database = getDb(),
+  now: Date = new Date(),
 ): Promise<InvoiceCommandResult & { sourceQuoteId?: string | null }> {
   assertCan(actor, "invoices.write");
   return db.transaction(async (tx) => {
@@ -465,6 +469,23 @@ export async function deleteDraftInvoice(
     if (!transitionInvoice(invoice.status, "delete").ok || invoice.number !== null) {
       return { ok: false as const, error: "Only drafts that were never sent can be deleted. Void or cancel this invoice instead." };
     }
+    const lines = await loadLines(tx, invoice.id);
+    const customerName = invoice.customerId
+      ? ((await getCustomerNames(actor, [invoice.customerId], db)).get(invoice.customerId) ?? null)
+      : null;
+    await putInTrash(
+      tx,
+      actor,
+      {
+        kind: "invoice",
+        originalId: invoice.id,
+        customerName,
+        totalMinor: invoice.totalMinor,
+        currency: invoice.currency,
+        payload: invoiceTrashPayload(invoice, lines),
+      },
+      now,
+    );
     await tx.delete(invoices).where(eq(invoices.id, invoice.id));
     if (invoice.sourceQuoteId) await clearQuoteConversion(tx, actor, invoice.sourceQuoteId, invoice.id);
     await audit(tx, actor, "invoice.deleted", invoice.id, {

@@ -133,7 +133,7 @@ export function PageHeaderSkeleton({
   const lines = description === false ? [] : Array.isArray(description) ? description : [description];
   return (
     <>
-      {back && <TextSkeleton width="w-24" className="mb-3 h-7 pointer-coarse:h-11" />}
+      {back && <TextSkeleton width="w-36" className="mb-4 h-9 rounded-md pointer-coarse:h-11" />}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="grid gap-1">
           <TextSkeleton size="2xl" width={title} />

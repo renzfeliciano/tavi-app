@@ -13,8 +13,9 @@ type LogoMarkProps = {
  * ground; the imprint is always the primary violet. This is the logo, not the
  * Stamp mascot (brand-mascot.tsx), which is a separate character.
  *
- * The tab and home-screen icons are the same drawing on a paper tile
- * (public/icons/icon.svg); the PDF footer mirrors it in document-pdf.tsx.
+ * This is the small tool-and-imprint mark used in footers and the PDF (which
+ * mirrors it in document-pdf.tsx). TAVI's app logo, tab and home-screen icons
+ * are the stamp with TAVI on its body: see app-logo.tsx.
  */
 export function LogoMark({ size = 24, className }: LogoMarkProps) {
   return (

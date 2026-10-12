@@ -11,17 +11,24 @@ export const metadata: Metadata = { title: "Set up your business" };
 
 // The only required setup (§G.5). Address, logo and tax details are asked for
 // when they matter: the first time a quote is sent.
-export default async function OnboardingPage() {
+// `?new=1` is "Add business" from the sidebar: someone who already has a
+// business can start another (D17), so the redirect to the dashboard is skipped.
+export default async function OnboardingPage({ searchParams }: PageProps<"/onboarding">) {
   const { user, session } = await requireSession();
-  if (await resolveMembership(user.id, session.activeOrganizationId)) redirect("/dashboard");
+  const adding = (await searchParams).new === "1";
+  if (!adding && (await resolveMembership(user.id, session.activeOrganizationId))) redirect("/dashboard");
 
   const firstName = user.name.split(" ")[0] || user.name;
   const defaultMarket = MARKETS[DEFAULT_MARKET];
   return (
     <>
       <AuthHeading
-        title={`Welcome, ${firstName}`}
-        description="One quick question before your first quote. You can add your address and logo later."
+        title={adding ? "Add a business" : `Welcome, ${firstName}`}
+        description={
+          adding
+            ? "It gets its own customers, quotations and billing statements. You can switch between your businesses any time."
+            : "One quick question before your first quote. You can add your address and logo later."
+        }
       />
       <BusinessForm
         currencies={currencyOptions({ locale: defaultMarket.locale, first: defaultMarket.currency })}

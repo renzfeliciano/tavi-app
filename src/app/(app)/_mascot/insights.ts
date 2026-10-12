@@ -130,3 +130,17 @@ export function selectInsight(
     .sort((a, b) => KIND_RANK[a.kind] - KIND_RANK[b.kind] || b.priority - a.priority);
   return best[0] ?? null;
 }
+
+/** The most valuable thing to say anywhere (the sidebar's Today card), or nothing. Scopes and dismissals don't apply. */
+export function topInsight(insights: readonly MascotInsight[]): MascotInsight | null {
+  return [...insights].sort((a, b) => KIND_RANK[a.kind] - KIND_RANK[b.kind] || b.priority - a.priority)[0] ?? null;
+}
+
+/** How the Stamp looks for each kind of thing it says. */
+export const INSIGHT_MOOD = {
+  critical: "concerned",
+  action: "curious",
+  recommended: "happy",
+  informational: "neutral",
+  positive: "happy",
+} as const satisfies Record<InsightKind, string>;

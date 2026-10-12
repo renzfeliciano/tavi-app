@@ -27,8 +27,10 @@ export {
   sendQuote,
 } from "./application/sending";
 export { expireQuotesPastValidity } from "./application/expiry";
+export { type RestoreQuoteResult, restoreDeletedQuote } from "./application/trash";
 export {
   type AttentionQuote,
+  countDraftQuotes,
   type QuotesAttention,
   quoteProgress,
   quotesNeedingAttention,

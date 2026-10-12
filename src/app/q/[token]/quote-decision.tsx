@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -93,7 +94,8 @@ export function QuoteDecision({ token, contentHash, name, businessName }: QuoteD
       </div>
 
       <Dialog open={open !== null} onOpenChange={(next) => !next && !pending && setOpen(null)}>
-        <DialogContent>
+        {/* No Stamp here: a customer sees the business, not TAVI. */}
+        <DialogContent mascot={null}>
           <form
             className="grid gap-4"
             onSubmit={(event) => {
@@ -109,65 +111,67 @@ export function QuoteDecision({ token, contentHash, name, businessName }: QuoteD
                   : `${businessName} will be told. You can add a reason to help them.`}
               </DialogDescription>
             </DialogHeader>
-            <FormAlert message={formError} />
+            <DialogBody className="grid gap-4">
+              <FormAlert message={formError} />
 
-            {open === "approve" ? (
-              <>
-                <div className="grid gap-1.5">
-                  <label htmlFor={nameId} className="text-sm font-medium">
-                    Your name
-                  </label>
-                  <Input
-                    id={nameId}
-                    value={approver}
-                    onChange={(e) => setApprover(e.target.value)}
-                    autoComplete="name"
-                    maxLength={QUOTE_DECISION_LIMITS.name}
-                    aria-invalid={errors.name ? true : undefined}
-                    aria-describedby={errors.name ? `${nameId}-error` : undefined}
-                  />
-                  {errors.name && (
-                    <p id={`${nameId}-error`} className="text-sm text-destructive">
-                      {errors.name}
-                    </p>
-                  )}
-                </div>
-                <div className="grid gap-1.5">
-                  <label htmlFor={acceptId} className="flex items-start gap-2 text-sm">
-                    <Checkbox
-                      id={acceptId}
-                      checked={accepted}
-                      onCheckedChange={(checked) => setAccepted(checked === true)}
-                      aria-invalid={errors.accepted ? true : undefined}
-                      aria-describedby={errors.accepted ? `${acceptId}-error` : undefined}
-                      className="mt-0.5"
+              {open === "approve" ? (
+                <>
+                  <div className="grid gap-1.5">
+                    <label htmlFor={nameId} className="text-sm font-medium">
+                      Your name
+                    </label>
+                    <Input
+                      id={nameId}
+                      value={approver}
+                      onChange={(e) => setApprover(e.target.value)}
+                      autoComplete="name"
+                      maxLength={QUOTE_DECISION_LIMITS.name}
+                      aria-invalid={errors.name ? true : undefined}
+                      aria-describedby={errors.name ? `${nameId}-error` : undefined}
                     />
-                    <span>I accept this quote, including its terms.</span>
+                    {errors.name && (
+                      <p id={`${nameId}-error`} className="text-sm text-destructive">
+                        {errors.name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label htmlFor={acceptId} className="flex items-start gap-2 text-sm">
+                      <Checkbox
+                        id={acceptId}
+                        checked={accepted}
+                        onCheckedChange={(checked) => setAccepted(checked === true)}
+                        aria-invalid={errors.accepted ? true : undefined}
+                        aria-describedby={errors.accepted ? `${acceptId}-error` : undefined}
+                        className="mt-0.5"
+                      />
+                      <span>I accept this quote, including its terms.</span>
+                    </label>
+                    {errors.accepted && (
+                      <p id={`${acceptId}-error`} className="text-sm text-destructive">
+                        {errors.accepted}
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="grid gap-1.5">
+                  <label htmlFor={reasonId} className="text-sm font-medium">
+                    Reason <span className="font-normal text-muted-foreground">(optional)</span>
                   </label>
-                  {errors.accepted && (
-                    <p id={`${acceptId}-error`} className="text-sm text-destructive">
-                      {errors.accepted}
-                    </p>
-                  )}
+                  <Textarea
+                    id={reasonId}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={3}
+                    maxLength={QUOTE_DECISION_LIMITS.reason}
+                    aria-invalid={errors.reason ? true : undefined}
+                  />
+                  {errors.reason && <p className="text-sm text-destructive">{errors.reason}</p>}
                 </div>
-              </>
-            ) : (
-              <div className="grid gap-1.5">
-                <label htmlFor={reasonId} className="text-sm font-medium">
-                  Reason <span className="font-normal text-muted-foreground">(optional)</span>
-                </label>
-                <Textarea
-                  id={reasonId}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  rows={3}
-                  maxLength={QUOTE_DECISION_LIMITS.reason}
-                  aria-invalid={errors.reason ? true : undefined}
-                />
-                {errors.reason && <p className="text-sm text-destructive">{errors.reason}</p>}
-              </div>
-            )}
+              )}
 
+            </DialogBody>
             <DialogFooter>
               <DialogClose render={<Button type="button" variant="outline" disabled={pending} />}>Not now</DialogClose>
               <Button

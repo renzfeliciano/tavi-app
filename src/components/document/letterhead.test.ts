@@ -25,7 +25,27 @@ describe("letterhead", () => {
       contactLines: ["billing@santos.example", "0917 555 0100"],
       taxId: { label: "VAT Reg TIN", value: "123-456-789-00000" },
       logo: null,
+      paymentQrs: [],
     });
+  });
+
+  it("carries the enabled payment QRs, in order, as label and text only", () => {
+    const head = letterhead(
+      {
+        ...profile,
+        paymentQrs: [
+          { label: "GCash", value: "https://pay.example/a", enabled: true },
+          { label: "Maya", value: "https://pay.example/b", enabled: false },
+          { label: "BDO", value: "000201…6304ABCD", enabled: true },
+        ],
+      },
+      MARKETS.PH,
+      null,
+    );
+    expect(head.paymentQrs).toEqual([
+      { label: "GCash", value: "https://pay.example/a" },
+      { label: "BDO", value: "000201…6304ABCD" },
+    ]);
   });
 
   it("uses the plain tax-ID label until the registration status is set, and skips a repeated name", () => {

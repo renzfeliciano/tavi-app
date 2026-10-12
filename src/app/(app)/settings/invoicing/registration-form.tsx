@@ -112,7 +112,7 @@ export function RegistrationForm({ editable, active, labels, titles, statementNa
       </form>
 
       <Dialog open={confirmOff} onOpenChange={setConfirmOff}>
-        <DialogContent>
+        <DialogContent mascot="concerned">
           <DialogHeader>
             <DialogTitle>Turn off invoice mode?</DialogTitle>
             <DialogDescription>

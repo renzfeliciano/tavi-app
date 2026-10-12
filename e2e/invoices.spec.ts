@@ -63,7 +63,8 @@ test("an approved quote becomes a draft billing statement with the same items", 
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { level: 1, name: "Welcome to Tavi" })).toBeVisible();
   await expect(page.getByText("Step 1 (done):")).toBeAttached();
-  await expect(page.getByRole("link", { name: "New quote" })).toBeVisible();
+  // The sidebar's Today card offers the same link, so look in the page itself.
+  await expect(page.locator("#main").getByRole("link", { name: "New quotation" })).toBeVisible();
 
   await page.goto("/quotes/new");
   await fillDraft("1,500");
@@ -191,6 +192,15 @@ test("recording payments part-pays, then pays in full with tax withheld, and the
   await dialog.getByLabel("Method").selectOption({ label: "GCash or Maya" });
   await dialog.getByLabel(/^Reference/).fill("GC-123");
   await expect(dialog.getByRole("checkbox", { name: /Email a payment acknowledgement to juan@example.com/ })).toBeChecked();
+  // The business can add more recipients; Enter adds one without submitting the payment.
+  await dialog.getByLabel(/^Also send to another email/).fill("accounts@example.com");
+  await dialog.getByLabel(/^Also send to another email/).press("Enter");
+  await expect(dialog.getByRole("list", { name: "Also sending to" }).getByText("accounts@example.com")).toBeVisible();
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel(/^Also send to another email/).fill("not-an-email");
+  await dialog.getByRole("button", { name: "Add" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("isn't a valid email address");
+  await dialog.getByLabel(/^Also send to another email/).fill("");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await dialog.getByRole("button", { name: "Record payment" }).click();
   await expect(toast("Payment recorded on Billing statement INV-000002.")).toBeVisible();
@@ -300,13 +310,13 @@ test("reports total the period's sales and payments, age what's unpaid, and down
   await expect(page.getByRole("link", { name: "This month" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("region", { name: "Sales" })).toContainText("Before tax");
   await expect(page.getByRole("region", { name: "Payments received" })).toContainText("GCash or Maya");
-  const unpaid = page.getByRole("region", { name: "Unpaid bills" });
+  const unpaid = page.getByRole("region", { name: "Unpaid billing statements" });
   await expect(unpaid).toContainText("₱1,500.00");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    unpaid.getByRole("link", { name: "Download CSV of unpaid bills" }).click(),
+    unpaid.getByRole("link", { name: "Download CSV of unpaid billing statements" }).click(),
   ]);
   expect(download.suggestedFilename()).toMatch(/^unpaid-\d{4}-\d{2}-\d{2}\.csv$/);
   const csv = await (await download.createReadStream()).toArray();

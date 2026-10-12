@@ -22,15 +22,15 @@ test.describe("app shell", () => {
   test("marks the current section in the navigation", async ({ page, isMobile }) => {
     await page.goto("/quotes");
     const nav = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
-    const current = nav.getByRole("link", { name: "Quotes" });
+    const current = nav.getByRole("link", { name: "Quotations" });
     await expect(current).toHaveAttribute("aria-current", "page");
     if (!isMobile) {
-      await expect(nav.getByRole("link", { name: "Invoices" })).not.toHaveAttribute("aria-current");
+      await expect(nav.getByRole("link", { name: "Billing statements" })).not.toHaveAttribute("aria-current");
     }
   });
 
   // Desktop opens a menu; phones open a bottom sheet (a dialog). Scope to
-  // whichever is open, since the dashboard also links to "New quote".
+  // whichever is open, since the dashboard also links to "New quotation".
   const openNewMenu = async (page: import("@playwright/test").Page) => {
     await page.goto("/dashboard");
     await page.getByRole("button", { name: "New", exact: true }).click();
@@ -39,24 +39,24 @@ test.describe("app shell", () => {
 
   test("the New menu offers every quick action", async ({ page }) => {
     const menu = await openNewMenu(page);
-    for (const label of ["New quote", "New invoice", "Add customer", "Record payment"]) {
+    for (const label of ["New quotation", "New billing statement", "Add customer", "Service", "Product"]) {
       await expect(
-        menu.getByRole("menuitem", { name: new RegExp(label) }).or(
-          menu.getByRole("link", { name: new RegExp(label) }),
+        menu.getByRole("menuitem", { name: new RegExp(`^${label}`) }).or(
+          menu.getByRole("link", { name: new RegExp(`^${label}`) }),
         ),
       ).toBeVisible();
     }
   });
 
-  test("New quote navigates to the quote editor", async ({ page }) => {
+  test("New quotation navigates to the quotation editor", async ({ page }) => {
     const menu = await openNewMenu(page);
     await menu
-      .getByRole("menuitem", { name: /New quote/ })
-      .or(menu.getByRole("link", { name: /New quote/ }))
+      .getByRole("menuitem", { name: /New quotation/ })
+      .or(menu.getByRole("link", { name: /New quotation/ }))
       .click();
 
     await expect(page).toHaveURL(/\/quotes\/new$/);
-    await expect(page.getByRole("heading", { level: 1, name: "New quote" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "New quotation" })).toBeVisible();
   });
 
   test("keyboard users can skip straight to the content", async ({ page, isMobile }) => {
@@ -73,10 +73,16 @@ test.describe("app shell", () => {
 test.describe("phone navigation", () => {
   test.skip(({ isMobile }) => !isMobile, "Phone-only tab bar");
 
-  test("More reaches the sections not on the tab bar", async ({ page }) => {
+  test("Menu reaches the sections not on the tab bar", async ({ page }) => {
     await page.goto("/dashboard");
-    await page.getByRole("button", { name: "More" }).click();
-    await page.getByRole("link", { name: "Customers" }).click();
+    // The top bar has "Open menu" too, so match the tab bar's button exactly. A tap before the
+    // page has hydrated does nothing, so tap again until the drawer is open.
+    const drawer = page.getByRole("dialog");
+    await expect(async () => {
+      if (!(await drawer.isVisible())) await page.getByRole("button", { name: "Menu", exact: true }).click();
+      await expect(drawer).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    await drawer.getByRole("link", { name: "Customers" }).click();
     await expect(page).toHaveURL(/\/customers$/);
     await expect(page.getByRole("heading", { level: 1, name: "Customers" })).toBeVisible();
   });

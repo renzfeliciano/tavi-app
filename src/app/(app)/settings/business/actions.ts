@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { can } from "@/modules/authz";
 import { removeOrganizationLogo, UPLOAD_MESSAGES, uploadOrganizationLogo } from "@/modules/files";
 import { requireOrgContext } from "@/modules/identity";
-import { BUSINESS_PROFILE_FIELDS, type BusinessProfileInput, updateBusinessProfile } from "@/modules/organizations";
+import {
+  BUSINESS_PROFILE_FIELDS,
+  type BusinessProfileInput,
+  type RawPaymentQr,
+  updatePaymentQrs,
+  updateBusinessProfile,
+} from "@/modules/organizations";
 
 type ProfileField = keyof BusinessProfileInput;
 export type ProfileFormValues = Record<ProfileField, string>;
@@ -60,4 +66,16 @@ export async function removeLogo(): Promise<LogoState> {
   await removeOrganizationLogo(ctx);
   revalidatePath("/settings/business");
   return { savedAt: Date.now() };
+}
+
+export type PaymentQrsResponse = { ok: true } | { ok: false; errors: Record<string, string> } | { ok: false; error: string };
+
+/** Saves the business's payment QR codes (up to three; see the organizations module). */
+export async function savePaymentQrs(rows: RawPaymentQr[]): Promise<PaymentQrsResponse> {
+  const ctx = await requireOrgContext();
+  if (!can(ctx, "organization.manage")) return { ok: false, error: NOT_ALLOWED };
+  const result = await updatePaymentQrs(ctx, rows);
+  if (!result.ok) return { ok: false, errors: result.errors };
+  revalidatePath("/settings/business");
+  return { ok: true };
 }

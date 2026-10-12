@@ -12,3 +12,4 @@ export * from "@/modules/files/schema";
 export * from "@/modules/audit/schema";
 export * from "@/modules/notifications/schema";
 export * from "@/modules/system/schema";
+export * from "@/modules/trash/schema";

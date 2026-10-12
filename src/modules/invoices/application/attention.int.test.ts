@@ -6,6 +6,7 @@ import { createCustomer } from "@/modules/customers";
 import { blankLine } from "@/modules/documents";
 import { paymentsReceivedSince, recordPayment } from "@/modules/payments";
 import {
+  countDraftQuotes,
   decideSharedQuote,
   getSharedQuote,
   quoteProgress,
@@ -15,7 +16,7 @@ import {
   sharedQuoteContentHash,
 } from "@/modules/quotes";
 import { convertQuoteToInvoice } from "./conversion";
-import { invoiceMoneySummary, overdueInvoices } from "./attention";
+import { countOverdueInvoices, invoiceMoneySummary, overdueInvoices } from "./attention";
 import { saveInvoiceDraft } from "./invoices";
 import { issueInvoice } from "./issuing";
 
@@ -77,7 +78,7 @@ describe("invoice money and overdue", () => {
     const due = await invoice(actor, customerId, { price: "1,000" });
     await invoice(actor, customerId, { dueDate: "2026-09-15", price: "2,000" });
     await invoice(actor, customerId, { currency: "USD", dueDate: "2026-09-20", price: "50" });
-    await recordPayment(actor, due, { amount: "400", withheld: "", paidOn: TODAY, method: "cash", reference: "", notes: "" }, { acknowledge: false, market: MARKETS.PH, now: NOW }, testDb());
+    await recordPayment(actor, due, { amount: "400", withheld: "", paidOn: TODAY, method: "cash", reference: "", institution: "", payer: "", paidTime: "", chequeDate: "", notes: "" }, { recipients: [], market: MARKETS.PH, now: NOW }, testDb());
 
     expect(await invoiceMoneySummary(actor, { today: TODAY }, testDb())).toEqual([
       { currency: "PHP", outstandingMinor: 260000, overdueMinor: 200000 },
@@ -92,6 +93,30 @@ describe("invoice money and overdue", () => {
 
     const other = await business();
     expect(await invoiceMoneySummary(other.actor, { today: TODAY }, testDb())).toEqual([]);
+  });
+});
+
+describe("sidebar counts", () => {
+  it("counts overdue billing statements and draft quotations for this business only", async () => {
+    const { actor, customerId } = await business();
+    expect(await countOverdueInvoices(actor, { today: TODAY }, testDb())).toBe(0);
+    expect(await countDraftQuotes(actor, testDb())).toBe(0);
+
+    const paid = await invoice(actor, customerId, { dueDate: "2026-09-15" });
+    await invoice(actor, customerId, { dueDate: "2026-09-20" });
+    await invoice(actor, customerId, { dueDate: "2026-10-16" });
+    await recordPayment(actor, paid, { amount: "1,000", withheld: "", paidOn: TODAY, method: "cash", reference: "", institution: "", payer: "", paidTime: "", chequeDate: "", notes: "" }, { recipients: [], market: MARKETS.PH, now: NOW }, testDb());
+    // One settled, one past due, one not due yet: a single overdue statement.
+    expect(await countOverdueInvoices(actor, { today: TODAY }, testDb())).toBe(1);
+
+    await quote(actor, customerId, { send: false });
+    await quote(actor, customerId, { send: false });
+    await quote(actor, customerId);
+    expect(await countDraftQuotes(actor, testDb())).toBe(2);
+
+    const other = await business();
+    expect(await countOverdueInvoices(other.actor, { today: TODAY }, testDb())).toBe(0);
+    expect(await countDraftQuotes(other.actor, testDb())).toBe(0);
   });
 });
 

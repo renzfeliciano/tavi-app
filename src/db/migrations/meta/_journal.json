@@ -190,6 +190,34 @@
       "when": 1791772008286,
       "tag": "0026_seller_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791801712718,
+      "tag": "0027_payment_proof_and_qrs",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791808202610,
+      "tag": "0028_recycle_bin",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791810592511,
+      "tag": "0029_registration_details",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791837287603,
+      "tag": "0030_withholding_certificates",
+      "breakpoints": true
     }
   ]
 }

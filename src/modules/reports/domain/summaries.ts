@@ -51,6 +51,11 @@ export type PaymentRow = {
   paidOn: CalendarDate;
   method: string;
   reference: string | null;
+  /** Bank or wallet, payer, time (HH:MM) and a cheque's own date, as the business typed them. */
+  institution: string | null;
+  payerName: string | null;
+  paidTime: string | null;
+  chequeDate: CalendarDate | null;
   currency: string;
   /** Money received. */
   amountMinor: number;

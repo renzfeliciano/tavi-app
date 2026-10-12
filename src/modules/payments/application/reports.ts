@@ -14,6 +14,10 @@ export type ReceivedPayment = {
   paidOn: CalendarDate;
   method: PaymentMethod;
   reference: string | null;
+  institution: string | null;
+  payerName: string | null;
+  paidTime: string | null;
+  chequeDate: CalendarDate | null;
   currency: string;
   amountMinor: number;
   withheldMinor: number;
@@ -33,6 +37,10 @@ export async function paymentsReceivedBetween(
       paidOn: payments.paidOn,
       method: payments.method,
       reference: payments.reference,
+      institution: payments.institution,
+      payerName: payments.payerName,
+      paidTime: payments.paidTime,
+      chequeDate: payments.chequeDate,
       currency: payments.currency,
       amountMinor: payments.amountMinor,
       withheldMinor: payments.withheldMinor,

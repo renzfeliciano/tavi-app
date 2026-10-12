@@ -1,4 +1,4 @@
-import { and, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, count, eq, inArray, lt, sql } from "drizzle-orm";
 import { type Database, getDb } from "@/db";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import type { CalendarDate } from "@/shared/dates/calendar";
@@ -61,4 +61,18 @@ export async function invoiceMoneySummary(
     .where(and(eq(invoices.organizationId, actor.organizationId), inArray(invoices.status, [...OWING])))
     .groupBy(invoices.currency)
     .orderBy(invoices.currency);
+}
+
+/** How many invoices are owed and past their due date (the sidebar's badge). */
+export async function countOverdueInvoices(
+  actor: OrgActor,
+  { today }: { today: CalendarDate },
+  db: Database = getDb(),
+): Promise<number> {
+  assertCan(actor, "invoices.read");
+  const [row] = await db
+    .select({ total: count() })
+    .from(invoices)
+    .where(and(eq(invoices.organizationId, actor.organizationId), inArray(invoices.status, [...OWING]), lt(invoices.dueDate, today)));
+  return row?.total ?? 0;
 }

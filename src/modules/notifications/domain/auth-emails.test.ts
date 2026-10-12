@@ -15,7 +15,7 @@ describe("verifyEmailEmail", () => {
 
   it("escapes user-controlled names in the HTML", () => {
     const email = verifyEmailEmail({ to: "x@example.com", name: '<img src=x onerror="alert(1)">', url });
-    expect(email.html).not.toContain("<img");
+    expect(email.html).not.toContain("<img src=x");
     expect(email.html).toContain("&lt;img");
   });
 });
@@ -29,5 +29,10 @@ describe("passwordResetEmail", () => {
     expect(email.text).toMatch(/expires in 45 minutes/);
     expect(email.html).toMatch(/expires in 45 minutes/);
     expect(email.text).toMatch(/ignore this email/);
+  });
+
+  it("signs off with the stamp and TAVI lockup from the app the link points to", () => {
+    const email = verifyEmailEmail({ to: "x@example.com", name: "Maria", url });
+    expect(email.html).toContain("/icons/tavi-email-lockup.png");
   });
 });

@@ -13,6 +13,8 @@ export const AUDIT_ACTIONS = [
   "organization.updated",
   "organization.logo_updated",
   "organization.logo_removed",
+  "organization.document_uploaded",
+  "organization.document_removed",
   "organization.exported",
   "organization.closed",
   "team.invited",
@@ -66,6 +68,15 @@ export const AUDIT_ACTIONS = [
   "invoice.reprinted",
   "payment.recorded",
   "payment.voided",
+  "withholding_certificate.recorded",
+  "withholding_certificate.updated",
+  "withholding_certificate.voided",
+  "withholding_certificate.payment_unlinked",
+  "quote.restored",
+  "invoice.restored",
+  "trash.item_deleted",
+  "trash.emptied",
+  "trash.purged",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

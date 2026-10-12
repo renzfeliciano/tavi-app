@@ -44,9 +44,11 @@ export function VerifyEmailBanner({ email }: { email: string }) {
   }
 
   return (
+    // A modal that opens before this hydrates makes Base UI mark it aria-hidden; that is not a mismatch (hydration.test.tsx).
     <div
       role="region"
       aria-label="Email verification"
+      suppressHydrationWarning
       className="mb-6 flex flex-col gap-3 rounded-lg border border-info/25 bg-info-subtle px-4 py-3 text-sm sm:flex-row sm:items-center"
     >
       <MailIcon aria-hidden="true" className="hidden size-4 shrink-0 text-info-strong sm:block" />

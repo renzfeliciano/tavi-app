@@ -65,6 +65,7 @@ const PROTECTED_PREFIXES = [
   "/payments",
   "/customers",
   "/catalog",
+  "/recycle-bin",
   "/settings",
   "/onboarding",
 ];

@@ -6,6 +6,7 @@ import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -40,7 +41,7 @@ export function CloseAccountDialog() {
         Close account
       </Button>
       <Dialog open={open} onOpenChange={reset}>
-        <DialogContent>
+        <DialogContent mascot="concerned" tone="danger">
           <form
             className="grid gap-4"
             onSubmit={(event) => {
@@ -63,29 +64,31 @@ export function CloseAccountDialog() {
               <DialogTitle>Close your account?</DialogTitle>
               <DialogDescription>This can&apos;t be undone.</DialogDescription>
             </DialogHeader>
-            <ul className="grid list-disc gap-1.5 pl-5 text-sm text-pretty marker:text-muted-foreground">
-              <li>You&apos;ll be signed out everywhere, and your password will stop working.</li>
-              <li>Your name and email will be removed.</li>
-              <li>
-                A business only you use closes: its customer links stop working, and the documents and payments it
-                issued are kept as tax rules require.
-              </li>
-              <li>You leave any business you share with others.</li>
-            </ul>
-            <FormAlert message={formError} />
-            <Field data-invalid={passwordError ? "true" : undefined}>
-              <FieldLabel htmlFor={passwordId}>Your password</FieldLabel>
-              <PasswordInput
-                id={passwordId}
-                name="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                aria-invalid={passwordError ? true : undefined}
-                aria-describedby={passwordError ? `${passwordId}-error` : undefined}
-              />
-              {passwordError && <FieldError id={`${passwordId}-error`}>{passwordError}</FieldError>}
-            </Field>
+            <DialogBody className="grid gap-4">
+              <ul className="grid list-disc gap-1.5 pl-5 text-sm text-pretty marker:text-muted-foreground">
+                <li>You&apos;ll be signed out everywhere, and your password will stop working.</li>
+                <li>Your name and email will be removed.</li>
+                <li>
+                  A business only you use closes: its customer links stop working, and the documents and payments it
+                  issued are kept as tax rules require.
+                </li>
+                <li>You leave any business you share with others.</li>
+              </ul>
+              <FormAlert message={formError} />
+              <Field data-invalid={passwordError ? "true" : undefined}>
+                <FieldLabel htmlFor={passwordId}>Your password</FieldLabel>
+                <PasswordInput
+                  id={passwordId}
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  aria-invalid={passwordError ? true : undefined}
+                  aria-describedby={passwordError ? `${passwordId}-error` : undefined}
+                />
+                {passwordError && <FieldError id={`${passwordId}-error`}>{passwordError}</FieldError>}
+              </Field>
+            </DialogBody>
             <DialogFooter>
               <DialogClose render={<Button type="button" variant="outline" disabled={pending} />}>Keep my account</DialogClose>
               <Button type="submit" variant="destructive" pending={pending} pendingLabel="Closing…">

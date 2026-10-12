@@ -85,8 +85,8 @@ describe("e-invoice exports (D19)", () => {
     const paid = await recordPayment(
       owner,
       id,
-      { amount: "1,100", withheld: "20", paidOn: "2026-10-06", method: "bank_transfer", reference: "", notes: "" },
-      { acknowledge: false, market, now: NOW },
+      { amount: "1,100", withheld: "20", paidOn: "2026-10-06", method: "bank_transfer", reference: "", institution: "", payer: "", paidTime: "", chequeDate: "", notes: "" },
+      { recipients: [], market, now: NOW },
       testDb(),
     );
     if (!paid.ok) throw new Error("payment");

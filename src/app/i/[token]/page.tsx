@@ -88,7 +88,7 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
           </h1>
           <div className="flex items-center gap-3">
             <StatusBadge kind="invoice" status={invoice.status} />
-            <a href={`/i/${token}/pdf`} download className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+            <a href={`/i/${token}/pdf`} download className="text-sm font-medium text-primary-text underline-offset-4 hover:underline">
               Download PDF
             </a>
           </div>
@@ -160,7 +160,7 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
                     <a
                       href={`/i/${token}/receipts/${encodeURIComponent(payment.receiptNumber)}/pdf`}
                       download
-                      className="font-medium text-primary underline-offset-4 hover:underline"
+                      className="font-medium text-primary-text underline-offset-4 hover:underline"
                       aria-label={`Download ${market.documents.receipt.singular} ${payment.receiptNumber} as PDF`}
                     >
                       PDF

@@ -39,6 +39,7 @@ test("sign up, set up the business and land on the dashboard", async ({ page }) 
 test("onboarding explains a missing business name", async ({ page }) => {
   await signUp(page, { name: "Ana", email: uniqueEmail("onboard"), password: strongPassword() });
   await page.getByLabel("Business name").fill("   ");
+  await page.locator("label", { hasText: "Home services" }).click(); // the kind of business is required by the browser too
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText("Enter your business name.")).toBeVisible();
   await expect(page).toHaveURL(/\/onboarding$/);
@@ -50,8 +51,10 @@ test("account lifecycle: sign out, wrong password, sign in, agree to new terms, 
   await signUp(page, { name: "Rosa Reyes", email, password });
   await createBusiness(page, "Reyes Repairs");
 
-  await page.getByRole("button", { name: "Sign out" }).first().click();
-  await expect(page).toHaveURL(/\/sign-in$/);
+  // Sign out is in the account menu at the foot of the sidebar.
+  await page.getByRole("button", { name: /Rosa Reyes/ }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/sign-in(\?reason=signed-out)?$/);
 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill("definitely not the password");

@@ -7,8 +7,11 @@
 export type TaxMode = "inclusive" | "exclusive";
 
 /** How a payment was made (stored); each market names them in its own words. */
-export const PAYMENT_METHODS = ["bank_transfer", "ewallet", "cash", "card", "cheque", "other"] as const;
+export const PAYMENT_METHODS = ["bank_transfer", "ewallet", "bank_deposit", "cash", "card", "cheque", "other"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/** The words for a payment's proof fields: one reference number, who it went through, and who paid. */
+export type PaymentDetailLabels = { reference: string; institution: string | null; payer: string };
 
 export type MarketProfile = {
   /** ISO 3166-1 alpha-2. */
@@ -29,7 +32,11 @@ export type MarketProfile = {
     label: string;
     pattern: RegExp;
     example: string;
+    /** Under the field, when the plain "Printed on your documents, e.g. {example}." isn't enough. */
+    hint?: string;
   };
+  /** Under "Business name": the name customers know the business by (PH: the trade name). */
+  businessNameHint: string;
   registeredNameHint: string;
   address: {
     line2Label: string;
@@ -43,12 +50,21 @@ export type MarketProfile = {
   paymentMethods: string;
   /** The name of each payment method, in this market's words. */
   paymentMethodLabels: Record<PaymentMethod, string>;
+  /** What each proof-of-payment field is called for each method (null: the method has no such field). */
+  paymentDetailLabels: Record<PaymentMethod, PaymentDetailLabels>;
+  /** The date printed on a cheque (it can be post-dated). */
+  chequeDateLabel: string;
   /**
    * Tax a customer may withhold from a payment and settle with the tax
    * authority (PH: creditable withholding tax, BIR Form 2307), or null.
    * It counts toward the balance, so the invoice closes.
    */
   taxWithheld: { label: string; hint: string } | null;
+  /**
+   * ATC codes (with their rate in basis points) offered as suggestions on a withholding certificate. A person can
+   * always type another code and rate, so this is a starting list, not a rule. Empty where `taxWithheld` is null.
+   */
+  withholdingAtcs: readonly { code: string; rateBps: number }[];
   paymentInstructionsHint: string;
   paymentInstructionsPlaceholder: string;
   /** Where people paste a document link, in running text. */
@@ -134,6 +150,53 @@ export type MarketProfile = {
     /** Under the buyer's signature line (B.18.c). */
     signature: string;
   } | null;
+  /**
+   * The business's registration with the tax authority and the bodies that
+   * register its name (PH: BIR Certificate of Registration, DTI/SEC/CDA),
+   * the returns that follow from it, and the certificates worth keeping, or
+   * null where TAVI doesn't track them.
+   */
+  registration: {
+    /** "BIR": the tax authority, in running text. */
+    authority: string;
+    /** The document that proves the tax registration (PH: Certificate of Registration, Form 2303). */
+    certificate: string;
+    taxpayerTypes: readonly { code: string; label: string; individual: boolean }[];
+    /** How an individual taxpayer pays income tax (PH: graduated rates or the 8% option). */
+    incomeTaxOptions: readonly { code: string; label: string; hint: string }[];
+    /** Which option means "no percentage tax" (PH: eight_percent). */
+    noPercentageTaxOption: string;
+    office: { label: string; hint: string; pattern: RegExp; example: string };
+    /** TIN suffixes that mean the head office (PH: 00000, or 000 on older certificates). */
+    headOfficeSuffixes: readonly string[];
+    taxRegisteredOnLabel: string;
+    lineOfBusinessHint: string;
+    industryCode: { label: string; hint: string; pattern: RegExp; example: string };
+    /** Who registers the business name (PH: DTI for sole proprietors, SEC for corporations and partnerships, CDA for cooperatives). */
+    nameRegistration: {
+      authorities: readonly { code: string; label: string; numberLabel: string; scoped: boolean; expires: boolean }[];
+      scopes: readonly { code: string; label: string }[];
+    };
+    /** What a business keeps in its certificate folder. */
+    documentKinds: readonly { code: string; label: string }[];
+    /** The returns and renewals that follow from the registration (see domain/tax-deadlines). */
+    filings: readonly {
+      form: string;
+      name: string;
+      /** Everything listed must match. An empty list matches anyone. */
+      registrations?: readonly string[];
+      taxpayerTypes?: readonly string[];
+      /** Skipped for businesses on one of these income tax options. */
+      exceptIncomeTaxOptions?: readonly string[];
+      /** Each due date, and the day its period ends (yearsBack 1: the period ended in the previous year). */
+      occurrences: readonly {
+        month: number;
+        day: number;
+        periodEnd: { month: number; day: number; yearsBack: 0 | 1 };
+      }[];
+    }[];
+    deadlinesNote: string;
+  } | null;
   /** Printed in bold on documents that aren't registered invoices (PH: RR 7-2024 Sec. 6 B.15), or null. */
   supplementaryDocumentNotice: string | null;
   /**
@@ -161,8 +224,10 @@ export const MARKETS = {
       label: "TIN",
       pattern: /^\d{3}-?\d{3}-?\d{3}(-?\d{3,5})?$/,
       example: "123-456-789-00000",
+      hint: "Printed on your documents, e.g. 123-456-789-00000. End it with your branch code: 00000 for the head office.",
     },
-    registeredNameHint: "If different, e.g. as on your DTI or SEC papers.",
+    businessNameHint: "Your trade name, as customers know you and as on your DTI certificate.",
+    registeredNameHint: "The taxpayer name on your BIR Certificate of Registration. For a sole proprietor, that's your own name.",
     address: {
       line2Label: "Building, unit or barangay",
       cityLabel: "City or municipality",
@@ -174,15 +239,28 @@ export const MARKETS = {
     paymentMethodLabels: {
       bank_transfer: "Bank transfer",
       ewallet: "GCash or Maya",
+      bank_deposit: "Bank deposit (slip)",
       cash: "Cash",
       card: "Card",
       cheque: "Cheque",
       other: "Other",
     },
+    paymentDetailLabels: {
+      bank_transfer: { reference: "Reference no.", institution: "Bank", payer: "Sender (name or account)" },
+      ewallet: { reference: "Reference no.", institution: "Wallet (GCash, Maya…)", payer: "Sender (name or number)" },
+      bank_deposit: { reference: "Deposit slip no.", institution: "Bank", payer: "Depositor" },
+      cash: { reference: "Receipt no.", institution: null, payer: "Paid by" },
+      card: { reference: "Approval or reference no.", institution: "Card issuer or bank", payer: "Cardholder" },
+      cheque: { reference: "Cheque no.", institution: "Bank on the cheque", payer: "Name on the cheque" },
+      other: { reference: "Reference no.", institution: "Bank or wallet", payer: "Paid by" },
+    },
+    chequeDateLabel: "Date on the cheque",
     taxWithheld: {
       label: "Tax withheld (BIR Form 2307)",
       hint: "If your customer withheld creditable tax, enter it here. It counts toward the balance; keep their Form 2307.",
     },
+    // The one ATC on the sample certificate. More are added once the CPA confirms them (compliance questionnaire, CPA question 8).
+    withholdingAtcs: [{ code: "WI160", rateBps: 200 }],
     paymentInstructionsHint: "Bank account, GCash or Maya number.",
     paymentInstructionsPlaceholder: "e.g. GCash 0917 123 4567 (Juan Dela Cruz)",
     shareChannels: "Messenger or Viber",
@@ -206,7 +284,7 @@ export const MARKETS = {
       },
       {
         code: "non_vat_exempt",
-        label: "Non-VAT, exempt from VAT and percentage tax",
+        label: "Non-VAT, no percentage tax (8% option or exempt)",
         statement: "Non-VAT Reg TIN",
         suggestsTaxes: false,
         invoiceSales: "exempt",
@@ -264,6 +342,100 @@ export const MARKETS = {
         totalDue: "Total Amount Due",
       },
       signature: "Signature over printed name",
+    },
+    registration: {
+      authority: "BIR",
+      certificate: "BIR Certificate of Registration (Form 2303)",
+      taxpayerTypes: [
+        { code: "sole_proprietor", label: "Single proprietorship", individual: true },
+        { code: "professional", label: "Self-employed professional", individual: true },
+        { code: "partnership", label: "Partnership", individual: false },
+        { code: "corporation", label: "Corporation", individual: false },
+        { code: "cooperative", label: "Cooperative", individual: false },
+        { code: "other", label: "Other", individual: false },
+      ],
+      incomeTaxOptions: [
+        { code: "graduated", label: "Graduated income tax rates", hint: "Quarterly and annual income tax on net income, plus percentage tax if you're non-VAT." },
+        { code: "eight_percent", label: "8% on gross sales", hint: "For individuals earning up to ₱3,000,000 a year. It replaces income tax and percentage tax. Your COR says \"Availed of 8%: Yes\"." },
+      ],
+      noPercentageTaxOption: "eight_percent",
+      office: {
+        label: "RDO code",
+        hint: "Your Revenue District Office, on your COR (e.g. 044 for Taguig-Pateros).",
+        pattern: /^\d{3}$/,
+        example: "044",
+      },
+      headOfficeSuffixes: ["00000", "000"],
+      taxRegisteredOnLabel: "Registered with the BIR on",
+      lineOfBusinessHint: "As on your COR, e.g. Auto repair shop.",
+      industryCode: {
+        label: "PSIC code",
+        hint: "The industry code on your COR, e.g. 45209.",
+        pattern: /^\d{4,5}$/,
+        example: "45209",
+      },
+      nameRegistration: {
+        authorities: [
+          { code: "dti", label: "DTI (single proprietorship)", numberLabel: "Business Name No.", scoped: true, expires: true },
+          { code: "sec", label: "SEC (corporation or partnership)", numberLabel: "SEC registration no.", scoped: false, expires: false },
+          { code: "cda", label: "CDA (cooperative)", numberLabel: "CDA registration no.", scoped: false, expires: false },
+        ],
+        scopes: [
+          { code: "barangay", label: "Barangay" },
+          { code: "city", label: "City or municipality" },
+          { code: "regional", label: "Regional" },
+          { code: "national", label: "National" },
+        ],
+      },
+      documentKinds: [
+        { code: "cor", label: "BIR Certificate of Registration (2303)" },
+        { code: "name_registration", label: "DTI, SEC or CDA certificate" },
+        { code: "permit", label: "Mayor's or business permit" },
+        { code: "other", label: "Other" },
+      ],
+      filings: [
+        {
+          form: "2550Q",
+          name: "Quarterly VAT return",
+          registrations: ["vat"],
+          occurrences: [
+          { month: 1, day: 25, periodEnd: { month: 12, day: 31, yearsBack: 1 } },
+          { month: 4, day: 25, periodEnd: { month: 3, day: 31, yearsBack: 0 } },
+          { month: 7, day: 25, periodEnd: { month: 6, day: 30, yearsBack: 0 } },
+          { month: 10, day: 25, periodEnd: { month: 9, day: 30, yearsBack: 0 } }
+          ],
+        },
+        {
+          form: "2551Q",
+          name: "Quarterly percentage tax return",
+          registrations: ["non_vat"],
+          exceptIncomeTaxOptions: ["eight_percent"],
+          occurrences: [
+          { month: 1, day: 25, periodEnd: { month: 12, day: 31, yearsBack: 1 } },
+          { month: 4, day: 25, periodEnd: { month: 3, day: 31, yearsBack: 0 } },
+          { month: 7, day: 25, periodEnd: { month: 6, day: 30, yearsBack: 0 } },
+          { month: 10, day: 25, periodEnd: { month: 9, day: 30, yearsBack: 0 } }
+          ],
+        },
+        {
+          form: "1701Q",
+          name: "Quarterly income tax return",
+          taxpayerTypes: ["sole_proprietor", "professional"],
+          occurrences: [
+            { month: 5, day: 15, periodEnd: { month: 3, day: 31, yearsBack: 0 } },
+            { month: 8, day: 15, periodEnd: { month: 6, day: 30, yearsBack: 0 } },
+            { month: 11, day: 15, periodEnd: { month: 9, day: 30, yearsBack: 0 } },
+          ],
+        },
+        {
+          form: "1701 / 1701A",
+          name: "Annual income tax return",
+          taxpayerTypes: ["sole_proprietor", "professional"],
+          occurrences: [{ month: 4, day: 15, periodEnd: { month: 12, day: 31, yearsBack: 1 } }],
+        },
+      ],
+      deadlinesNote:
+        "These follow the usual BIR calendar for your registration. A date that falls on a weekend or holiday usually moves to the next working day. Your Certificate of Registration lists the returns you must file; check it and your RDO.",
     },
     supplementaryDocumentNotice: "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.",
     units: {

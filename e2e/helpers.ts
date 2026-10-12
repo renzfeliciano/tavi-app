@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { expect, type Page } from "@playwright/test";
 
 /** A unique address per test run; example.com never receives mail. */
@@ -38,6 +38,8 @@ export async function signUp(page: Page, { name, email, password }: { name: stri
 
 export async function createBusiness(page: Page, name: string) {
   await page.getByLabel("Business name").fill(name);
+  // The kind of business is required (D21). The radios are visually hidden, so click their label.
+  await page.locator("label", { hasText: "Home services" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 }
@@ -71,20 +73,48 @@ export async function setTermsVersion(email: string, version: string) {
   }
 }
 
-/** Test-only: the invitation link in the latest email queued for `to` (E2E runs have no mailbox). */
-export async function latestInvitationPath(to: string): Promise<string> {
+/**
+ * Test-only: a working link for the invitation the app just created for `to`.
+ * The real link exists only in the email, and the outbox drops an email's body
+ * once it is sent (dispatchOutbox), so E2E, which has no mailbox, issues a
+ * fresh token for that same invitation instead.
+ */
+export async function freshInvitationPath(to: string): Promise<string> {
+  const { Client } = await import("pg");
+  const { testDatabaseUrl } = await import("../src/db/testing/env");
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const client = new Client({ connectionString: testDatabaseUrl() });
+  await client.connect();
+  try {
+    const { rowCount } = await client.query(
+      `update invitations set token_hash = $1
+       where id = (
+         select id from invitations
+         where email = $2 and accepted_at is null and revoked_at is null
+         order by created_at desc limit 1
+       )`,
+      [tokenHash, to],
+    );
+    if (rowCount !== 1) throw new Error(`No open invitation for ${to}`);
+    return `/invite/${token}`;
+  } finally {
+    await client.end();
+  }
+}
+
+/** Test-only: whether the latest email queued for `to` is still "pending", or already "sent" (or "failed"). */
+export async function latestEmailStatus(to: string): Promise<string | undefined> {
   const { Client } = await import("pg");
   const { testDatabaseUrl } = await import("../src/db/testing/env");
   const client = new Client({ connectionString: testDatabaseUrl() });
   await client.connect();
   try {
-    const { rows } = await client.query<{ text: string }>(
-      "select payload->>'text' as text from outbox_messages where payload->>'to' = $1 order by created_at desc limit 1",
+    const { rows } = await client.query<{ status: string }>(
+      "select status from outbox_messages where payload->>'to' = $1 order by created_at desc limit 1",
       [to],
     );
-    const path = /\/invite\/[A-Za-z0-9_-]{43}/.exec(rows[0]?.text ?? "")?.[0];
-    if (!path) throw new Error(`No invitation email for ${to}`);
-    return path;
+    return rows[0]?.status;
   } finally {
     await client.end();
   }

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -224,7 +225,7 @@ export function SentInvoiceActions({
       )}
 
       <Dialog open={open !== null} onOpenChange={(next) => !next && !pending && setOpen(null)}>
-        <DialogContent>
+        <DialogContent mascot="concerned" tone="danger">
           <form
             className="grid gap-4"
             onSubmit={(event) => {
@@ -236,28 +237,30 @@ export function SentInvoiceActions({
               <DialogTitle>{copy ? `${copy.title} ${name}?` : ""}</DialogTitle>
               <DialogDescription>{copy?.body}</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-1.5">
-              <label htmlFor={reasonId} className="text-sm font-medium">
-                Reason
-              </label>
-              <Textarea
-                id={reasonId}
-                value={reason}
-                onChange={(e) => {
-                  setReason(e.target.value);
-                  setReasonError(null);
-                }}
-                rows={2}
-                maxLength={INVOICE_REASON_MAX}
-                aria-invalid={reasonError ? true : undefined}
-                aria-describedby={reasonError ? `${reasonId}-error` : undefined}
-              />
-              {reasonError && (
-                <p id={`${reasonId}-error`} className="text-sm text-destructive">
-                  {reasonError}
-                </p>
-              )}
-            </div>
+            <DialogBody className="grid gap-4">
+              <div className="grid gap-1.5">
+                <label htmlFor={reasonId} className="text-sm font-medium">
+                  Reason
+                </label>
+                <Textarea
+                  id={reasonId}
+                  value={reason}
+                  onChange={(e) => {
+                    setReason(e.target.value);
+                    setReasonError(null);
+                  }}
+                  rows={2}
+                  maxLength={INVOICE_REASON_MAX}
+                  aria-invalid={reasonError ? true : undefined}
+                  aria-describedby={reasonError ? `${reasonId}-error` : undefined}
+                />
+                {reasonError && (
+                  <p id={`${reasonId}-error`} className="text-sm text-destructive">
+                    {reasonError}
+                  </p>
+                )}
+              </div>
+            </DialogBody>
             <DialogFooter>
               <DialogClose render={<Button type="button" variant="outline" disabled={pending} />}>Keep it</DialogClose>
               <Button type="submit" variant="destructive" pending={pending} pendingLabel={copy?.pending ?? ""}>

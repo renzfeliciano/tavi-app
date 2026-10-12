@@ -8,6 +8,8 @@ export type LetterheadProfile = AddressParts & {
   taxRegistration: string | null;
   email: string | null;
   phone: string | null;
+  /** Up to three QR codes the customer can scan to pay; only the enabled ones are printed. */
+  paymentQrs?: { label: string; value: string; enabled: boolean }[];
 };
 
 /**
@@ -27,5 +29,6 @@ export function letterhead(
     contactLines: [profile.email, profile.phone].filter((line): line is string => Boolean(line)),
     taxId: profile.taxId ? { label: taxIdStatement(market, profile.taxRegistration), value: profile.taxId } : null,
     logo,
+    paymentQrs: (profile.paymentQrs ?? []).filter((qr) => qr.enabled).map(({ label, value }) => ({ label, value })),
   };
 }

@@ -57,7 +57,7 @@ export function SignInForm({ next }: { next?: Route } = {}) {
           autoComplete="email"
           inputMode="email"
           required
-          placeholder="e.g. maria@acmeaircon.ph"
+          placeholder="e.g. travisrenz.repairservices@gmail.com"
         />
       </Field>
       <Field>

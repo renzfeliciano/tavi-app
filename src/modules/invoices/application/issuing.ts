@@ -112,6 +112,9 @@ export async function issueInvoice(
   };
   const today = todayIn(settings.timezone, now);
 
+  // The business as it is now, kept with the document: identity and payment QR codes (D25).
+  const sellerSnapshot = sellerFrom(profile);
+
   const outcome = await db.transaction(async (tx) => {
     const locked = await loadHeader(tx, actor, id, true);
     if (!locked || locked.status !== "DRAFT") return null;
@@ -156,7 +159,7 @@ export async function issueInvoice(
         status,
         number,
         customerSnapshot: snapshot,
-        sellerSnapshot: sellerFrom(profile),
+        sellerSnapshot,
         paymentInstructions: profile.paymentInstructions,
         registration: registered,
         sentAt: sql`now()`,
@@ -192,6 +195,7 @@ export async function issueInvoice(
           message: email.message,
           url,
           action: `View the ${title.toLowerCase()}`,
+          paymentQrs: (sellerSnapshot.paymentQrs ?? []).map((qr, index) => ({ label: qr.label, imageUrl: `${url}/qr/${index}` })),
         }),
         { organizationId: actor.organizationId },
       );

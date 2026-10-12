@@ -1,7 +1,11 @@
 // The business as it was when a document was issued (D25). Names, tax ID,
 // registration, contact and address are kept with the document, so changing
 // Settings later never rewrites what was already sent. The logo is a brand
-// asset, not legal identity, so it stays the current one.
+// asset, not legal identity, so it stays the current one. The payment QR codes
+// are frozen too: they are what the customer was told to pay to. A snapshot
+// taken before QRs existed has none, so it prints none.
+
+import type { PaymentQr } from "./payment-qr";
 
 export type SellerSnapshot = {
   name: string;
@@ -15,6 +19,8 @@ export type SellerSnapshot = {
   city: string | null;
   region: string | null;
   postalCode: string | null;
+  /** The enabled QRs at issue time. Absent on snapshots taken before QRs existed. */
+  paymentQrs?: PaymentQr[];
 };
 
 /** The identity part of the profile, as kept on an issued document. */
@@ -31,6 +37,7 @@ export function sellerFrom(profile: SellerSnapshot): SellerSnapshot {
     city: profile.city,
     region: profile.region,
     postalCode: profile.postalCode,
+    paymentQrs: (profile.paymentQrs ?? []).filter((qr) => qr.enabled),
   };
 }
 

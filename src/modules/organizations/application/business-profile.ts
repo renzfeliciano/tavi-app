@@ -5,9 +5,12 @@ import { type Database, getDb } from "@/db";
 import { recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import { type BusinessProfileInput, businessProfileSchemaFor } from "../domain/business-profile";
+import { incomeTaxConflict } from "../domain/registration";
+import { type PaymentQr, parsePaymentQrs, type RawPaymentQr } from "../domain/payment-qr";
 import { organizations } from "../schema";
 
-export type BusinessProfile = BusinessProfileInput;
+/** The business as printed on documents: the profile form's fields, plus its payment QR codes (saved on their own). */
+export type BusinessProfile = BusinessProfileInput & { paymentQrs: PaymentQr[] };
 
 export type UpdateBusinessProfileResult =
   | { ok: true }
@@ -32,6 +35,7 @@ const profileColumns = {
   defaultNotes: organizations.defaultNotes,
   defaultTerms: organizations.defaultTerms,
   paymentInstructions: organizations.paymentInstructions,
+  paymentQrs: organizations.paymentQrs,
 };
 
 /** The business details and document defaults of the actor's organization. */
@@ -113,21 +117,26 @@ export async function updateBusinessProfile(
 
   return db.transaction(async (tx): Promise<UpdateBusinessProfileResult> => {
     const [row] = await tx
-      .select({ ...profileColumns, countryCode: organizations.countryCode })
+      .select({ ...profileColumns, countryCode: organizations.countryCode, incomeTaxOption: organizations.incomeTaxOption })
       .from(organizations)
       .where(eq(organizations.id, actor.organizationId))
       .for("update");
     if (!row) throw new Error("Organization not found");
-    const { countryCode, ...current } = row;
+    const { countryCode, incomeTaxOption, ...current } = row;
 
     // Validated against the business's own market (e.g. its tax-ID format).
-    const parsed = businessProfileSchemaFor(marketFor(countryCode)).safeParse(input);
+    const market = marketFor(countryCode);
+    const parsed = businessProfileSchemaFor(market).safeParse(input);
     if (!parsed.success) {
       return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors };
     }
     const next = parsed.data;
 
-    const changed = (Object.keys(next) as (keyof BusinessProfile)[]).filter(
+    // The 8% option and VAT or percentage tax exclude each other (registration details).
+    const conflict = market.registration ? incomeTaxConflict(market.registration, incomeTaxOption, next.taxRegistration) : null;
+    if (conflict) return { ok: false, fieldErrors: { taxRegistration: [conflict] } };
+
+    const changed = (Object.keys(next) as (keyof BusinessProfileInput)[]).filter(
       (key) => next[key] !== current[key],
     );
     if (changed.length === 0) return { ok: true };
@@ -145,6 +154,45 @@ export async function updateBusinessProfile(
       entityType: "organization",
       entityId: actor.organizationId,
       metadata: { changed },
+    });
+    return { ok: true };
+  });
+}
+
+export type UpdatePaymentQrsResult = { ok: true } | { ok: false; errors: Record<string, string> };
+
+/**
+ * Saves the business's payment QR codes (what a customer scans to pay). They
+ * are separate from the profile form: a row is a label and the text inside the
+ * QR. The audit log records that they changed, never what they hold.
+ */
+export async function updatePaymentQrs(
+  actor: OrgActor,
+  rows: RawPaymentQr[],
+  db: Database = getDb(),
+): Promise<UpdatePaymentQrsResult> {
+  assertCan(actor, "organization.manage");
+  const parsed = parsePaymentQrs(rows);
+  if (!parsed.ok) return parsed;
+
+  return db.transaction(async (tx): Promise<UpdatePaymentQrsResult> => {
+    const [row] = await tx
+      .select({ paymentQrs: organizations.paymentQrs })
+      .from(organizations)
+      .where(eq(organizations.id, actor.organizationId))
+      .for("update");
+    if (!row) throw new Error("Organization not found");
+    if (JSON.stringify(row.paymentQrs) === JSON.stringify(parsed.qrs)) return { ok: true };
+
+    await tx.update(organizations).set({ paymentQrs: parsed.qrs }).where(eq(organizations.id, actor.organizationId));
+    await recordAuditEvent(tx, {
+      action: "organization.updated",
+      actorType: "user",
+      actorId: actor.userId,
+      organizationId: actor.organizationId,
+      entityType: "organization",
+      entityId: actor.organizationId,
+      metadata: { changed: ["paymentQrs"] },
     });
     return { ok: true };
   });

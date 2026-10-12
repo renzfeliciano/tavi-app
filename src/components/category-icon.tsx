@@ -1,6 +1,7 @@
 import {
   BriefcaseIcon,
   CalendarHeartIcon,
+  CarIcon,
   GraduationCapIcon,
   HardHatIcon,
   LaptopIcon,
@@ -28,6 +29,7 @@ const ICONS: Record<CategoryCode, LucideIcon> = {
   tech_it: LaptopIcon,
   retail: StoreIcon,
   transport: TruckIcon,
+  auto_repair: CarIcon,
   events: CalendarHeartIcon,
   professional: BriefcaseIcon,
   other: ShapesIcon,

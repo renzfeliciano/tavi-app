@@ -9,6 +9,7 @@ import {
   isMarketCode,
   MARKET_CODES,
   MARKETS,
+  type MarketProfile,
   marketFor,
   PAYMENT_METHODS,
 } from "./markets";
@@ -139,5 +140,51 @@ describe("the Philippine market (D13, RR 7-2024)", () => {
 
   it("only suggests VAT to VAT-registered businesses", () => {
     expect(MARKETS.PH.taxRegistrations.filter((r) => r.suggestsTaxes).map((r) => r.code)).toEqual(["vat"]);
+  });
+});
+
+describe("registration details (D28)", () => {
+  const registration: MarketProfile["registration"] = MARKETS.PH.registration;
+
+  it("is only configured where it can be filled in", () => {
+    expect(registration).not.toBeNull();
+  });
+
+  it("refers only to taxpayer types, tax registrations and options that exist", () => {
+    if (!registration) return;
+    const types = registration.taxpayerTypes.map((t) => t.code);
+    const registrations = MARKETS.PH.taxRegistrations.map((r) => r.code);
+    const options = registration.incomeTaxOptions.map((o) => o.code);
+    expect(registration.incomeTaxOptions.map((o) => o.code)).toContain(registration.noPercentageTaxOption);
+    for (const filing of registration.filings) {
+      for (const t of filing.taxpayerTypes ?? []) expect(types).toContain(t);
+      for (const r of filing.registrations ?? []) expect(registrations).toContain(r);
+      for (const o of filing.exceptIncomeTaxOptions ?? []) expect(options).toContain(o);
+    }
+  });
+
+  it("has real calendar days for every due date and period end", () => {
+    if (!registration) return;
+    for (const filing of registration.filings) {
+      expect(filing.occurrences.length).toBeGreaterThan(0);
+      for (const o of filing.occurrences) {
+        for (const { month, day } of [o, o.periodEnd]) {
+          expect(month).toBeGreaterThanOrEqual(1);
+          expect(month).toBeLessThanOrEqual(12);
+          // 2025 isn't a leap year: day 29 of February would fail here.
+          expect(day).toBeLessThanOrEqual(new Date(Date.UTC(2025, month, 0)).getUTCDate());
+        }
+      }
+    }
+  });
+
+  it("keeps a place for the certificate of registration and the business name certificate", () => {
+    expect(registration?.documentKinds.map((k) => k.code)).toEqual(expect.arrayContaining(["cor", "name_registration"]));
+  });
+
+  it("accepts the codes printed on a real certificate", () => {
+    expect(registration?.office.pattern.test("044")).toBe(true);
+    expect(registration?.industryCode.pattern.test("45209")).toBe(true);
+    expect(MARKETS.PH.taxId.pattern.test("618-327-286-00000")).toBe(true);
   });
 });

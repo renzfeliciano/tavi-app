@@ -18,6 +18,7 @@ export const CATEGORY_CODES = [
   "tech_it",
   "retail",
   "transport",
+  "auto_repair",
   "events",
   "professional",
   "other",
@@ -184,6 +185,20 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
       { name: "Waiting time", unit: "hour" },
     ],
     accessory: "cap",
+  },
+  auto_repair: {
+    code: "auto_repair",
+    label: "Auto & motorcycle repair",
+    hint: "Repair shop, car wash, detailing, vulcanizing",
+    itemExample: "Change oil and filter",
+    units: ["job", "hour", "pc"],
+    starterItems: [
+      { name: "Labour", unit: "hour" },
+      { name: "Change oil and filter", unit: "job" },
+      { name: "Parts", unit: "lot" },
+      { name: "Diagnostic check", unit: "job" },
+    ],
+    accessory: "hardhat",
   },
   events: {
     code: "events",

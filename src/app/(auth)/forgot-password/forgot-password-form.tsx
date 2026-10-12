@@ -63,7 +63,7 @@ export function ForgotPasswordForm() {
           autoComplete="email"
           inputMode="email"
           required
-          placeholder="e.g. maria@acmeaircon.ph"
+          placeholder="e.g. travisrenz.repairservices@gmail.com"
         />
       </Field>
       <Button type="submit" size="lg" pending={pending} pendingLabel="Sending link…">

@@ -1,5 +1,5 @@
 import { brand } from "@/config/brand";
-import { escapeHtml, type EmailMessage } from "./email";
+import { brandSignoffHtml, escapeHtml, type EmailMessage, originOf } from "./email";
 
 // The invitation to join a business in Tavi (Phase 2.1, D17). From Tavi on
 // the business's behalf; the link is the point.
@@ -26,9 +26,7 @@ export function teamInvitationEmail(input: TeamInvitationEmailInput): EmailMessa
     lead,
   )}</p><p><a href="${url}" style="display:inline-block;padding:10px 16px;border-radius:6px;background:${C.accent};color:${C.onAccent};text-decoration:none">Accept the invitation</a></p><p style="color:${C.muted};font-size:13px">${escapeHtml(
     expiry,
-  )}</p><p style="color:${C.muted};font-size:13px">If the button doesn't work, paste this link into your browser:<br>${url}</p><p style="color:${C.muted};font-size:12px">${escapeHtml(
-    brand.name,
-  )}</p></body></html>`;
+  )}</p><p style="color:${C.muted};font-size:13px">If the button doesn't work, paste this link into your browser:<br>${url}</p>${brandSignoffHtml(originOf(input.url), "Sent with")}</body></html>`;
 
   return {
     to: input.to,

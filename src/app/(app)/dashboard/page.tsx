@@ -58,7 +58,7 @@ function setupSteps(
   return [
     {
       title: "Add your first customer",
-      description: "Their name and contact details fill in on every quote and invoice.",
+      description: `Their name and contact details fill in on every ${quote} and ${market.documents.invoice.singular.toLowerCase()}.`,
       href: "/customers/new",
       cta: "Add customer",
       done: progress.hasCustomer,
@@ -100,7 +100,7 @@ function Checklist({ steps, quoteName }: { steps: Step[]; quoteName: string }) {
           </p>
           <p className="text-sm text-pretty text-muted-foreground">
             Your logo and business details can wait.{" "}
-            <Link href="/settings/business" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
+            <Link href="/settings/business" className="font-medium text-foreground underline underline-offset-4 hover:text-primary-text">
               Add them now
             </Link>
           </p>
@@ -251,7 +251,7 @@ export default async function DashboardPage() {
           <div className="flex flex-wrap gap-2">
             <Link href="/quotes/new" className={buttonVariants()}>
               <FilePlus2Icon aria-hidden="true" />
-              New quote
+              New {market.documents.quote.singular.toLowerCase()}
             </Link>
             <Link href="/invoices/new" className={buttonVariants({ variant: "outline" })}>
               <ReceiptTextIcon aria-hidden="true" />

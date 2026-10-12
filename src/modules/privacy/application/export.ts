@@ -10,6 +10,7 @@ import { exportTeam, getOrganizationForExport } from "@/modules/organizations";
 import { exportPayments } from "@/modules/payments";
 import { exportQuotes } from "@/modules/quotes";
 import { consumeRateLimit } from "@/modules/system";
+import { exportTrash } from "@/modules/trash";
 import { todayIn } from "@/shared/dates/calendar";
 import {
   attachLines,
@@ -52,6 +53,7 @@ export async function exportBusinessData(
       const invoices = await exportInvoices(tx, organizationId);
       const payments = await exportPayments(tx, organizationId);
       const team = await exportTeam(tx, organizationId);
+      const recycleBin = await exportTrash(tx, organizationId);
 
       await recordAuditEvent(tx, {
         action: "organization.exported",
@@ -78,6 +80,7 @@ export async function exportBusinessData(
         quotes: attachLines(quotes.quotes, quotes.lines, (line) => line.quoteId),
         invoices: attachLines(invoices.invoices, invoices.lines, (line) => line.invoiceId),
         payments,
+        recycleBin,
       };
     },
     { isolationLevel: "repeatable read" },

@@ -10,12 +10,16 @@ import { ReadOnlyNotice, SettingsPageHeader } from "../_components/settings-page
 import type { ProfileFormValues } from "./actions";
 import { BusinessProfileForm, type BusinessProfileCopy } from "./business-profile-form";
 import { LogoUploader } from "./logo-uploader";
+import { PaymentQrEditor } from "./payment-qr-editor";
 
 export const metadata: Metadata = { title: "Business profile" };
 
 function toFormValues(profile: BusinessProfile): ProfileFormValues {
+  // The payment QR codes have their own card and form.
   return Object.fromEntries(
-    Object.entries(profile).map(([key, value]) => [key, value === null ? "" : String(value)]),
+    Object.entries(profile)
+      .filter(([key]) => key !== "paymentQrs")
+      .map(([key, value]) => [key, value === null ? "" : String(value)]),
   ) as ProfileFormValues;
 }
 
@@ -29,9 +33,10 @@ export default async function BusinessProfilePage() {
   // Everything country-specific comes from the business's market profile.
   const copy: BusinessProfileCopy = {
     taxIdLabel: market.taxId.label,
-    taxIdHint: `Printed on your documents, e.g. ${market.taxId.example}.`,
+    taxIdHint: market.taxId.hint ?? `Printed on your documents, e.g. ${market.taxId.example}.`,
     taxRegistrations: market.taxRegistrations.map(({ code, label }) => ({ code, label })),
     taxRegistrationHint: market.taxRegistrationHint,
+    businessNameHint: market.businessNameHint,
     registeredNameHint: market.registeredNameHint,
     address: market.address,
     documentsTitle: `${market.documents.quote.plural} and ${docs.invoices}`,
@@ -59,6 +64,11 @@ export default async function BusinessProfilePage() {
           businessName={profile.name}
           description={`Printed at the top of your ${docs.quotesAndInvoices}.`}
           editable={editable}
+        />
+        <PaymentQrEditor
+          initial={profile.paymentQrs}
+          editable={editable}
+          where={docs.quotesAndInvoices}
         />
         <BusinessProfileForm initialValues={toFormValues(profile)} copy={copy} editable={editable} />
       </div>

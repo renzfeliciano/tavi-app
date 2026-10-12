@@ -13,6 +13,7 @@ import {
   revokeInvitation,
   transferOwnership,
 } from "@/modules/organizations";
+import { flushOutboxAfterResponse } from "@/modules/notifications";
 import { env } from "@/shared/env";
 
 const PAGE = "/settings/team";
@@ -20,7 +21,11 @@ const PAGE = "/settings/team";
 export async function inviteMemberAction(input: { email: unknown; role: unknown }): Promise<InviteResult> {
   const ctx = await requireOrgContext();
   const result = await inviteMember(ctx, input, { appUrl: env.APP_URL });
-  if (result.ok) revalidatePath(PAGE);
+  if (result.ok) {
+    revalidatePath(PAGE);
+    // The email is queued in the same transaction; send it now rather than at the next cron run.
+    flushOutboxAfterResponse();
+  }
   return result;
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type InsightFacts, insightsFrom, selectInsight } from "./insights";
+import { type InsightFacts, insightsFrom, selectInsight, topInsight } from "./insights";
 
 const words = {
   quote: { one: "quotation", other: "quotations" },
@@ -103,5 +103,17 @@ describe("selectInsight: one thing at a time, on the right page", () => {
   it("lets a critical item through on any page", () => {
     const critical = [{ id: "x", kind: "critical" as const, message: "Blocked.", scopes: ["/dashboard"], priority: 1 }];
     expect(selectInsight(critical, "/settings/team", new Set())?.id).toBe("x");
+  });
+});
+
+describe("topInsight", () => {
+  const base = { scopes: [], priority: 1 };
+  it("picks the most valuable kind first, then the higher priority, wherever it applies", () => {
+    expect(topInsight([])).toBeNull();
+    const a = { ...base, id: "a", kind: "recommended" as const, message: "a" };
+    const b = { ...base, id: "b", kind: "action" as const, message: "b", priority: 5 };
+    const c = { ...base, id: "c", kind: "action" as const, message: "c", priority: 9 };
+    expect(topInsight([a, b, c])?.id).toBe("c");
+    expect(topInsight([a])?.id).toBe("a");
   });
 });

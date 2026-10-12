@@ -109,13 +109,16 @@ export async function sendQuote(
     taxId: customer.taxId,
   };
 
+  // The business as it is now, kept with the document: identity and payment QR codes (D25).
+  const sellerSnapshot = sellerFrom(profile);
+
   const outcome = await db.transaction(async (tx) => {
     const locked = await loadHeader(tx, actor, id, true);
     if (!locked || locked.status !== "DRAFT") return null;
     const number = locked.number ?? (await allocateDocumentNumber(tx, actor.organizationId, "quote")).number;
     await tx
       .update(quotes)
-      .set({ status: "SENT", number, customerSnapshot: snapshot, sellerSnapshot: sellerFrom(profile), sentAt: sql`now()` })
+      .set({ status: "SENT", number, customerSnapshot: snapshot, sellerSnapshot, sentAt: sql`now()` })
       .where(eq(quotes.id, locked.id));
     await revokeShareLinks(tx, quoteDocument(actor, locked.id));
     const token = await createShareLink(tx, {
@@ -145,6 +148,7 @@ export async function sendQuote(
           message: email.message,
           url,
           action: "View the quote",
+          paymentQrs: (sellerSnapshot.paymentQrs ?? []).map((qr, index) => ({ label: qr.label, imageUrl: `${url}/qr/${index}` })),
         }),
         { organizationId: actor.organizationId },
       );

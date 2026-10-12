@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { CategoryIcon } from "@/components/category-icon";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { EllipsisIcon, PlusIcon } from "lucide-react";
-import { Wordmark } from "@/components/brand/wordmark";
-import { ThemeMenu } from "@/components/theme/theme-toggle";
+import { useEffect, useState } from "react";
+import { MenuIcon, PlusIcon } from "lucide-react";
+import { AppLogo } from "@/components/brand/app-logo";
 import {
   Sheet,
   SheetContent,
@@ -18,13 +16,13 @@ import {
 import { brand } from "@/config/brand";
 import { cn } from "@/lib/utils";
 import type { ShellAccount } from "./account";
-import { AccountBlock } from "./account-menu";
+import { setDrawerOpen, useCloseDrawerOnDesktop, useDrawerOpen } from "./drawer-state";
+import { SidebarBody, type SidebarProps } from "./sidebar-body";
 import {
   isActive,
-  mobileMoreFor,
   mobileTabs,
   type NavItem,
-  newActionsFor,
+  newMenuFor,
   withDocumentNames,
 } from "./nav";
 
@@ -83,43 +81,71 @@ function SheetLinkList({
   );
 }
 
-/** Top bar (phones and tablets). */
-export function MobileTopBar({ organizationName, category }: { organizationName: string; category: string | null }) {
+/** Top bar (phones and tablets): the menu button, the Stamp's tile and the business's name. */
+export function MobileTopBar({ organizationName }: { organizationName: string }) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-sm lg:hidden">
-      <Link href="/dashboard" className="flex h-11 shrink-0 items-center rounded-sm">
-        <Wordmark size={18} mark />
+    // A modal that opens before this hydrates makes Base UI mark it aria-hidden; that is not a mismatch (hydration.test.tsx).
+    <header
+      suppressHydrationWarning
+      className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/90 px-2 backdrop-blur-sm lg:hidden"
+    >
+      <button
+        type="button"
+        aria-label="Open menu"
+        aria-haspopup="dialog"
+        onClick={() => setDrawerOpen(true)}
+        className="grid size-11 shrink-0 place-items-center rounded-md text-foreground outline-none transition-colors duration-(--duration-fast) ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/35 active:bg-muted"
+      >
+        <MenuIcon aria-hidden="true" className="size-5" />
+      </button>
+      <Link href="/dashboard" className="flex h-11 shrink-0 items-center rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/35">
+        <AppLogo size={32} />
       </Link>
-      <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
-        {category && <CategoryIcon code={category} className="size-3.5 shrink-0" />}
-        <span className="truncate">{organizationName}</span>
-      </span>
-      <ThemeMenu className="ml-auto" />
+      <span className="min-w-0 truncate text-base font-semibold tracking-tight">{organizationName}</span>
     </header>
   );
 }
 
+/**
+ * The navigation drawer (below the desktop layout): the same sidebar, sliding
+ * in from the left over a backdrop. Focus stays inside while it is open, Escape
+ * and the backdrop close it, and so does choosing anything or changing page.
+ */
+export function MobileDrawer(props: Omit<SidebarProps, "variant" | "onNavigate">) {
+  const open = useDrawerOpen();
+  const pathname = usePathname();
+  useCloseDrawerOnDesktop();
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  return (
+    <Sheet open={open} onOpenChange={setDrawerOpen}>
+      <SheetContent side="left" className="w-[min(20rem,88vw)] gap-0 bg-sidebar p-0 sm:max-w-none lg:hidden">
+        <SheetHeader className="sr-only">
+          <SheetTitle>Menu</SheetTitle>
+          <SheetDescription>Move around {brand.name}, switch business, or sign out</SheetDescription>
+        </SheetHeader>
+        <SidebarBody {...props} variant="drawer" onNavigate={() => setDrawerOpen(false)} />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 /** Bottom tab bar with a central "New" action (phones and tablets). */
-export function MobileTabBar({
-  account,
-  signOutAction,
-  switchAction,
-}: {
-  account: ShellAccount;
-  signOutAction: () => Promise<void>;
-  switchAction: (organizationId: string) => Promise<void>;
-}) {
+export function MobileTabBar({ account }: { account: ShellAccount }) {
   const pathname = usePathname();
   const [newOpen, setNewOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const more = mobileMoreFor(account);
-  const moreActive = more.some((item) => isActive(pathname, item.href));
   const [home, quotes, invoices] = withDocumentNames(mobileTabs, account.documents, { short: true });
 
   return (
     // A floating pill, inset from the screen edges and the home indicator. The
-    // wrapper ignores touches so only the pill itself is tappable.
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
+    // wrapper ignores touches so only the pill itself is tappable. A modal that opens before this hydrates makes Base UI mark it aria-hidden; that is not a mismatch (hydration.test.tsx).
+    <div
+      suppressHydrationWarning
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
+    >
       <nav
         aria-label="Main"
         className="pointer-events-auto mx-auto max-w-lg rounded-2xl border border-border bg-card/95 shadow-lg backdrop-blur-sm"
@@ -145,32 +171,23 @@ export function MobileTabBar({
           <SheetContent side="bottom" className="gap-2">
             <SheetHeader>
               <SheetTitle>Create something new</SheetTitle>
-              <SheetDescription>Start with a quote, or bill finished work directly.</SheetDescription>
+              <SheetDescription>Start with a {account.documents.quote.singular.toLowerCase()}, or bill finished work directly.</SheetDescription>
             </SheetHeader>
-            <SheetLinkList items={newActionsFor(account.documents)} onNavigate={() => setNewOpen(false)} withDescriptions />
+            <SheetLinkList items={newMenuFor(account.documents)} onNavigate={() => setNewOpen(false)} withDescriptions />
           </SheetContent>
         </Sheet>
 
         {invoices && <Tab item={invoices} pathname={pathname} />}
 
-        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-          <SheetTrigger
-            className={cn(TAB, moreActive ? "text-stamp" : "text-muted-foreground")}
-          >
-            <EllipsisIcon aria-hidden="true" className="size-5" />
-            More
-          </SheetTrigger>
-          <SheetContent side="bottom" className="gap-2">
-            <SheetHeader>
-              <SheetTitle>More</SheetTitle>
-              <SheetDescription className="sr-only">Other sections of {brand.name}</SheetDescription>
-            </SheetHeader>
-            <SheetLinkList items={more} onNavigate={() => setMoreOpen(false)} />
-            <div className="border-t border-border px-4 pt-3 pb-4">
-              <AccountBlock account={account} signOutAction={signOutAction} switchAction={switchAction} />
-            </div>
-          </SheetContent>
-        </Sheet>
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={() => setDrawerOpen(true)}
+          className={cn(TAB, "text-muted-foreground outline-none focus-visible:text-foreground")}
+        >
+          <MenuIcon aria-hidden="true" className="size-5" />
+          Menu
+        </button>
       </div>
     </nav>
     </div>

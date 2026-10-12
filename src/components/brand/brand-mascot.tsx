@@ -42,6 +42,8 @@ type BrandMascotProps = {
   follow?: boolean;
   /** Skip the occasional stamp press: breathing, blinking and a slight head turn only. */
   calm?: boolean;
+  /** Draw the check imprint under the pad on happy and celebrating (default). `false` leaves it out and trims the space it would take, for a lockup beside the wordmark. */
+  imprint?: boolean;
   /** When set, the mascot is announced as an image with this name. */
   label?: string;
   className?: string;
@@ -148,6 +150,9 @@ const TILT: Partial<Record<MascotExpression, number>> = {
   resting: 3,
 };
 
+/** The drawing is 88 units tall; the pad ends at 71, so 74 leaves a little air when the imprint is left out. */
+const DRAWING_HEIGHT = 88;
+const PAD_BOTTOM_HEIGHT = 74;
 const SHOWS_IMPRINT: ReadonlySet<MascotExpression> = new Set(["happy", "celebrating"]);
 
 /** Eyes that look at the pointer: one shared listener per mascot, only when motion is welcome. */
@@ -187,10 +192,13 @@ export function BrandMascot({
   idle = true,
   follow: followPointer = true,
   calm = false,
+  imprint = true,
   label,
   className,
 }: BrandMascotProps) {
   const height = SIZES[size];
+  // Without the imprint the drawing ends just under the pad, at the same scale.
+  const drawnHeight = imprint ? DRAWING_HEIGHT : PAD_BOTTOM_HEIGHT;
   const tilt = TILT[expression] ?? 0;
   const decorative = label === undefined;
   const ref = useRef<SVGSVGElement>(null);
@@ -200,9 +208,9 @@ export function BrandMascot({
   return (
     <svg
       ref={ref}
-      viewBox="-2 0 72 88"
-      width={height * (72 / 88)}
-      height={height}
+      viewBox={`-2 0 72 ${drawnHeight}`}
+      width={height * (72 / DRAWING_HEIGHT)}
+      height={height * (drawnHeight / DRAWING_HEIGHT)}
       className={cn("mascot shrink-0 overflow-visible dark:[--mascot-body:oklch(0.5_0.04_268)]", className)}
       // The mascot is drawn in the light theme's ink and paper in every theme (D24).
       data-theme="light"
@@ -229,7 +237,7 @@ export function BrandMascot({
         </g>
       </g>
 
-      {SHOWS_IMPRINT.has(expression) && (
+      {imprint && SHOWS_IMPRINT.has(expression) && (
         <path
           d="M23.5 79 L29.6 85.4 L42 73.6"
           fill="none"
@@ -256,8 +264,8 @@ export function BrandMascot({
 
       {expression === "resting" && (
         <g fill="none" stroke={STAMP} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M55 8 h5 l-5 6 h5" />
-          <path d="M61.5 1 h3.4 l-3.4 4.2 h3.4" opacity={0.7} />
+          <path d="M55 8 h5 l-5 6 h5" className="mascot-zz" />
+          <path d="M61.5 1 h3.4 l-3.4 4.2 h3.4" opacity={0.7} className="mascot-zz" />
         </g>
       )}
 

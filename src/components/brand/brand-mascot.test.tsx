@@ -34,6 +34,24 @@ describe("BrandMascot", () => {
     expect(screen.getByRole("img", { name: "Stamp, celebrating" })).toBeInTheDocument();
   });
 
+  it("draws the check imprint under a happy Stamp by default", () => {
+    const { container } = render(<BrandMascot expression="happy" size="md" />);
+    const svg = container.querySelector("svg")!;
+    expect(svg.querySelector('path[d^="M23.5 79"]')).not.toBeNull();
+    expect(svg).toHaveAttribute("viewBox", "-2 0 72 88");
+    expect(svg).toHaveAttribute("height", "56");
+  });
+
+  it("leaves the imprint out and trims the space under the pad when asked", () => {
+    const { container } = render(<BrandMascot expression="happy" size="md" imprint={false} />);
+    const svg = container.querySelector("svg")!;
+    expect(svg.querySelector('path[d^="M23.5 79"]')).toBeNull();
+    expect(svg).toHaveAttribute("viewBox", "-2 0 72 74");
+    // Same scale as the full drawing: the width does not change.
+    expect(Number(svg.getAttribute("width"))).toBeCloseTo(56 * (72 / 88));
+    expect(Number(svg.getAttribute("height"))).toBeCloseTo(56 * (74 / 88));
+  });
+
   it.each(MASCOT_EXPRESSIONS)("renders the %s expression", (expression) => {
     const { container } = render(<BrandMascot expression={expression} />);
     expect(container.querySelector("svg")).toHaveAttribute("data-expression", expression);

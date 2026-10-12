@@ -9,6 +9,7 @@ import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -227,7 +228,7 @@ function TaxRateDialog({
 }) {
   return (
     <Dialog open={editing !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent mascot="curious" className="sm:max-w-md">
         {editing && (
           // Keyed so each opening starts with a fresh form state.
           <TaxRateForm
@@ -279,41 +280,43 @@ function TaxRateForm({
               : "A tax your business charges, such as a sales or local business tax."}
         </DialogDescription>
       </DialogHeader>
-      <FormAlert message={state.error} />
-      {editing.mode === "edit" && <input type="hidden" name="id" value={editing.row.id} />}
-      <div key={state.submission} className="grid gap-4">
-        <FormField name="name" label="Name" hint={example ? `Shown on documents, e.g. ${example.name}.` : "Shown on documents."} error={state.fieldErrors?.name?.[0]}>
-          {(p) => <Input {...p} defaultValue={values.name} maxLength={TAX_RATE_LIMITS.name} autoFocus />}
-        </FormField>
-        <FormField name="rate" label="Rate" error={state.fieldErrors?.rate?.[0]}>
-          {(p) => (
-            <div className="flex items-center gap-2">
-              <Input
-                {...p}
-                defaultValue={values.rate}
-                inputMode="decimal"
-                maxLength={TAX_RATE_LIMITS.rateInput}
-                className="w-28 font-mono tabular-nums"
+      <DialogBody className="grid gap-4">
+        <FormAlert message={state.error} />
+        {editing.mode === "edit" && <input type="hidden" name="id" value={editing.row.id} />}
+        <div key={state.submission} className="grid gap-4">
+          <FormField name="name" label="Name" hint={example ? `Shown on documents, e.g. ${example.name}.` : "Shown on documents."} error={state.fieldErrors?.name?.[0]}>
+            {(p) => <Input {...p} defaultValue={values.name} maxLength={TAX_RATE_LIMITS.name} autoFocus />}
+          </FormField>
+          <FormField name="rate" label="Rate" error={state.fieldErrors?.rate?.[0]}>
+            {(p) => (
+              <div className="flex items-center gap-2">
+                <Input
+                  {...p}
+                  defaultValue={values.rate}
+                  inputMode="decimal"
+                  maxLength={TAX_RATE_LIMITS.rateInput}
+                  className="w-28 font-mono tabular-nums"
+                />
+                <span className="text-sm text-muted-foreground">%</span>
+              </div>
+            )}
+          </FormField>
+          {editing.mode === "create" && (
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="makeDefault"
+                defaultChecked={isFirst}
+                className="mt-0.5 size-4 accent-stamp"
               />
-              <span className="text-sm text-muted-foreground">%</span>
-            </div>
+              <span className="grid gap-0.5">
+                <span className="font-medium">Add it to new lines by default</span>
+                <span className="text-muted-foreground">You can still change the tax on any line.</span>
+              </span>
+            </label>
           )}
-        </FormField>
-        {editing.mode === "create" && (
-          <label className="flex items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              name="makeDefault"
-              defaultChecked={isFirst}
-              className="mt-0.5 size-4 accent-stamp"
-            />
-            <span className="grid gap-0.5">
-              <span className="font-medium">Add it to new lines by default</span>
-              <span className="text-muted-foreground">You can still change the tax on any line.</span>
-            </span>
-          </label>
-        )}
-      </div>
+        </div>
+      </DialogBody>
       <DialogFooter>
         <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
         <Button type="submit" pending={pending} pendingLabel="Saving…">

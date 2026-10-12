@@ -7,6 +7,8 @@ export {
   getLetterheadForSharedDocument,
   type UpdateBusinessProfileResult,
   updateBusinessProfile,
+  type UpdatePaymentQrsResult,
+  updatePaymentQrs,
 } from "./application/business-profile";
 export {
   type CreateOrganizationResult,
@@ -26,7 +28,26 @@ export {
   type BusinessProfileInput,
   businessProfileSchemaFor,
 } from "./domain/business-profile";
-export { BUSINESS_PROFILE_LIMITS } from "./domain/limits";
+export {
+  type BusinessRegistration,
+  getBusinessRegistration,
+  type UpdateRegistrationResult,
+  updateBusinessRegistration,
+} from "./application/registration";
+export { BUSINESS_PROFILE_LIMITS, REGISTRATION_LIMITS } from "./domain/limits";
+export {
+  EMPTY_REGISTRATION,
+  incomeTaxConflict,
+  parseRegistration,
+  REGISTRATION_FIELDS,
+  type RegisteringOffice,
+  type RegistrationDetails,
+  type RegistrationField,
+  registeringOffice,
+  tinParts,
+} from "./domain/registration";
+export { DEADLINE_HORIZON_DAYS, type Deadline, type DeadlineProfile, filingsKnown, upcomingDeadlines } from "./domain/tax-deadlines";
+export { type PaymentQr, PAYMENT_QR_LIMITS, type RawPaymentQr } from "./domain/payment-qr";
 export { type SellerSnapshot, sellerFrom, withSeller } from "./domain/seller-snapshot";
 export {
   type AcceptInvitationResult,

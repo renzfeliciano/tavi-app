@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type Database, getDb } from "@/db";
 import { recordAuditEvent } from "@/modules/audit";
@@ -18,10 +18,11 @@ const log = logger.child({ module: "files" });
 const isLogoOf = (actor: OrgActor) =>
   and(eq(files.organizationId, actor.organizationId), eq(files.purpose, "logo"));
 
+// A logo always has a size (a database check); the column is nullable for PDFs.
 const logoInfo = {
   id: files.id,
-  width: files.width,
-  height: files.height,
+  width: sql<number>`${files.width}`.mapWith(Number),
+  height: sql<number>`${files.height}`.mapWith(Number),
   updatedAt: files.updatedAt,
 };
 
@@ -131,8 +132,8 @@ export async function readLogoForSharedDocument(organizationId: string, db: Data
       data: files.data,
       contentType: files.contentType,
       sha256: files.sha256,
-      width: files.width,
-      height: files.height,
+      width: sql<number>`${files.width}`.mapWith(Number),
+      height: sql<number>`${files.height}`.mapWith(Number),
     })
     .from(files)
     .where(and(eq(files.organizationId, organizationId), eq(files.purpose, "logo")));

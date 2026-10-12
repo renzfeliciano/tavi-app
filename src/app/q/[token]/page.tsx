@@ -87,7 +87,7 @@ export default async function SharedQuotePage({ params }: PageProps<"/q/[token]"
           </h1>
           <div className="flex items-center gap-3">
             <StatusBadge kind="quote" status={quote.status} />
-            <a href={`/q/${token}/pdf`} download className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+            <a href={`/q/${token}/pdf`} download className="text-sm font-medium text-primary-text underline-offset-4 hover:underline">
               Download PDF
             </a>
           </div>

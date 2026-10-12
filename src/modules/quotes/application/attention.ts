@@ -111,3 +111,13 @@ export async function quoteProgress(actor: OrgActor, db: Database = getDb()) {
     .where(eq(quotes.organizationId, actor.organizationId));
   return { hasQuote: Number(row?.created ?? 0) > 0, hasSentQuote: Number(row?.sent ?? 0) > 0 };
 }
+
+/** How many drafts the business has (the sidebar's badge). */
+export async function countDraftQuotes(actor: OrgActor, db: Database = getDb()): Promise<number> {
+  assertCan(actor, "quotes.read");
+  const [row] = await db
+    .select({ total: count() })
+    .from(quotes)
+    .where(and(eq(quotes.organizationId, actor.organizationId), eq(quotes.status, "DRAFT")));
+  return row?.total ?? 0;
+}

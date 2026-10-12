@@ -1,10 +1,11 @@
+import { sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { addTestMembership, closeTestDb, createTestOrganization, createTestUser, resetTables, testDb } from "@/db/testing";
 import { MARKETS } from "@/config/markets";
 import type { OrgActor } from "@/modules/authz";
 import { createCustomer } from "@/modules/customers";
 import { blankLine } from "@/modules/documents";
-import { BUSINESS_PROFILE_FIELDS, getBusinessProfile, updateBusinessProfile } from "@/modules/organizations";
+import { BUSINESS_PROFILE_FIELDS, getBusinessProfile, updateBusinessProfile, updatePaymentQrs } from "@/modules/organizations";
 import { getInvoice, saveInvoiceDraft } from "./invoices";
 import { getSharedInvoice, issueInvoice } from "./issuing";
 
@@ -78,5 +79,33 @@ describe("the seller on an issued invoice", () => {
     if (!issued.ok) throw new Error("issue");
     const shared = await getSharedInvoice(tokenOf(issued.url), testDb());
     expect(shared?.business.name).toBe("Santos Cooling Co.");
+  });
+
+  it("keeps the payment QR codes it was issued with: later ones, edits and switch-offs don't reach it", async () => {
+    const { actor, invoiceId } = await setup();
+    const gcash = { label: "GCash", value: "https://pay.example/gcash", enabled: true };
+    const maya = { label: "Maya", value: "https://pay.example/maya", enabled: false };
+    await updatePaymentQrs(actor, [gcash, maya], testDb());
+
+    const issued = await issue(actor, invoiceId);
+    if (!issued.ok) throw new Error("issue");
+    // Only the enabled ones are frozen into the invoice.
+    expect((await getInvoice(actor, invoiceId, testDb()))?.sellerSnapshot?.paymentQrs).toEqual([gcash]);
+
+    await updatePaymentQrs(actor, [{ ...gcash, value: "https://pay.example/new-gcash" }, { ...maya, enabled: true }], testDb());
+    const shared = await getSharedInvoice(tokenOf(issued.url), testDb());
+    expect(shared?.business.paymentQrs).toEqual([gcash]);
+
+    await updatePaymentQrs(actor, [], testDb());
+    expect((await getSharedInvoice(tokenOf(issued.url), testDb()))?.business.paymentQrs).toEqual([gcash]);
+  });
+
+  it("shows no QR codes on an invoice whose snapshot predates them", async () => {
+    const { actor, invoiceId } = await setup();
+    const issued = await issue(actor, invoiceId);
+    if (!issued.ok) throw new Error("issue");
+    await testDb().execute(sql`update invoices set seller_snapshot = seller_snapshot - 'paymentQrs' where id = ${invoiceId}`);
+    await updatePaymentQrs(actor, [{ label: "GCash", value: "https://pay.example/gcash", enabled: true }], testDb());
+    expect((await getSharedInvoice(tokenOf(issued.url), testDb()))?.business.paymentQrs).toEqual([]);
   });
 });

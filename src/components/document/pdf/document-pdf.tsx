@@ -2,6 +2,7 @@ import path from "node:path";
 import { Circle, Document, Font, Image, Page, Path, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { brand } from "@/config/brand";
 import { fitLogo, LOGO_BOXES } from "@/modules/files/client";
+import { qrMatrix, qrPath } from "@/shared/qr/qr-matrix";
 import type { AcknowledgementView } from "../acknowledgement-paper";
 import type { DocumentParty, DocumentView } from "../document-view";
 
@@ -299,12 +300,13 @@ export function DocumentPdf({ view }: { view: DocumentView }) {
           </View>
         )}
         {/* How to pay beside the notes and terms: keeps a short bill on one page. */}
-        {(view.paymentInstructions || view.notes || view.terms) && (
+        {(view.paymentInstructions || view.business.paymentQrs.length > 0 || view.notes || view.terms) && (
           <View style={[s.row, { marginTop: 16 }]} wrap={false}>
-            {view.paymentInstructions && (
+            {(view.paymentInstructions || view.business.paymentQrs.length > 0) && (
               <View style={[s.box, { flex: 1, marginRight: view.notes || view.terms ? 16 : 0 }]}>
                 <Text style={s.label}>How to pay</Text>
-                <Text>{view.paymentInstructions}</Text>
+                {view.paymentInstructions && <Text>{view.paymentInstructions}</Text>}
+                <PaymentQrs qrs={view.business.paymentQrs} gap={view.paymentInstructions ? 8 : 2} />
               </View>
             )}
             {(view.notes || view.terms) && (
@@ -330,6 +332,32 @@ export function DocumentPdf({ view }: { view: DocumentView }) {
         <PageFooter label={name} business={view.business.name} />
       </Page>
     </Document>
+  );
+}
+
+/** Light margin around a code, in modules. */
+const QR_QUIET = 2;
+const QR_SIZE = 74;
+
+/** The business's payment QR codes as vector shapes (a PDF can't use the page's inline SVG), each with its label. */
+function PaymentQrs({ qrs, gap }: { qrs: DocumentView["business"]["paymentQrs"]; gap: number }) {
+  if (qrs.length === 0) return null;
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: gap }}>
+      {qrs.map((qr, index) => {
+        const { d, size } = qrPath(qrMatrix(qr.value));
+        const total = size + QR_QUIET * 2;
+        return (
+          <View key={index} style={{ width: QR_SIZE, marginRight: 10, marginBottom: 4, alignItems: "center" }} wrap={false}>
+            <Svg viewBox={`${-QR_QUIET} ${-QR_QUIET} ${total} ${total}`} style={{ width: QR_SIZE, height: QR_SIZE }}>
+              <Rect x={-QR_QUIET} y={-QR_QUIET} width={total} height={total} fill="#ffffff" />
+              <Path d={d} fill="#111111" />
+            </Svg>
+            <Text style={[s.strong, { fontSize: 8, marginTop: 2, textAlign: "center" }]}>{qr.label}</Text>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 

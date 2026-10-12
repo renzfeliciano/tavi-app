@@ -2,10 +2,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CheckIcon } from "lucide-react";
 import { AuthMascot, AuthStageProvider } from "@/components/auth-stage";
+import { Tagline } from "@/components/brand/tagline";
 import { Wordmark } from "@/components/brand/wordmark";
 import { ThemeCorner } from "@/components/theme/theme-toggle";
 import { LegalLinks } from "@/components/legal/legal-document";
-import { brand } from "@/config/brand";
 
 /** The three moments of a job, in order. The last one is the point of it all, so it carries the check. */
 const FLOW = [
@@ -55,7 +55,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </ol>
         </div>
 
-        <p className="text-sm text-muted-foreground">{brand.taglines.primary}</p>
+        <p className="text-sm text-muted-foreground">
+          <Tagline />
+        </p>
       </aside>
 
       <div className="flex flex-col items-center px-4 py-10 sm:py-14 lg:justify-center lg:px-12">
@@ -69,7 +71,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
           {children}
         </main>
         <footer className="mt-10 grid gap-2 lg:mt-14">
-          <p className="text-center text-xs text-muted-foreground lg:hidden">{brand.taglines.primary}</p>
+          <p className="text-center text-xs text-muted-foreground lg:hidden">
+            <Tagline />
+          </p>
           <LegalLinks />
         </footer>
       </div>

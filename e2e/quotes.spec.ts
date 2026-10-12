@@ -38,7 +38,7 @@ test.afterAll(async () => {
 
 test("opening a new quote saves nothing until something changes", async () => {
   await page.goto("/quotes");
-  await page.getByRole("link", { name: "New quote" }).first().click();
+  await page.getByRole("link", { name: "New quotation" }).first().click();
   await expect(page).toHaveURL(/\/quotes\/new$/);
   await expect(preview()).toContainText("Quotation");
   await expect(preview()).toContainText("No items yet");
@@ -47,7 +47,7 @@ test("opening a new quote saves nothing until something changes", async () => {
   expect((await axe(page)).violations).toEqual([]);
 
   await page.goto("/quotes");
-  await expect(page.getByRole("heading", { name: "No quotes yet" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No quotations yet" })).toBeVisible();
 });
 
 test("building a quote: new customer inline, a catalog item, a free-text line, live totals, autosave", async () => {
@@ -100,7 +100,7 @@ test("the draft comes back exactly as left, and shows in the list", async () => 
   await expect(preview()).toContainText("₱3,450.00");
 
   await page.goto("/quotes");
-  const row = page.getByRole("region", { name: "Quote list" }).getByRole("link", { name: /Juan Dela Cruz/ });
+  const row = page.getByRole("region", { name: "Quotation list" }).getByRole("link", { name: /Juan Dela Cruz/ });
   await expect(row).toContainText("₱3,450.00");
   await expect(row).toContainText("Draft");
 });
@@ -125,5 +125,5 @@ test("deleting the draft asks first, then confirms", async () => {
   await dialog.getByRole("button", { name: "Delete draft" }).click();
   await expect(toast("Draft deleted.")).toBeVisible();
   await expect(page).toHaveURL(/\/quotes$/);
-  await expect(page.getByRole("heading", { name: "No quotes yet" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No quotations yet" })).toBeVisible();
 });

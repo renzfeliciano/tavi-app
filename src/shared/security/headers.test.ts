@@ -85,7 +85,7 @@ describe("PORTAL_HEADERS", () => {
 });
 
 describe("isProtectedPath", () => {
-  it.each(["/dashboard", "/quotes", "/quotes/new", "/settings/security", "/onboarding"])(
+  it.each(["/dashboard", "/quotes", "/quotes/new", "/settings/security", "/recycle-bin", "/onboarding"])(
     "%s needs a session",
     (path) => expect(isProtectedPath(path)).toBe(true),
   );

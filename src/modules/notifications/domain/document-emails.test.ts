@@ -40,4 +40,43 @@ describe("documentLinkEmail", () => {
   it("has no Reply-To when the business has no email", () => {
     expect(documentLinkEmail({ ...base, businessEmail: null }).replyTo).toBeUndefined();
   });
+
+  describe("payment QR codes", () => {
+    const paymentQrs = [
+      { label: "GCash", imageUrl: "https://tavi.example/i/abc123/qr/0" },
+      { label: "Maya <b>", imageUrl: "https://tavi.example/i/abc123/qr/1" },
+    ];
+
+    it("shows each QR as an image from the link, labelled, with alt text", () => {
+      const { html } = documentLinkEmail({ ...base, paymentQrs });
+      expect(html).toContain('<img src="https://tavi.example/i/abc123/qr/0" alt="GCash QR code"');
+      expect(html).toContain('src="https://tavi.example/i/abc123/qr/1"');
+      expect(html).toContain("Scan to pay");
+    });
+
+    it("escapes the labels the business typed", () => {
+      const { html } = documentLinkEmail({ ...base, paymentQrs });
+      expect(html).not.toContain("<b>");
+      expect(html).toContain("Maya &lt;b&gt;");
+    });
+
+    it("points the plain-text version at the page, since text can't show a QR", () => {
+      const { text } = documentLinkEmail({ ...base, paymentQrs });
+      expect(text).toContain("GCash");
+      expect(text).toContain("QR");
+      expect(text).not.toContain("/qr/0");
+    });
+
+    it("adds nothing when there are none", () => {
+      const email = documentLinkEmail(base);
+      expect(email.html).not.toContain("Scan to pay");
+      expect(email.text).not.toContain("QR");
+    });
+  });
+
+  it("signs off with the stamp and TAVI lockup, loaded from the app the link points to", () => {
+    const { html } = documentLinkEmail(base);
+    expect(html).toContain('src="https://tavi.example/icons/tavi-email-lockup.png"');
+    expect(html).toContain('alt="Tavi"');
+  });
 });

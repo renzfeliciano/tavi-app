@@ -14,3 +14,9 @@ export function isUniqueViolation(error: unknown, constraint?: string): boolean 
   const pg = pgError(error);
   return pg?.code === "23505" && (constraint === undefined || pg.constraint === constraint);
 }
+
+/** True for a check-constraint violation (23514), optionally on one named constraint. */
+export function isCheckViolation(error: unknown, constraint?: string): boolean {
+  const pg = pgError(error);
+  return pg?.code === "23514" && (constraint === undefined || pg.constraint === constraint);
+}

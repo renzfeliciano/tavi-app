@@ -9,7 +9,7 @@ import {
 // A sent bill: the way back, its number, status and actions, its payments, then the bill itself.
 export default function InvoiceLoading() {
   return (
-    <LoadingScreen label="Loading bill">
+    <LoadingScreen label="Loading billing statement">
       <PageHeaderSkeleton back badge title="w-56" description="w-64" actions={["w-28", "w-24"]} />
       <div className="mt-8 max-w-3xl rounded-xl border border-border bg-card p-5 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-3">

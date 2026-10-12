@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { LaptopIcon, SmartphoneIcon } from "lucide-react";
-import { PageHeader } from "@/components/app-shell/page-header";
 import { listMyDevices, requireOrgContext, SESSION_POLICY } from "@/modules/identity";
 import { describeDuration } from "@/shared/format/duration";
+import { SettingsPageHeader } from "../_components/settings-page-header";
 import { SignOutDeviceButton, SignOutOthersButton } from "./device-actions";
 
 export const metadata: Metadata = { title: "Security" };
@@ -25,7 +25,7 @@ export default async function SecurityPage() {
 
   return (
     <>
-      <PageHeader
+      <SettingsPageHeader
         title="Security"
         description="Devices signed in to your account. Sign out any you don't recognise."
         actions={others > 0 && <SignOutOthersButton count={others} />}

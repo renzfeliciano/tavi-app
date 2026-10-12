@@ -1,4 +1,5 @@
 import { brand } from "@/config/brand";
+import { TRASH_RETENTION_DAYS } from "@/modules/trash/client";
 
 // "Download your data" (proposal §M 1.13c, D16): one JSON file with
 // everything a business keeps in Tavi, so it can take it elsewhere (RA 10173
@@ -17,7 +18,9 @@ export const EXPORT_NOTES = {
     "Amounts (fields ending in Minor) are whole numbers of the currency's smallest unit (for example centavos); divide by 100 for most currencies.",
   quantities: "Quantities are exact decimals as text.",
   taxRates: "Tax rates (fields ending in Bps) are in basis points: 1200 means 12%.",
-  logo: "The logo isn't included; download it from Settings, Business profile.",
+  recycleBin:
+    `recycleBin lists drafts you deleted in the last ${TRASH_RETENTION_DAYS} days; each payload is the draft as it was, with amounts in the same units.`,
+  logo: "The logo and the certificates in Settings, Registration aren't included; download them from there. The registration details you entered are in business.",
 } as const;
 
 /** ASCII-only file name with the business's calendar date. */

@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeTestDb, createTestOrganization, createTestUser, listAllAuditEvents, resetTables, testDb } from "@/db/testing";
 import type { OrgActor, Role } from "@/modules/authz";
 import { createCustomer } from "@/modules/customers";
+import { putInTrash } from "@/modules/trash";
 import { exportBusinessData } from "./export";
 
 beforeEach(async () => {
@@ -48,6 +49,24 @@ describe("exportBusinessData", () => {
 
     const exported = (await listAllAuditEvents()).filter((e) => e.action === "organization.exported");
     expect(exported).toMatchObject([{ organizationId: actor.organizationId, actorId: actor.userId }]);
+  });
+
+  it("includes what is waiting in the recycle bin, and only this business's", async () => {
+    const db = testDb();
+    const actor = await actorFor("owner", "Acme");
+    const other = await actorFor("owner", "Other Co");
+    const now = new Date("2026-10-02T03:00:00Z");
+    const draft = { kind: "quote" as const, originalId: crypto.randomUUID(), customerName: "Juan Dela Cruz", totalMinor: 150_000, currency: "PHP", payload: { v: 1, lines: [] } };
+    await db.transaction(async (tx) => {
+      await putInTrash(tx, actor, draft, now);
+      await putInTrash(tx, other, { ...draft, originalId: crypto.randomUUID(), customerName: "Not mine" }, now);
+    });
+
+    const result = await exportBusinessData(actor, db, now);
+    if (!result.ok) throw new Error("export refused");
+    const data = JSON.parse(result.body);
+    expect(data.recycleBin).toMatchObject([{ kind: "quote", customerName: "Juan Dela Cruz", totalMinor: 150000, originalId: draft.originalId }]);
+    expect(JSON.stringify(data)).not.toContain("Not mine");
   });
 
   it("is for owners and admins only", async () => {

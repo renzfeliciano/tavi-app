@@ -10,7 +10,7 @@ import { DocumentRowSkeleton } from "../../_documents/document-row-skeleton";
 // The bill list: header, search and status tabs, then rows of number, customer, status and amount.
 export default function InvoicesLoading() {
   return (
-    <LoadingScreen label="Loading bills">
+    <LoadingScreen label="Loading billing statements">
       <PageHeaderSkeleton title="w-36" description="w-96" wraps="w-16" actions={["w-36"]} />
       <div className="mt-8 grid gap-3">
         <ListSearchSkeleton />

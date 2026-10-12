@@ -1,3 +1,4 @@
+import { brand } from "@/config/brand";
 /** A provider-independent email (§46). HTML is optional; text is always sent. */
 export type EmailMessage = {
   to: string;
@@ -15,6 +16,28 @@ export type EmailMessage = {
 
 export interface EmailSender {
   send(message: EmailMessage): Promise<void>;
+}
+
+/** The web address (scheme and host) a link points to, or null when it isn't a web link. */
+export function originOf(url: string): string | null {
+  try {
+    const { protocol, origin } = new URL(url);
+    return protocol === "https:" || protocol === "http:" ? origin : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The foot of an email: TAVI's stamp and wordmark, served from the app itself
+ * (mail clients can't draw SVG or CSS, so it's a PNG in `public/icons`). With
+ * no address to load it from, it falls back to the name in text.
+ */
+export function brandSignoffHtml(origin: string | null, lead: string): string {
+  const style = `margin:24px 0 0;color:${brand.emailColors.muted};font-size:12px`;
+  if (!origin) return `<p style="${style}">${escapeHtml(`${lead} ${brand.name}`)}</p>`;
+  const src = escapeHtml(`${origin}/icons/tavi-email-lockup.png`);
+  return `<p style="${style}">${escapeHtml(lead)}<br><img src="${src}" alt="${escapeHtml(brand.name)}" width="137" height="66" style="display:block;border:0;margin-top:6px"></p>`;
 }
 
 export function escapeHtml(value: string): string {

@@ -1,5 +1,5 @@
 import { brand } from "@/config/brand";
-import { escapeHtml, type EmailMessage } from "./email";
+import { brandSignoffHtml, escapeHtml, type EmailMessage, originOf } from "./email";
 
 // The instant email to the business when a customer approves or declines a
 // quote from its link (§G.4, §I: it also mitigates a forwarded link).
@@ -34,9 +34,7 @@ export function quoteDecisionEmail(input: QuoteDecisionEmailInput): EmailMessage
     subject,
   )}</strong> (${escapeHtml(input.total)}).</p>${
     detail ? `<p style="white-space:pre-wrap">${escapeHtml(detail)}</p>` : ""
-  }<p><a href="${url}" style="display:inline-block;padding:10px 16px;border-radius:6px;background:${C.accent};color:${C.onAccent};text-decoration:none">Open the quote</a></p><p style="color:${C.muted};font-size:12px">${escapeHtml(
-    brand.name,
-  )}</p></body></html>`;
+  }<p><a href="${url}" style="display:inline-block;padding:10px 16px;border-radius:6px;background:${C.accent};color:${C.onAccent};text-decoration:none">Open the quote</a></p>${brandSignoffHtml(originOf(input.url), "Sent with")}</body></html>`;
 
   return {
     to: input.to,

@@ -58,8 +58,8 @@ async function pay(actor: OrgActor, invoiceId: string, { amount, withheld = "", 
   const paid = await recordPayment(
     actor,
     invoiceId,
-    { amount, withheld, paidOn, method: "bank_transfer", reference: "", notes: "" },
-    { acknowledge: false, market, now: NOW },
+    { amount, withheld, paidOn, method: "bank_transfer", reference: "", institution: "", payer: "", paidTime: "", chequeDate: "", notes: "" },
+    { recipients: [], market, now: NOW },
     testDb(),
   );
   if (!paid.ok) throw new Error("payment");

@@ -75,7 +75,7 @@ function ConfirmButton({
         {label}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent mascot={destructive ? "concerned" : "curious"} tone={destructive ? "danger" : "default"}>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>

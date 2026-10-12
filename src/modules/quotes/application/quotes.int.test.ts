@@ -11,8 +11,10 @@ import type { OrgActor, Role } from "@/modules/authz";
 import { archiveTaxRate, createTaxRate } from "@/modules/catalog";
 import { createCustomer } from "@/modules/customers";
 import { blankLine, type RawLine } from "@/modules/documents";
+import { listTrash } from "@/modules/trash";
 import type { RawQuoteDraft } from "../domain/quote-draft";
 import { deleteDraftQuote, getQuote, listQuotes, newQuoteDefaults, saveQuoteDraft } from "./quotes";
+import { restoreDeletedQuote } from "./trash";
 
 const OPTIONS = { locale: "en-PH" };
 const NOW = new Date("2026-09-30T16:30:00Z"); // 1 Oct in Manila
@@ -244,3 +246,54 @@ describe("deleteDraftQuote", () => {
     expect((await listAllAuditEvents(testDb())).map((e) => e.action).at(-1)).toBe("quote.deleted");
   });
 });
+
+describe("the recycle bin for draft quotes", () => {
+  const binned = async (actor: OrgActor, now: Date = NOW) => {
+    const [item] = await listTrash(actor, testDb(), now);
+    if (!item) throw new Error("nothing in the bin");
+    return item;
+  };
+
+  it("keeps a deleted draft and brings it back whole, under the same id", async () => {
+    const actor = await actorFor("member");
+    const juan = await customer(actor);
+    const quote = await save(actor, draft({ customerId: juan.id, notes: "Includes freon.", lines: [line(), line({ description: "Freon", quantity: "1", unitPrice: "800" })] }));
+    const before = await getQuote(actor, quote.id, testDb());
+
+    expect(await deleteDraftQuote(actor, quote.id, testDb(), NOW)).toEqual({ ok: true });
+    expect(await getQuote(actor, quote.id, testDb())).toBeNull();
+    expect(await binned(actor)).toMatchObject({ kind: "quote", customerName: "Juan Dela Cruz", totalMinor: quote.totalMinor, currency: "PHP" });
+
+    const restored = await restoreDeletedQuote(actor, (await binned(actor)).id, testDb(), NOW);
+    expect(restored).toEqual({ ok: true, quoteId: quote.id });
+    const after = await getQuote(actor, quote.id, testDb());
+    expect(after).toMatchObject({ status: "DRAFT", number: null, customerId: juan.id, notes: "Includes freon.", totalMinor: quote.totalMinor });
+    expect(after?.lines).toEqual(before?.lines);
+    expect(await listTrash(actor, testDb(), NOW)).toEqual([]);
+    expect((await listAllAuditEvents(testDb())).map((e) => e.action).slice(-2)).toEqual(["quote.deleted", "quote.restored"]);
+  });
+
+  it("restores a draft that had no customer yet", async () => {
+    const actor = await actorFor("member");
+    const quote = await save(actor, draft());
+    await deleteDraftQuote(actor, quote.id, testDb(), NOW);
+    expect(await binned(actor)).toMatchObject({ customerName: null });
+    expect(await restoreDeletedQuote(actor, (await binned(actor)).id, testDb(), NOW)).toMatchObject({ ok: true });
+    expect((await getQuote(actor, quote.id, testDb()))?.customerId).toBeNull();
+  });
+
+  it("restores an item once, and not after it has lapsed or into another business", async () => {
+    const actor = await actorFor("member", "One");
+    const other = await actorFor("owner", "Two");
+    const quote = await save(actor, draft());
+    await deleteDraftQuote(actor, quote.id, testDb(), NOW);
+    const { id } = await binned(actor);
+
+    expect(await restoreDeletedQuote(other, id, testDb(), NOW)).toEqual({ ok: false, notFound: true });
+    const later = new Date(NOW.getTime() + 31 * 24 * 60 * 60 * 1000);
+    expect(await restoreDeletedQuote(actor, id, testDb(), later)).toEqual({ ok: false, notFound: true });
+    expect(await restoreDeletedQuote(actor, id, testDb(), NOW)).toMatchObject({ ok: true });
+    expect(await restoreDeletedQuote(actor, id, testDb(), NOW)).toEqual({ ok: false, notFound: true });
+  });
+});
+

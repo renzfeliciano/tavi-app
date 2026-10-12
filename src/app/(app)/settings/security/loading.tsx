@@ -8,11 +8,11 @@ import {
   vary,
 } from "@/components/skeletons";
 
-// Security: header, then the signed-in devices, this one first, and the session note.
+// Security: the way back, the header, then the signed-in devices, this one first, and the session note.
 export default function SecuritySettingsLoading() {
   return (
     <LoadingScreen label="Loading signed-in devices">
-      <PageHeaderSkeleton title="w-32" description="w-96" wraps="w-24" actions={["w-44"]} />
+      <PageHeaderSkeleton back title="w-32" description="w-96" wraps="w-24" actions={["w-44"]} />
       <ListSkeleton
         rows={2}
         className="mt-8"

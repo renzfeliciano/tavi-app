@@ -26,6 +26,10 @@ const pay = (overrides: Record<string, string> = {}) => ({
   paidOn: "2026-10-01",
   method: "ewallet",
   reference: "GC-1",
+  institution: "",
+  payer: "",
+  paidTime: "",
+  chequeDate: "",
   notes: "",
   ...overrides,
 });
@@ -62,8 +66,8 @@ async function sentInvoice(role: Role = "owner", dueDate = "2026-10-16", into?: 
   return { actor, id: saved.invoice.id, input, token: sent.url.split("/i/")[1] ?? "" };
 }
 
-const record = (actor: OrgActor, id: string, raw = pay(), acknowledge = false) =>
-  recordPayment(actor, id, raw, { acknowledge, market, now: NOW }, testDb());
+const record = (actor: OrgActor, id: string, raw = pay(), recipients: string[] = []) =>
+  recordPayment(actor, id, raw, { recipients, market, now: NOW }, testDb());
 
 beforeEach(async () => {
   await resetTables();
@@ -74,16 +78,42 @@ afterAll(async () => {
 });
 
 describe("recordPayment", () => {
+  it("keeps the proof of payment as typed and shows it on every list that carries the payment", async () => {
+    const { actor, id } = await sentInvoice();
+    const raw = pay({ reference: "  7845 2210 9  ", institution: " GCash ", payer: " Juan D.C. ", paidTime: "14:30" });
+    expect(await record(actor, id, raw)).toMatchObject({ ok: true });
+
+    const proof = { reference: "7845 2210 9", institution: "GCash", payerName: "Juan D.C.", paidTime: "14:30", chequeDate: null };
+    expect((await listInvoicePayments(actor, id, testDb()))[0]).toMatchObject(proof);
+    expect((await listPayments(actor, {}, testDb())).payments[0]).toMatchObject(proof);
+    expect((await listPaymentsForSharedInvoice(actor.organizationId, id, testDb()))[0]).toMatchObject(proof);
+  });
+
+  it("keeps a post-dated cheque's date, and a deposit slip's number and bank", async () => {
+    const { actor, id } = await sentInvoice();
+    await record(actor, id, pay({ amount: "500", method: "cheque", reference: "0001234", institution: "BDO", chequeDate: "2026-10-20" }));
+    await record(actor, id, pay({ amount: "500", method: "bank_deposit", reference: "SLIP-88", institution: "BPI" }));
+    const rows = await listInvoicePayments(actor, id, testDb());
+    expect(rows.find((r) => r.method === "cheque")).toMatchObject({ reference: "0001234", institution: "BDO", chequeDate: "2026-10-20" });
+    expect(rows.find((r) => r.method === "bank_deposit")).toMatchObject({ reference: "SLIP-88", institution: "BPI", chequeDate: null });
+  });
+
+  it("rejects a bad time and records nothing", async () => {
+    const { actor, id } = await sentInvoice();
+    expect(await record(actor, id, pay({ paidTime: "25:99" }))).toMatchObject({ ok: false });
+    expect(await listPayments(actor, {}, testDb())).toMatchObject({ payments: [] });
+  });
+
   it("won't email an acknowledgement past the business's hourly limit, and records nothing", async () => {
     const { actor, id } = await sentInvoice();
     await fillTestOutbox(actor.organizationId, DOCUMENT_EMAIL_LIMIT.max);
 
-    expect(await record(actor, id, pay(), true)).toEqual({
+    expect(await record(actor, id, pay(), ["juan@example.com"])).toEqual({
       ok: false,
       error: documentEmailLimitMessage("Record it without emailing the acknowledgement"),
     });
     expect(await listPayments(actor, {}, testDb())).toMatchObject({ payments: [] });
-    expect(await record(actor, id, pay(), false)).toMatchObject({ ok: true });
+    expect(await record(actor, id, pay(), [])).toMatchObject({ ok: true });
   });
 
   it("numbers an acknowledgement, part-pays the invoice and audits it", async () => {
@@ -138,10 +168,39 @@ describe("recordPayment", () => {
 
   it("emails the customer an acknowledgement when asked, with the notice and disclaimer", async () => {
     const { actor, id } = await sentInvoice();
-    await record(actor, id, pay(), true);
+    await record(actor, id, pay(), ["juan@example.com"]);
     const [message] = await listAllOutboxMessages(testDb());
     expect(message?.payload).toMatchObject({ to: "juan@example.com", subject: "Payment received: Billing statement INV-000001" });
     expect(JSON.stringify(message?.payload)).toContain("Not a BIR official receipt.");
+  });
+
+  it("emails every recipient once (the customer plus others), de-duplicated", async () => {
+    const { actor, id } = await sentInvoice();
+    expect(await record(actor, id, pay(), ["Juan@example.com", "accounts@example.com", "juan@example.com"])).toMatchObject({ ok: true });
+    const messages = await listAllOutboxMessages(testDb());
+    expect(messages.map((m) => (m.payload as { to: string }).to).sort()).toEqual(["accounts@example.com", "juan@example.com"]);
+  });
+
+  it("can email someone who isn't on the invoice", async () => {
+    const { actor, id } = await sentInvoice();
+    await record(actor, id, pay(), ["bookkeeper@example.com"]);
+    const [message] = await listAllOutboxMessages(testDb());
+    expect(message?.payload).toMatchObject({ to: "bookkeeper@example.com" });
+  });
+
+  it("rejects an invalid or excessive recipient list and records nothing", async () => {
+    const { actor, id } = await sentInvoice();
+    expect(await record(actor, id, pay(), ["not-an-email"])).toMatchObject({ ok: false, errors: { recipients: expect.any(String) } });
+    const many = Array.from({ length: 6 }, (_, i) => `p${i}@example.com`);
+    expect(await record(actor, id, pay(), many)).toMatchObject({ ok: false, errors: { recipients: expect.any(String) } });
+    expect(await listPayments(actor, {}, testDb())).toMatchObject({ payments: [] });
+  });
+
+  it("checks the hourly limit against the whole list", async () => {
+    const { actor, id } = await sentInvoice();
+    await fillTestOutbox(actor.organizationId, DOCUMENT_EMAIL_LIMIT.max - 1);
+    expect(await record(actor, id, pay(), ["a@example.com", "b@example.com"])).toMatchObject({ ok: false });
+    expect(await record(actor, id, pay(), ["a@example.com"])).toMatchObject({ ok: true });
   });
 
   it("needs the record permission (members can't)", async () => {
@@ -154,7 +213,7 @@ describe("recordPayment", () => {
 describe("recordPayment idempotency", () => {
   const KEY = "3f0c5a52-9b1e-4d3a-8f55-2d1f0a7c9e11";
   const keyed = (actor: OrgActor, id: string, raw = pay(), idempotencyKey: string | null = KEY) =>
-    recordPayment(actor, id, raw, { acknowledge: false, market, now: NOW, idempotencyKey }, testDb());
+    recordPayment(actor, id, raw, { recipients: [], market, now: NOW, idempotencyKey }, testDb());
 
   it("records a repeated request once and answers the repeat with the first result", async () => {
     const { actor, id } = await sentInvoice();

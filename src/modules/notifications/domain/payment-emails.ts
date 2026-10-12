@@ -1,5 +1,5 @@
 import { brand } from "@/config/brand";
-import { escapeHtml, type EmailMessage } from "./email";
+import { brandSignoffHtml, escapeHtml, type EmailMessage, originOf } from "./email";
 
 // The payment acknowledgement a customer can get by email when the business
 // records their payment (§B.5). It's a supplementary document (PH: RR 7-2024
@@ -18,10 +18,14 @@ export type PaymentAcknowledgementEmailInput = {
   received: string;
   withheld: { label: string; amount: string } | null;
   paidOn: string;
+  /** The proof of payment as the business typed it, already labelled. */
+  details: { label: string; value: string }[];
   /** What's still owed, or null when paid in full. */
   balance: string | null;
   notice: string | null;
   disclaimer: string | null;
+  /** The app's public address, where the email's logo is loaded from. */
+  appUrl?: string;
 };
 
 export function paymentAcknowledgementEmail(input: PaymentAcknowledgementEmailInput): EmailMessage {
@@ -31,6 +35,7 @@ export function paymentAcknowledgementEmail(input: PaymentAcknowledgementEmailIn
     `Amount received: ${input.received}`,
     input.withheld ? `${input.withheld.label}: ${input.withheld.amount}` : null,
     `Date: ${input.paidOn}`,
+    ...input.details.map((row) => `${row.label}: ${row.value}`),
     `${input.receiptTitle} no.: ${input.receiptNumber}`,
     input.balance ? `Balance remaining: ${input.balance}` : "Paid in full. Thank you!",
   ].filter((line): line is string => line !== null);
@@ -40,7 +45,7 @@ export function paymentAcknowledgementEmail(input: PaymentAcknowledgementEmailIn
     .map((line) => `<p>${escapeHtml(line)}</p>`)
     .join("")}${input.notice ? `<p><strong>${escapeHtml(input.notice)}</strong></p>` : ""}${footer
     .map((line) => `<p style="color:${C.muted};font-size:13px">${escapeHtml(line)}</p>`)
-    .join("")}<p style="color:${C.muted};font-size:12px">Sent with ${escapeHtml(brand.name)}</p></body></html>`;
+    .join("")}${brandSignoffHtml(input.appUrl ? originOf(input.appUrl) : null, "Sent with")}</body></html>`;
 
   return {
     to: input.to,

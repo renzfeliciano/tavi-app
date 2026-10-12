@@ -29,8 +29,8 @@ function showTheme(theme: Theme) {
   else delete document.documentElement.dataset.theme;
 }
 
-/** The theme button: one icon, a short menu of System / Light / Dark, remembered on this device. */
-export function ThemeMenu({ className }: { className?: string }) {
+/** What the theme control needs: the choices, the one showing, and how to change it (shared by the menu and the user menu). */
+export function useThemeChoice() {
   const saved = useTheme();
   const [shown, setShown] = useOptimistic(saved);
   const [, startTransition] = useTransition();
@@ -47,6 +47,13 @@ export function ThemeMenu({ className }: { className?: string }) {
       }
     });
   }
+
+  return { shown, choose, choices: CHOICES };
+}
+
+/** The theme button: one icon, a short menu of System / Light / Dark, remembered on this device. */
+export function ThemeMenu({ className }: { className?: string }) {
+  const { shown, choose } = useThemeChoice();
 
   return (
     <DropdownMenu>

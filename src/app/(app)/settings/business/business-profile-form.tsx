@@ -20,6 +20,7 @@ export type BusinessProfileCopy = {
   /** The market's tax registration statuses (PH: VAT-registered, Non-VAT…). */
   taxRegistrations: { code: string; label: string }[];
   taxRegistrationHint: string;
+  businessNameHint: string;
   registeredNameHint: string;
   address: { line2Label: string; cityLabel: string; regionLabel: string; postalCodeLabel: string };
   /** e.g. "Quotations and billing statements". */
@@ -75,7 +76,7 @@ export function BusinessProfileForm({
           <FormField
             name="name"
             label="Business name"
-            hint="As customers know you."
+            hint={copy.businessNameHint}
             error={error("name")}
           >
             {(p) => <Input {...p} defaultValue={v.name} maxLength={LIMITS.name} autoComplete="organization" />}

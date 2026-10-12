@@ -10,6 +10,10 @@ const raw = (overrides: Partial<RawPayment> = {}): RawPayment => ({
   paidOn: "2026-10-01",
   method: "ewallet",
   reference: " GC-1234 ",
+  institution: "",
+  payer: "",
+  paidTime: "",
+  chequeDate: "",
   notes: "",
   ...overrides,
 });
@@ -24,8 +28,60 @@ describe("parsePaymentInput", () => {
         paidOn: "2026-10-01",
         method: "ewallet",
         reference: "GC-1234",
+        institution: null,
+        payerName: null,
+        paidTime: null,
+        chequeDate: null,
         notes: null,
       },
+    });
+  });
+
+  it("keeps the proof of payment as typed: bank or wallet, payer, and the time paid", () => {
+    const result = parsePaymentInput(
+      raw({ method: "bank_transfer", reference: "BDO-778812", institution: " BDO ", payer: " Maria Santos / 0012 ", paidTime: "14:30" }),
+      options,
+    );
+    expect(result.ok && result.payment).toMatchObject({
+      method: "bank_transfer",
+      reference: "BDO-778812",
+      institution: "BDO",
+      payerName: "Maria Santos / 0012",
+      paidTime: "14:30",
+      chequeDate: null,
+    });
+  });
+
+  it("reads a cheque: its number, its bank and the date on it (which may be post-dated)", () => {
+    const result = parsePaymentInput(
+      raw({ method: "cheque", reference: "0005521", institution: "Metrobank", chequeDate: "2026-11-15" }),
+      options,
+    );
+    expect(result.ok && result.payment).toMatchObject({ reference: "0005521", institution: "Metrobank", chequeDate: "2026-11-15" });
+  });
+
+  it("only keeps a cheque date for a cheque", () => {
+    const result = parsePaymentInput(raw({ method: "ewallet", chequeDate: "2026-11-15" }), options);
+    expect(result.ok && result.payment.chequeDate).toBeNull();
+  });
+
+  it("reads a deposit slip's number and bank like any other reference", () => {
+    const result = parsePaymentInput(raw({ method: "bank_deposit", reference: "SLIP-9981", institution: "BPI" }), options);
+    expect(result.ok && result.payment).toMatchObject({ method: "bank_deposit", reference: "SLIP-9981", institution: "BPI" });
+  });
+
+  it("checks the time, the cheque date and the lengths", () => {
+    expect(parsePaymentInput(raw({ paidTime: "25:00" }), options)).toMatchObject({ ok: false, errors: { paidTime: "Enter a time like 14:30." } });
+    expect(parsePaymentInput(raw({ paidTime: "9:5" }), options)).toMatchObject({ ok: false, errors: { paidTime: "Enter a time like 14:30." } });
+    expect(parsePaymentInput(raw({ method: "cheque", chequeDate: "2026-02-30" }), options)).toMatchObject({
+      ok: false,
+      errors: { chequeDate: "Enter a real date." },
+    });
+    expect(
+      parsePaymentInput(raw({ institution: "x".repeat(PAYMENT_LIMITS.institution + 1), payer: "y".repeat(PAYMENT_LIMITS.payer + 1) }), options),
+    ).toMatchObject({
+      ok: false,
+      errors: { institution: tooLong(PAYMENT_LIMITS.institution), payer: tooLong(PAYMENT_LIMITS.payer) },
     });
   });
 

@@ -10,7 +10,7 @@ import { DocumentRowSkeleton } from "../../_documents/document-row-skeleton";
 // The quote list: header, search and status tabs, then rows of number, customer, status and amount.
 export default function QuotesLoading() {
   return (
-    <LoadingScreen label="Loading quotes">
+    <LoadingScreen label="Loading quotations">
       <PageHeaderSkeleton title="w-28" description="w-88" actions={["w-32"]} />
       <div className="mt-8 grid gap-3">
         <ListSearchSkeleton />

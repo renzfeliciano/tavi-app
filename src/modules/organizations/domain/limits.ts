@@ -15,3 +15,9 @@ export const BUSINESS_PROFILE_LIMITS = {
   quoteValidityDays: { min: 1, max: 365 },
   paymentTermsDays: { min: 0, max: 365 },
 } as const;
+
+// Registration details (src/modules/organizations/domain/registration.ts).
+export const REGISTRATION_LIMITS = {
+  lineOfBusiness: 120,
+  registrationNumber: 40,
+} as const;

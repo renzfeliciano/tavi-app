@@ -7,7 +7,9 @@ export {
   voidInvoice,
 } from "./application/corrections";
 export { markOverdueInvoices } from "./application/expiry";
+export { type RestoreInvoiceResult, restoreDeletedInvoice } from "./application/trash";
 export {
+  countOverdueInvoices,
   type InvoiceMoney,
   invoiceMoneySummary,
   type OverdueInvoice,

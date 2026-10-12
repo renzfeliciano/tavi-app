@@ -60,7 +60,7 @@ export function SignUpForm({ next }: { next?: Route } = {}) {
       <FormAlert message={error} />
       <Field>
         <FieldLabel htmlFor="name">Your name</FieldLabel>
-        <Input id="name" name="name" autoComplete="name" required maxLength={120} placeholder="e.g. Maria Santos" />
+        <Input id="name" name="name" autoComplete="name" required maxLength={120} placeholder="e.g. Travis Renz" />
       </Field>
       <Field>
         <FieldLabel htmlFor="email">Work email</FieldLabel>
@@ -71,7 +71,7 @@ export function SignUpForm({ next }: { next?: Route } = {}) {
           autoComplete="email"
           inputMode="email"
           required
-          placeholder="e.g. maria@acmeaircon.ph"
+          placeholder="e.g. travisrenz.repairservices@gmail.com"
         />
       </Field>
       <Field>

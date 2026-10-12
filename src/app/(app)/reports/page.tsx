@@ -69,6 +69,8 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
     paymentsReport(ctx, { period: before }),
   ]);
   const { market, locale } = ctx;
+  const statement = market.documents.invoice.singular.toLowerCase();
+  const statements = market.documents.invoice.plural.toLowerCase();
   const seller = market.taxRegistrations.find((r) => r.code === profile.taxRegistration)?.invoiceSales ?? null;
   const salesLabels = market.invoiceRegistration?.sales;
   const date = (d: string) => formatCalendarDate(d, locale);
@@ -78,7 +80,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
 
   return (
     <>
-      <PageHeader title="Reports" description="Sales, payments and unpaid bills, ready to send to your accountant." />
+      <PageHeader title="Reports" description={`Sales, payments and unpaid ${statements}, ready to send to your accountant.`} />
 
       <div className="mt-8 grid gap-4">
         <div className="-mx-4 overflow-x-auto px-4 pb-1">
@@ -113,7 +115,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
       <ReportSection
         id="sales"
         title="Sales"
-        description="Bills issued in this period. Void bills are left out; cancelled ones are shown apart."
+        description={`${capital(statements)} issued in this period. Void ones are left out; cancelled ones are shown apart.`}
         csv={csvHref("sales", period)}
       >
         {sales.rows.some((r) => r.registered) && (
@@ -131,13 +133,13 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
           </p>
         )}
         {sales.summaries.length === 0 ? (
-          <Quiet>No bills issued in this period.</Quiet>
+          <Quiet>No {statements} issued in this period.</Quiet>
         ) : (
           sales.summaries.map((s) => (
             <div key={s.currency} className="grid gap-3">
               <Figures
                 items={[
-                  { label: `Sales (${countOf(s.issued.count, "bill")})`, value: amount(s.issued.totalMinor, s.currency) },
+                  { label: `Sales (${countOf(s.issued.count, statement)})`, value: amount(s.issued.totalMinor, s.currency) },
                   { label: "Before tax", value: amount(s.issued.netMinor, s.currency) },
                   { label: "Tax", value: amount(s.issued.taxMinor, s.currency) },
                 ]}
@@ -174,13 +176,13 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
                 <p className="text-sm text-muted-foreground">
                   {s.registered.count > 0 && (
                     <>
-                      Registered invoices: {countOf(s.registered.count, "bill")},{" "}
+                      Registered invoices: {countOf(s.registered.count, statement)},{" "}
                       {amount(s.registered.totalMinor, s.currency, "text-foreground")}.{" "}
                     </>
                   )}
                   {s.cancelled.count > 0 && (
                     <>
-                      Cancelled: {countOf(s.cancelled.count, "bill")},{" "}
+                      Cancelled: {countOf(s.cancelled.count, statement)},{" "}
                       {amount(s.cancelled.totalMinor, s.currency, "text-foreground")}.
                     </>
                   )}
@@ -248,18 +250,18 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
 
       <ReportSection
         id="unpaid"
-        title="Unpaid bills"
+        title={`Unpaid ${statements}`}
         description={`What customers still owe today, ${date(today)}, by how long it's been overdue.`}
         csv={csvHref("unpaid", period)}
       >
         {unpaid.summaries.length === 0 ? (
-          <Quiet>Nothing unpaid. Every sent bill is settled.</Quiet>
+          <Quiet>Nothing unpaid. Every sent {statement} is settled.</Quiet>
         ) : (
           unpaid.summaries.map((s) => (
             <div key={s.currency} className="grid gap-3">
               <Figures
                 items={[
-                  { label: `Outstanding (${countOf(s.count, "bill")})`, value: amount(s.outstandingMinor, s.currency) },
+                  { label: `Outstanding (${countOf(s.count, statement)})`, value: amount(s.outstandingMinor, s.currency) },
                   ...AGING_BUCKETS.map((b) => ({ label: BUCKET_LABELS[b.key], value: amount(s.buckets[b.key], s.currency) })),
                 ]}
                 currency={unpaid.summaries.length > 1 ? s.currency : null}
@@ -271,7 +273,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
                     {c.customerName ?? "No customer"}
                     <span className="text-muted-foreground">
                       {" "}
-                      · {countOf(c.count, "bill")} ·{" "}
+                      · {countOf(c.count, statement)} ·{" "}
                       {c.daysOverdue > 0 ? `${countOf(c.daysOverdue, "day")} overdue` : "not yet due"}
                     </span>
                   </span>,
@@ -325,6 +327,7 @@ function Compared({
   );
 }
 
+const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 const countOf = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
 function ReportSection({

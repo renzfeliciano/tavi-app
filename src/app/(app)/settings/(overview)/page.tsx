@@ -3,11 +3,13 @@ import Link from "next/link";
 import {
   BuildingIcon,
   ChevronRightIcon,
+  ClipboardCheckIcon,
   FileBadgeIcon,
   HashIcon,
   type LucideIcon,
   PercentIcon,
   ShieldCheckIcon,
+  Trash2Icon,
   UserRoundIcon,
   UsersIcon,
 } from "lucide-react";
@@ -29,6 +31,16 @@ function sectionsFor(market: MarketProfile): Section[] {
       description: `Logo, address, ${market.taxId.label}, payment instructions and document defaults.`,
       icon: BuildingIcon,
     },
+    ...(market.registration
+      ? [
+          {
+            href: "/settings/registration" as Route,
+            title: "Registration",
+            description: `${market.registration.authority} and business name registration, return dates and your certificates.`,
+            icon: ClipboardCheckIcon,
+          },
+        ]
+      : []),
     {
       href: "/settings/tax-rates",
       title: "Tax rates",
@@ -62,6 +74,12 @@ function sectionsFor(market: MarketProfile): Section[] {
       title: "Security",
       description: "See the devices signed in to your account and sign them out.",
       icon: ShieldCheckIcon,
+    },
+    {
+      href: "/recycle-bin",
+      title: "Recycle bin",
+      description: "Bring back a draft you deleted, or an archived customer, product, service or tax.",
+      icon: Trash2Icon,
     },
     {
       href: "/settings/account",
