@@ -18,6 +18,7 @@ import {
 import { id, timestamps } from "@/db/columns";
 import { customers } from "@/modules/customers/schema";
 import { users } from "@/modules/identity/schema";
+import type { SellerSnapshot } from "@/modules/organizations";
 import { organizations } from "@/modules/organizations/schema";
 import { type CustomerSnapshot, quotes } from "@/modules/quotes/schema";
 import type { QualifiedDiscountSnapshot } from "./domain/qualified-discount";
@@ -48,6 +49,8 @@ export const invoices = pgTable(
     issueDate: date("issue_date", { mode: "string" }).notNull(),
     dueDate: date("due_date", { mode: "string" }).notNull(),
     customerSnapshot: jsonb("customer_snapshot").$type<CustomerSnapshot>(),
+    /** The business's name, tax ID, registration, contact and address as issued (D25); null on drafts. */
+    sellerSnapshot: jsonb("seller_snapshot").$type<SellerSnapshot>(),
     /** The business's payment instructions as they were when issued. */
     paymentInstructions: text("payment_instructions"),
     notes: text("notes"),

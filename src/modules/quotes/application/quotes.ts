@@ -14,7 +14,7 @@ import {
   quantityToNumeric,
   type TaxMode,
 } from "@/modules/documents";
-import { getDocumentSettings } from "@/modules/organizations";
+import { getDocumentSettings, type SellerSnapshot } from "@/modules/organizations";
 import { addDays, type CalendarDate, todayIn } from "@/shared/dates/calendar";
 import { escapeLikePattern } from "@/shared/text/search";
 import { type QuoteDraft, parseQuoteDraft } from "../domain/quote-draft";
@@ -38,6 +38,8 @@ export type QuoteHeader = {
   notes: string | null;
   terms: string | null;
   customerSnapshot: CustomerSnapshot | null;
+  /** The business as it was when sent (D25); null on drafts and older quotes without one. */
+  sellerSnapshot: SellerSnapshot | null;
   subtotalMinor: number;
   discountTotalMinor: number;
   taxTotalMinor: number;
@@ -122,6 +124,7 @@ export const headerColumns = {
   notes: quotes.notes,
   terms: quotes.terms,
   customerSnapshot: quotes.customerSnapshot,
+  sellerSnapshot: quotes.sellerSnapshot,
   subtotalMinor: quotes.subtotalMinor,
   discountTotalMinor: quotes.discountTotalMinor,
   taxTotalMinor: quotes.taxTotalMinor,

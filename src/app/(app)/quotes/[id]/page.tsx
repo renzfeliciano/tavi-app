@@ -83,7 +83,7 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
   }
 
   // A sent quote is read-only; changes go through a revision (§B.3).
-  const view = quoteDocumentView(quote, { business: await documentBusiness(ctx), market: ctx.market, locale: ctx.locale });
+  const view = quoteDocumentView(quote, { business: await documentBusiness(ctx, quote.sellerSnapshot), market: ctx.market, locale: ctx.locale });
   const name = `${title} ${quote.number ?? ""}`.trim();
   const when = (date: Date | null) =>
     date ? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeStyle: "short", timeZone: ctx.timezone }).format(date) : null;

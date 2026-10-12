@@ -14,6 +14,7 @@ import type { OrgActor, Role } from "@/modules/authz";
 import { createCustomer } from "@/modules/customers";
 import { blankLine } from "@/modules/documents";
 import { DOCUMENT_EMAIL_LIMIT, documentEmailLimitMessage } from "@/modules/notifications";
+import { BUSINESS_PROFILE_FIELDS, getBusinessProfile, updateBusinessProfile } from "@/modules/organizations";
 import type { RawQuoteDraft } from "../domain/quote-draft";
 import { getQuote, saveQuoteDraft } from "./quotes";
 import { cancelQuote, createQuoteLink, getSharedQuote, reviseQuote, sendQuote } from "./sending";
@@ -291,5 +292,23 @@ describe("getSharedQuote", () => {
     });
     expect(shared?.quote.lines).toHaveLength(1);
     expect(await getSharedQuote("x".repeat(43), testDb())).toBeNull();
+  });
+});
+
+describe("the seller on a sent quote (D25)", () => {
+  it("keeps the business details it was sent with when Settings change later", async () => {
+    const actor = await actorFor("owner");
+    const quote = await draftQuote(actor);
+    const sent = await sendQuote(actor, quote.id, options(), testDb());
+    if (!sent.ok) throw new Error("send");
+
+    const profile = await getBusinessProfile(actor, testDb());
+    const values = Object.fromEntries(BUSINESS_PROFILE_FIELDS.map((f) => [f, String(profile[f] ?? "")]));
+    const changed = await updateBusinessProfile(actor, { ...values, name: "Santos Cooling Co." }, testDb());
+    expect(changed.ok).toBe(true);
+
+    const shared = await getSharedQuote(tokenOf(sent.url), testDb());
+    expect(shared?.business.name).toBe("Santos Aircon");
+    expect((await getQuote(actor, quote.id, testDb()))?.sellerSnapshot).toMatchObject({ name: "Santos Aircon" });
   });
 });

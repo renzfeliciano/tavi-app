@@ -78,6 +78,8 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
   });
   const [recording, setRecording] = useState(false);
   const [raw, setRaw] = useState<RawPayment>(blank);
+  // One key per attempt: a retry of the same attempt sends it again, a new attempt gets a new one.
+  const [attemptKey, setAttemptKey] = useState(() => crypto.randomUUID());
   const [acknowledge, setAcknowledge] = useState(Boolean(props.customerEmail));
   const [errors, setErrors] = useState(EMPTY_ERRORS);
   const [formError, setFormError] = useState<string | null>(null);
@@ -89,6 +91,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
 
   const set = (patch: Partial<RawPayment>) => {
     setRaw((current) => ({ ...current, ...patch }));
+    setAttemptKey(crypto.randomUUID()); // changed details are a new attempt
     setErrors((current) => {
       const next = { ...current };
       for (const key of Object.keys(patch)) delete next[key];
@@ -98,7 +101,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
 
   async function submit() {
     setPending(true);
-    const result = await recordPaymentAction(props.invoiceId, raw, acknowledge && Boolean(props.customerEmail));
+    const result = await recordPaymentAction(props.invoiceId, raw, acknowledge && Boolean(props.customerEmail), attemptKey);
     setPending(false);
     if (!result.ok) {
       if ("errors" in result) setErrors(result.errors);
@@ -108,6 +111,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
       }
       return;
     }
+    setAttemptKey(crypto.randomUUID());
     setRecording(false);
     toast.success(`Payment recorded on ${props.name}.`, {
       description: result.paidInFull

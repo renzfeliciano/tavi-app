@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { type ReactNode, Suspense } from "react";
 import type { ShellAccount } from "@/components/app-shell/account";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
+import { ShellLoading } from "@/components/app-shell/shell-loading";
 import { WelcomeGreeting } from "@/components/brand/welcome-greeting";
 import { MobileTabBar, MobileTopBar } from "@/components/app-shell/mobile-nav";
 import { VerifyEmailBanner } from "@/components/app-shell/verify-email-banner";
@@ -16,7 +17,18 @@ import { signOut, switchBusiness } from "./actions";
 // The signed-in product shell. `requireOrgContext` is the real gate: it
 // redirects to sign-in without a valid session and to onboarding without an
 // organization. proxy.ts only does a fast, optimistic cookie check.
-export default async function AppLayout({ children }: { children: ReactNode }) {
+export default function AppLayout({ children }: { children: ReactNode }) {
+  // The gate and the account lookups below await before anything can stream, so
+  // a hard load or refresh showed a blank screen. The boundary sends the page
+  // loader first; the page itself is only emitted once the gate has passed.
+  return (
+    <Suspense fallback={<ShellLoading />}>
+      <AppShell>{children}</AppShell>
+    </Suspense>
+  );
+}
+
+async function AppShell({ children }: { children: ReactNode }) {
   const ctx = await requireOrgContext();
   const flags = featureFlags();
   // After a material change to the Terms or Privacy Notice (D15), agree again first.
@@ -46,7 +58,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       </a>
       <AppSidebar account={account} signOutAction={signOut} switchAction={switchBusiness} />
       <MobileTopBar organizationName={account.organizationName} category={account.organizationCategory} />
-      <main id="main" tabIndex={-1} className="flex-1 outline-none lg:pl-60">
+      {/* --page-loader-inset = the sidebar's width (w-60), so the page loader centres in the main panel, not the window. */}
+      <main id="main" tabIndex={-1} className="flex-1 outline-none lg:pl-60 lg:[--page-loader-inset:15rem]">
         <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-10 lg:pt-10 lg:pb-12">
           {!ctx.emailVerified && <VerifyEmailBanner email={ctx.userEmail} />}
           {children}

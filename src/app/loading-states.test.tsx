@@ -60,4 +60,29 @@ describe("loading states", () => {
     expect(status.querySelector('[aria-hidden="true"] [data-slot="skeleton"]')).not.toBeNull();
     expect(status.querySelectorAll("a, button, input, select, textarea, [tabindex]")).toHaveLength(0);
   });
+
+  // The page loader rides on top of the skeleton; it must never take its place (DESIGN.md, "Loading").
+  it.each(loadings)("$route/loading.tsx keeps its skeleton under the page loader", async ({ folder }) => {
+    const { default: Loading } = (await import(/* @vite-ignore */ join(APP, folder, "loading.tsx"))) as {
+      default: ComponentType;
+    };
+    const { getByRole } = render(<Loading />);
+    const status = getByRole("status");
+    const loader = status.querySelector(".page-loader");
+
+    // Customer links (a quote or invoice someone was sent) keep the plain skeleton.
+    if (folder.startsWith("q/") || folder.startsWith("i/")) {
+      expect(loader).toBeNull();
+      return;
+    }
+    expect(loader).not.toBeNull();
+    // Hidden from assistive tech and from the pointer, so the page under it keeps working.
+    expect(loader).toHaveAttribute("aria-hidden", "true");
+    expect(loader).toHaveClass("pointer-events-none", "fixed", "inset-y-0", "right-0", "grid", "place-items-center");
+    // The skeleton is a separate sibling: still drawn, still hidden from screen readers, not inside the loader.
+    expect(loader?.querySelector('[data-slot="skeleton"]')).toBeNull();
+    const skeleton = status.querySelector('[aria-hidden="true"]:not(.page-loader)');
+    expect(skeleton?.querySelector('[data-slot="skeleton"]')).not.toBeNull();
+    expect(skeleton?.contains(loader)).toBe(false);
+  });
 });

@@ -3,12 +3,10 @@
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
-// TAVI ships light only (DESIGN.md), so the toaster is pinned to light rather
-// than following next-themes.
+// The toaster follows the theme the layout read from the cookie (D24), passed as `theme`.
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      theme="light"
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4 text-success" />,

@@ -128,10 +128,12 @@ export default function PrivacyPage() {
 
       <LegalSection title="Cookies">
         <p>
-          {name} uses one kind of cookie: the sign-in cookie that keeps you signed in. It&apos;s needed for the app to
+          {name} uses a sign-in cookie that keeps you signed in. It&apos;s needed for the app to
           work. You&apos;re signed out after {describeDuration(SESSION_POLICY.idleTimeoutSeconds)} without activity,
           and asked to sign in again {describeDuration(SESSION_POLICY.absoluteLifetimeSeconds)} after signing in.
-          There are no analytics, advertising or third-party cookies, and customer links set no cookies.
+          If you choose a colour theme (System, Light or Dark), a second cookie remembers that choice on your device.
+          It holds only that word and nothing about you. There are no analytics, advertising or third-party cookies,
+          and customer links set no cookies.
         </p>
       </LegalSection>
 

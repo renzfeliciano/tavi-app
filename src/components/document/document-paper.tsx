@@ -1,7 +1,7 @@
-import Image from "next/image";
 import { StampImprint } from "@/components/brand/stamp-imprint";
 import { DocumentNumber } from "@/components/document-number";
 import { cn } from "@/lib/utils";
+import { BusinessLogo } from "./business-logo";
 import type { DocumentParty, DocumentView } from "./document-view";
 
 // A quote or invoice as the customer sees it: a sheet of paper (DESIGN.md
@@ -42,6 +42,7 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
   return (
     <div className="@container">
     <article
+      data-theme="light"
       aria-label={`${view.title}${view.number ? ` ${view.number}` : ""}`}
       className={cn(
         "overflow-hidden rounded-lg border border-border border-t-8 border-t-foreground bg-card p-6 text-foreground shadow-sm @xl:p-10",
@@ -50,16 +51,7 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
     >
       <header className="flex flex-col-reverse gap-6 @xl:flex-row @xl:items-start @xl:justify-between">
         <div className="grid min-w-0 gap-1 [overflow-wrap:anywhere]">
-          {business.logo && (
-            <Image
-              src={business.logo.src}
-              alt={`${business.name} logo`}
-              width={business.logo.width}
-              height={business.logo.height}
-              unoptimized
-              className="mb-2 h-auto max-h-16 w-auto max-w-48 object-contain object-left"
-            />
-          )}
+          {business.logo && <BusinessLogo logo={business.logo} name={business.name} className="mb-2" />}
           <p className="text-base font-semibold">{business.name}</p>
           {business.subtitle && <p className="text-sm">{business.subtitle}</p>}
           <div className="text-sm text-muted-foreground">

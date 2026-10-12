@@ -1,6 +1,7 @@
 import path from "node:path";
 import { Circle, Document, Font, Image, Page, Path, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { brand } from "@/config/brand";
+import { fitLogo, LOGO_BOXES } from "@/modules/files/client";
 import type { AcknowledgementView } from "../acknowledgement-paper";
 import type { DocumentParty, DocumentView } from "../document-view";
 
@@ -90,12 +91,15 @@ function Party({ label, party }: { label: string; party: DocumentParty }) {
 }
 
 function Letterhead({ business, title, number }: { business: DocumentView["business"]; title: string; number: string }) {
+  // The same fit rule as the screen (modules/files/domain/logo-display.ts), so an extreme logo can't overflow.
+  const { logo } = business;
+  const logoSize = logo ? fitLogo(logo, LOGO_BOXES.pdf) : null;
   return (
     <View style={s.row}>
       <View style={{ maxWidth: 300 }}>
-        {business.logo && (
+        {logo && logoSize && (
           // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt; the name follows.
-          <Image src={business.logo.src} style={{ maxHeight: 52, maxWidth: 170, objectFit: "contain", marginBottom: 8 }} />
+          <Image src={logo.src} style={{ width: logoSize.width, height: logoSize.height, objectFit: "contain", marginBottom: 8 }} />
         )}
         <Text style={[s.strong, { fontSize: 13 }]}>{business.name}</Text>
         {business.subtitle && <Text>{business.subtitle}</Text>}
@@ -135,6 +139,20 @@ function PdfWordmark({ size = 13 }: { size?: number }) {
   );
 }
 
+/** The TAVI logo (components/brand/logo-mark.tsx) for the PDF footer: a rubber stamp pressing a violet check. */
+function PdfLogoMark({ height = 16 }: { height?: number }) {
+  return (
+    <Svg viewBox="88 22 336 468" style={{ width: height * (336 / 468), height }}>
+      <Rect x={190} y={30} width={132} height={118} rx={54} fill={C.ink} />
+      <Rect x={226} y={136} width={60} height={46} fill={C.ink} />
+      <Rect x={96} y={176} width={320} height={58} rx={22} fill={C.ink} />
+      <Rect x={116} y={234} width={280} height={22} rx={8} fill={C.accent} />
+      <Rect x={96} y={286} width={320} height={196} rx={30} fill={C.accent} />
+      <Path d="M160.5 383 L227.5 464.9 L351.5 311.7" fill="none" stroke="#ffffff" strokeWidth={24.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 /** The Stamp, small and still (a PDF can't move): white head, ink body, violet pad. */
 function PdfStamp({ height = 15 }: { height?: number }) {
   return (
@@ -156,7 +174,10 @@ function PageFooter({ label, business }: { label: string; business: string }) {
         {business} · {label}
       </Text>
       <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
-        <Text style={{ marginRight: 3 }}>Sent with</Text>
+        <Text style={{ marginRight: 4 }}>Sent with</Text>
+        <View style={{ marginRight: 3, alignSelf: "center" }}>
+          <PdfLogoMark />
+        </View>
         <PdfWordmark />
         <View style={{ marginLeft: 4 }}>
           <PdfStamp />

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { EllipsisIcon, PlusIcon } from "lucide-react";
 import { Wordmark } from "@/components/brand/wordmark";
+import { ThemeMenu } from "@/components/theme/theme-toggle";
 import {
   Sheet,
   SheetContent,
@@ -87,12 +88,13 @@ export function MobileTopBar({ organizationName, category }: { organizationName:
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-sm lg:hidden">
       <Link href="/dashboard" className="flex h-11 shrink-0 items-center rounded-sm">
-        <Wordmark size={18} />
+        <Wordmark size={18} mark />
       </Link>
       <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
         {category && <CategoryIcon code={category} className="size-3.5 shrink-0" />}
         <span className="truncate">{organizationName}</span>
       </span>
+      <ThemeMenu className="ml-auto" />
     </header>
   );
 }

@@ -50,6 +50,8 @@ type BrandMascotProps = {
 const INK = "var(--foreground)";
 const STAMP = "var(--stamp)";
 const PAPER = "var(--card)";
+// The body and curl are ink-dark, which would vanish on a dark page; there the svg sets --mascot-body to a lighter slate (3:1 on the page).
+const BODY = "var(--mascot-body, var(--foreground))";
 
 const line = { fill: "none", stroke: INK, strokeLinecap: "round" as const };
 
@@ -201,7 +203,9 @@ export function BrandMascot({
       viewBox="-2 0 72 88"
       width={height * (72 / 88)}
       height={height}
-      className={cn("mascot shrink-0 overflow-visible", className)}
+      className={cn("mascot shrink-0 overflow-visible dark:[--mascot-body:oklch(0.5_0.04_268)]", className)}
+      // The mascot is drawn in the light theme's ink and paper in every theme (D24).
+      data-theme="light"
       data-expression={expression}
       data-animated={animated ? "true" : undefined}
       data-idle={idle ? "true" : undefined}
@@ -213,13 +217,13 @@ export function BrandMascot({
         <g className={cn(idle && "mascot-breathe")}>
           {/* Pad, mount and base: the stamp itself. */}
           <rect x={10} y={66} width={44} height={5} rx={2.2} fill={STAMP} />
-          <path d="M26 38 H38 L40 46 H24 Z" fill={INK} />
-          <rect x={8} y={44} width={48} height={23} rx={6.5} fill={INK} />
+          <path d="M26 38 H38 L40 46 H24 Z" fill={BODY} />
+          <rect x={8} y={44} width={48} height={23} rx={6.5} fill={BODY} />
           <path d="M15 51 H27" stroke={PAPER} strokeWidth={2.2} strokeLinecap="round" opacity={0.28} />
           {/* The handle is the head; it turns toward the pointer while the base stays planted. */}
           <g className="mascot-head">
             <path d="M12 25 C12 12 20 5 32 5 C44 5 52 12 52 25 C52 33 47 38.5 40 38.5 H24 C17 38.5 12 33 12 25 Z" fill={PAPER} stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
-            <path d="M30.8 5.4 C29.4 1.6 34 0.6 35.2 3.4" fill="none" stroke={INK} strokeWidth={2.2} strokeLinecap="round" />
+            <path d="M30.8 5.4 C29.4 1.6 34 0.6 35.2 3.4" fill="none" stroke={BODY} strokeWidth={2.2} strokeLinecap="round" />
             <Face expression={expression} />
           </g>
         </g>

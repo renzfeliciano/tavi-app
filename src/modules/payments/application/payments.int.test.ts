@@ -30,11 +30,15 @@ const pay = (overrides: Record<string, string> = {}) => ({
   ...overrides,
 });
 
-async function sentInvoice(role: Role = "owner", dueDate = "2026-10-16") {
-  const org = await createTestOrganization(testDb(), { name: "Santos Aircon", email: "billing@santos.example" });
-  const user = await createTestUser(testDb(), { email: `${crypto.randomUUID()}@example.com`, emailVerified: true });
-  await addTestMembership(testDb(), { organizationId: org.id, userId: user.id, role });
-  const actor: OrgActor = { organizationId: org.id, userId: user.id, role };
+async function sentInvoice(role: Role = "owner", dueDate = "2026-10-16", into?: OrgActor) {
+  let actor: OrgActor;
+  if (into) actor = into;
+  else {
+    const org = await createTestOrganization(testDb(), { name: "Santos Aircon", email: "billing@santos.example" });
+    const user = await createTestUser(testDb(), { email: `${crypto.randomUUID()}@example.com`, emailVerified: true });
+    await addTestMembership(testDb(), { organizationId: org.id, userId: user.id, role });
+    actor = { organizationId: org.id, userId: user.id, role };
+  }
   const customer = await createCustomer(actor, { displayName: "Juan Dela Cruz", email: "juan@example.com" }, testDb());
   if (!customer.ok) throw new Error("customer");
   const input = {
@@ -144,6 +148,67 @@ describe("recordPayment", () => {
     const { id } = await sentInvoice();
     const member = await sentInvoice("member");
     await expect(record(member.actor, id)).rejects.toThrow();
+  });
+});
+
+describe("recordPayment idempotency", () => {
+  const KEY = "3f0c5a52-9b1e-4d3a-8f55-2d1f0a7c9e11";
+  const keyed = (actor: OrgActor, id: string, raw = pay(), idempotencyKey: string | null = KEY) =>
+    recordPayment(actor, id, raw, { acknowledge: false, market, now: NOW, idempotencyKey }, testDb());
+
+  it("records a repeated request once and answers the repeat with the first result", async () => {
+    const { actor, id } = await sentInvoice();
+    const first = await keyed(actor, id);
+    const again = await keyed(actor, id);
+    expect(first).toMatchObject({ ok: true, receiptNumber: "REC-000001", balanceMinor: 200000 });
+    expect(again).toEqual(first);
+    const rows = await listInvoicePayments(actor, id, testDb());
+    expect(rows).toHaveLength(1);
+    expect(await getInvoice(actor, id, testDb())).toMatchObject({ amountPaidMinor: 100000 });
+  });
+
+  it("still answers a retry after the invoice has been paid in full", async () => {
+    const { actor, id } = await sentInvoice();
+    const first = await keyed(actor, id, pay({ amount: "3,000" }));
+    expect(first).toMatchObject({ ok: true, status: "PAID" });
+    expect(await keyed(actor, id, pay({ amount: "3,000" }))).toEqual(first);
+    expect(await listInvoicePayments(actor, id, testDb())).toHaveLength(1);
+  });
+
+  it("treats a different key (a new attempt) as a new payment", async () => {
+    const { actor, id } = await sentInvoice();
+    await keyed(actor, id, pay(), KEY);
+    expect(await keyed(actor, id, pay(), "another-attempt-0002")).toMatchObject({ ok: true, receiptNumber: "REC-000002" });
+    expect(await listInvoicePayments(actor, id, testDb())).toHaveLength(2);
+  });
+
+  it("refuses a key that was used for a different invoice of the business, and records nothing", async () => {
+    const { actor, id } = await sentInvoice();
+    await keyed(actor, id);
+    const other = await sentInvoice("owner", "2026-10-16", actor);
+    expect(await keyed(actor, other.id)).toMatchObject({ ok: false });
+    expect(await listInvoicePayments(actor, other.id, testDb())).toHaveLength(0);
+  });
+
+  it("keeps keys separate per business", async () => {
+    const mine = await sentInvoice();
+    await keyed(mine.actor, mine.id);
+    const theirs = await sentInvoice();
+    expect(await keyed(theirs.actor, theirs.id)).toMatchObject({ ok: true });
+    expect(await listInvoicePayments(theirs.actor, theirs.id, testDb())).toHaveLength(1);
+  });
+
+  it("keeps working without a key, as before", async () => {
+    const { actor, id } = await sentInvoice();
+    await keyed(actor, id, pay(), null);
+    await keyed(actor, id, pay(), null);
+    expect(await listInvoicePayments(actor, id, testDb())).toHaveLength(2);
+  });
+
+  it("rejects a malformed key", async () => {
+    const { actor, id } = await sentInvoice();
+    expect(await keyed(actor, id, pay(), "no")).toMatchObject({ ok: false, error: expect.stringContaining("try again") });
+    expect(await listInvoicePayments(actor, id, testDb())).toHaveLength(0);
   });
 });
 

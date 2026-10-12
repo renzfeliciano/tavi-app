@@ -78,6 +78,9 @@ test("logo: uploads, refuses an SVG, and can be removed", async () => {
   const input = page.locator('input[type="file"][name="logo"]');
 
   await input.setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
+  // The chosen file is previewed first; nothing is saved until the person confirms.
+  await expect(page.getByTestId("logo-preview").getByRole("img", { name: "Santos Aircon logo" })).toBeVisible();
+  await page.getByRole("button", { name: "Save logo" }).click();
   await expect(toast("Logo updated.")).toBeVisible();
   const logo = page.getByRole("img", { name: "Santos Aircon logo" });
   await expect(logo).toBeVisible();
@@ -93,6 +96,29 @@ test("logo: uploads, refuses an SVG, and can be removed", async () => {
 
   await page.getByRole("button", { name: "Remove" }).click();
   await expect(toast("Logo removed.")).toBeVisible();
+  await expect(page.getByText("No logo yet")).toBeVisible();
+});
+
+test("logo: a very wide logo is fitted inside its preview box and can be cancelled", async () => {
+  await page.goto("/settings/business");
+  const wide = await sharp({
+    create: { width: 1200, height: 40, channels: 4, background: { r: 60, g: 40, b: 160, alpha: 1 } },
+  })
+    .png()
+    .toBuffer();
+  await page.locator('input[type="file"][name="logo"]').setInputFiles({ name: "wide.png", mimeType: "image/png", buffer: wide });
+
+  const box = page.getByTestId("logo-preview");
+  const img = box.getByRole("img", { name: "Santos Aircon logo" });
+  await expect(img).toBeVisible();
+  const [boxBounds, imgBounds] = [await box.boundingBox(), await img.boundingBox()];
+  expect(boxBounds && imgBounds).toBeTruthy();
+  expect(imgBounds!.x).toBeGreaterThanOrEqual(boxBounds!.x);
+  expect(imgBounds!.x + imgBounds!.width).toBeLessThanOrEqual(boxBounds!.x + boxBounds!.width + 0.5);
+  expect(await box.evaluate((el: HTMLElement) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await expect(page.getByRole("status").filter({ hasText: "very wide" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByText("No logo yet")).toBeVisible();
 });
 
@@ -156,4 +182,25 @@ test("document numbers: preview while typing, save, and keep counting", async ()
   await quotes.getByRole("button", { name: "Save" }).click();
   await expect(quotes.getByText("Use up to 12 letters, digits or dashes.")).toBeVisible();
   expect((await axe(page)).violations).toEqual([]);
+});
+
+test("theme: dark applies at once, survives a reload, and System goes back to the browser's choice", async () => {
+  await page.goto("/settings");
+  const html = page.locator("html");
+  const choose = async (name: string) => {
+    await page.getByRole("button", { name: "Theme" }).locator("visible=true").first().click();
+    await page.getByRole("menuitemradio", { name }).click();
+  };
+
+  await choose("Dark");
+  await expect(html).toHaveAttribute("data-theme", "dark");
+
+  await page.reload();
+  await expect(html).toHaveAttribute("data-theme", "dark");
+  expect((await axe(page)).violations).toEqual([]);
+
+  await choose("System");
+  await expect(html).not.toHaveAttribute("data-theme", /.+/);
+  await choose("Light");
+  await expect(html).toHaveAttribute("data-theme", "light");
 });

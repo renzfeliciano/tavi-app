@@ -69,7 +69,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
   // An issued invoice is read-only here; edits (before payment, D7) happen on
   // its edit page, and void / cancel ask for a reason.
   const view = invoiceDocumentView(invoice, {
-    business: await documentBusiness(ctx),
+    business: await documentBusiness(ctx, invoice.sellerSnapshot),
     market: ctx.market,
     locale: ctx.locale,
   });

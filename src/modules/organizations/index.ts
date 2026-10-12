@@ -27,6 +27,7 @@ export {
   businessProfileSchemaFor,
 } from "./domain/business-profile";
 export { BUSINESS_PROFILE_LIMITS } from "./domain/limits";
+export { type SellerSnapshot, sellerFrom, withSeller } from "./domain/seller-snapshot";
 export {
   type AcceptInvitationResult,
   acceptInvitation,

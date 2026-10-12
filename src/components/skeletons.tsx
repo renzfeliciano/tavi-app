@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "cn";
+import { PageLoader } from "@/components/brand/page-loader";
+import { LightScope } from "@/components/theme/light-scope";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /*
@@ -37,17 +39,23 @@ const BAR: Record<TextSize, string> = {
 
 /**
  * What every loading.tsx renders: a status region that tells screen readers
- * `label` once, with the bars themselves hidden from them.
+ * `label` once, with the bars themselves hidden from them. The page loader
+ * (the Stamp and TAVI, centred in the window) rides on top of the skeleton
+ * after 150ms; it never takes the skeleton's place, layout or label, and
+ * lets every pointer event through. Customer links turn it off.
  */
 export function LoadingScreen({
   label,
   className,
+  loader = true,
   children,
 }: {
   /** What's on its way, e.g. "Loading customers". */
   label: string;
   /** Layout for the skeleton, which sits where the page's own content will. */
   className?: string;
+  /** Show the page loader over the skeleton (default). Customer pages pass `false`. */
+  loader?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -56,6 +64,7 @@ export function LoadingScreen({
       <div aria-hidden="true" className={className}>
         {children}
       </div>
+      {loader && <PageLoader />}
     </div>
   );
 }
@@ -500,32 +509,34 @@ export function LegalDocumentSkeleton({ sections = 6 }: { sections?: number }) {
 /** What a customer sees at a shared link (q/[token], i/[token]): the sender, the document, the footer. */
 export function PortalDocumentSkeleton({ label, balance = false }: { label: string; balance?: boolean }) {
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
-      <LoadingScreen label={label}>
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <TextSkeleton width="w-52" />
-          <div className="flex items-center gap-3">
-            <BadgeSkeleton />
-            <TextSkeleton width="w-24" />
-          </div>
-        </div>
-        {balance && (
-          <div className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-8">
-            <div>
+    <LightScope>
+      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
+        <LoadingScreen label={label} loader={false}>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <TextSkeleton width="w-52" />
+            <div className="flex items-center gap-3">
+              <BadgeSkeleton />
               <TextSkeleton width="w-24" />
-              <TextSkeleton size="3xl" width="w-40" />
-              <TextSkeleton width="w-28" className="mt-1" />
-            </div>
-            <div className="grid content-start">
-              <TextSkeleton width="w-24" />
-              <ParagraphSkeleton lines={2} />
             </div>
           </div>
-        )}
-        <DocumentPaperSkeleton />
-        <TextSkeleton size="xs" width="w-28" className="mt-10 justify-center" />
-        <TextSkeleton size="xs" width="w-32" className="mt-2 justify-center" />
-      </LoadingScreen>
-    </main>
+          {balance && (
+            <div className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-8">
+              <div>
+                <TextSkeleton width="w-24" />
+                <TextSkeleton size="3xl" width="w-40" />
+                <TextSkeleton width="w-28" className="mt-1" />
+              </div>
+              <div className="grid content-start">
+                <TextSkeleton width="w-24" />
+                <ParagraphSkeleton lines={2} />
+              </div>
+            </div>
+          )}
+          <DocumentPaperSkeleton />
+          <TextSkeleton size="xs" width="w-28" className="mt-10 justify-center" />
+          <TextSkeleton size="xs" width="w-32" className="mt-2 justify-center" />
+        </LoadingScreen>
+      </main>
+    </LightScope>
   );
 }

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { CheckIcon } from "lucide-react";
 import { AuthMascot, AuthStageProvider } from "@/components/auth-stage";
 import { Wordmark } from "@/components/brand/wordmark";
+import { ThemeCorner } from "@/components/theme/theme-toggle";
 import { LegalLinks } from "@/components/legal/legal-document";
 import { brand } from "@/config/brand";
 
@@ -21,12 +22,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <AuthStageProvider>
     <div className="auth-shell group/auth grid flex-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <ThemeCorner />
       <aside
         aria-hidden="true"
         className="relative hidden flex-col justify-between overflow-hidden border-r border-border bg-surface-sunken p-12 lg:flex"
       >
         <Link href="/" tabIndex={-1} className="w-fit group-has-data-[branded]/auth:invisible">
-          <Wordmark size={26} />
+          <Wordmark size={26} mark />
         </Link>
 
         <div className="mx-auto grid w-full max-w-xs justify-items-center gap-10">
@@ -59,7 +61,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <div className="flex flex-col items-center px-4 py-10 sm:py-14 lg:justify-center lg:px-12">
         <div className="mb-6 grid justify-items-center gap-3 lg:hidden">
           <Link href="/" className="rounded-sm group-has-data-[branded]/auth:hidden">
-            <Wordmark size={24} />
+            <Wordmark size={24} mark />
           </Link>
           <AuthMascot size="lg" />
         </div>

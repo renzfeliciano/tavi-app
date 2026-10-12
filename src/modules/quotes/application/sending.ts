@@ -21,6 +21,8 @@ import {
   getBusinessProfile,
   getDocumentSettings,
   getLetterheadForSharedDocument,
+  sellerFrom,
+  withSeller,
 } from "@/modules/organizations";
 import { addDays, formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { formatMoney } from "@/shared/money";
@@ -113,7 +115,7 @@ export async function sendQuote(
     const number = locked.number ?? (await allocateDocumentNumber(tx, actor.organizationId, "quote")).number;
     await tx
       .update(quotes)
-      .set({ status: "SENT", number, customerSnapshot: snapshot, sentAt: sql`now()` })
+      .set({ status: "SENT", number, customerSnapshot: snapshot, sellerSnapshot: sellerFrom(profile), sentAt: sql`now()` })
       .where(eq(quotes.id, locked.id));
     await revokeShareLinks(tx, quoteDocument(actor, locked.id));
     const token = await createShareLink(tx, {
@@ -275,7 +277,7 @@ export async function getSharedQuote(token: string, db: Database = getDb()): Pro
   if (!business) return null;
   return {
     quote: { ...header, lines },
-    business,
+    business: withSeller(business, header.sellerSnapshot),
     countryCode: business.countryCode,
     locale: business.locale,
     organizationId: link.organizationId,

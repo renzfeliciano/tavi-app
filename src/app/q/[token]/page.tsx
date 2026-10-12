@@ -11,6 +11,7 @@ import {
 import { letterhead } from "@/components/document/letterhead";
 import { StatusBadge } from "@/components/status/status-badge";
 import { Wordmark } from "@/components/brand/wordmark";
+import { LightScope } from "@/components/theme/light-scope";
 import { LegalLinks } from "@/components/legal/legal-document";
 import { marketFor } from "@/config/markets";
 import { readLogoForSharedDocument } from "@/modules/files";
@@ -78,66 +79,68 @@ export default async function SharedQuotePage({ params }: PageProps<"/q/[token]"
     : null;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-sm font-normal text-muted-foreground">
-          {market.documents.quote.singular} from <span className="font-medium text-foreground">{business.name}</span>
-        </h1>
-        <div className="flex items-center gap-3">
-          <StatusBadge kind="quote" status={quote.status} />
-          <a href={`/q/${token}/pdf`} download className="text-sm font-medium text-primary underline-offset-4 hover:underline">
-            Download PDF
-          </a>
-        </div>
-      </header>
+    <LightScope>
+      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-sm font-normal text-muted-foreground">
+            {market.documents.quote.singular} from <span className="font-medium text-foreground">{business.name}</span>
+          </h1>
+          <div className="flex items-center gap-3">
+            <StatusBadge kind="quote" status={quote.status} />
+            <a href={`/q/${token}/pdf`} download className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+              Download PDF
+            </a>
+          </div>
+        </header>
 
-      {open && (
-        <p className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-pretty shadow-xs">
-          This quote is valid until{" "}
-          <span className="font-medium">{formatCalendarDate(quote.validUntil, shared.locale)}</span>. Approve it below
-          to go ahead, or contact {business.name}
-          {contact ? ` (${contact})` : ""} with questions.
-        </p>
-      )}
-      {quote.status === "APPROVED" && (
-        <p role="status" className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-pretty shadow-xs">
-          {quote.decisionName ? `Approved by ${quote.decisionName}` : "Approved"}
-          {decidedOn ? ` on ${decidedOn}` : ""}. {business.name} has been told
-          {contact ? ` and will be in touch (${contact})` : " and will be in touch"}.
-        </p>
-      )}
-      {quote.status === "REJECTED" && (
-        <p role="status" className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
-          You declined this quote{decidedOn ? ` on ${decidedOn}` : ""}. {business.name} has been told.
-        </p>
-      )}
-      {quote.status === "EXPIRED" && (
-        <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
-          This quote expired on {formatCalendarDate(quote.validUntil, shared.locale)}. Ask {business.name}
-          {contact ? ` (${contact})` : ""} for an updated quote.
-        </p>
-      )}
-      {quote.status === "CANCELLED" && (
-        <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
-          {business.name} cancelled this quote. Contact them if you have questions.
-        </p>
-      )}
+        {open && (
+          <p className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-pretty shadow-xs">
+            This quote is valid until{" "}
+            <span className="font-medium">{formatCalendarDate(quote.validUntil, shared.locale)}</span>. Approve it below
+            to go ahead, or contact {business.name}
+            {contact ? ` (${contact})` : ""} with questions.
+          </p>
+        )}
+        {quote.status === "APPROVED" && (
+          <p role="status" className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-pretty shadow-xs">
+            {quote.decisionName ? `Approved by ${quote.decisionName}` : "Approved"}
+            {decidedOn ? ` on ${decidedOn}` : ""}. {business.name} has been told
+            {contact ? ` and will be in touch (${contact})` : " and will be in touch"}.
+          </p>
+        )}
+        {quote.status === "REJECTED" && (
+          <p role="status" className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
+            You declined this quote{decidedOn ? ` on ${decidedOn}` : ""}. {business.name} has been told.
+          </p>
+        )}
+        {quote.status === "EXPIRED" && (
+          <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
+            This quote expired on {formatCalendarDate(quote.validUntil, shared.locale)}. Ask {business.name}
+            {contact ? ` (${contact})` : ""} for an updated quote.
+          </p>
+        )}
+        {quote.status === "CANCELLED" && (
+          <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
+            {business.name} cancelled this quote. Contact them if you have questions.
+          </p>
+        )}
 
-      <DocumentPaper view={view} />
+        <DocumentPaper view={view} />
 
-      {open && (
-        <QuoteDecision
-          token={token}
-          contentHash={sharedQuoteContentHash(quote)}
-          name={name}
-          businessName={business.name}
-        />
-      )}
+        {open && (
+          <QuoteDecision
+            token={token}
+            contentHash={sharedQuoteContentHash(quote)}
+            name={name}
+            businessName={business.name}
+          />
+        )}
 
-      <footer className="mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        Sent with <Wordmark size={12} />
-      </footer>
-      <LegalLinks className="mt-2" />
-    </main>
+        <footer className="mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          Sent with <Wordmark size={12} mark />
+        </footer>
+        <LegalLinks className="mt-2" />
+      </main>
+    </LightScope>
   );
 }

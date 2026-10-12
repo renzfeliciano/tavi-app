@@ -12,6 +12,7 @@ import {
 } from "@/components/portal/portal-unavailable";
 import { StatusBadge } from "@/components/status/status-badge";
 import { Wordmark } from "@/components/brand/wordmark";
+import { LightScope } from "@/components/theme/light-scope";
 import { LegalLinks } from "@/components/legal/legal-document";
 import { marketFor } from "@/config/markets";
 import { readLogoForSharedDocument } from "@/modules/files";
@@ -79,103 +80,105 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
     : null;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-sm font-normal text-muted-foreground">
-          {invoiceTitle(invoice, market)} from <span className="font-medium text-foreground">{business.name}</span>
-        </h1>
-        <div className="flex items-center gap-3">
-          <StatusBadge kind="invoice" status={invoice.status} />
-          <a href={`/i/${token}/pdf`} download className="text-sm font-medium text-primary underline-offset-4 hover:underline">
-            Download PDF
-          </a>
-        </div>
-      </header>
-
-      {!closed && invoice.status !== "PAID" && (
-        <section
-          aria-label="Balance due"
-          className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-8"
-        >
-          <div>
-            <p className="text-sm text-muted-foreground">Balance due</p>
-            <MoneyAmount
-              amountMinor={balanceMinor}
-              currency={invoice.currency}
-              locale={shared.locale}
-              className="text-3xl font-semibold"
-            />
-            <p className="mt-1 text-sm text-muted-foreground">
-              Due {formatCalendarDate(invoice.dueDate, shared.locale)}
-            </p>
+    <LightScope>
+      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-sm font-normal text-muted-foreground">
+            {invoiceTitle(invoice, market)} from <span className="font-medium text-foreground">{business.name}</span>
+          </h1>
+          <div className="flex items-center gap-3">
+            <StatusBadge kind="invoice" status={invoice.status} />
+            <a href={`/i/${token}/pdf`} download className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+              Download PDF
+            </a>
           </div>
-          <div className="min-w-0 text-sm">
-            <p className="font-medium">How to pay</p>
-            {invoice.paymentInstructions ? (
-              <p className="mt-1 whitespace-pre-wrap">{invoice.paymentInstructions}</p>
-            ) : (
-              <p className="mt-1 text-muted-foreground">
-                Contact {business.name}
-                {contact ? ` (${contact})` : ""} for payment details.
+        </header>
+
+        {!closed && invoice.status !== "PAID" && (
+          <section
+            aria-label="Balance due"
+            className="mb-6 grid gap-4 rounded-xl border border-border bg-card p-5 shadow-xs sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-8"
+          >
+            <div>
+              <p className="text-sm text-muted-foreground">Balance due</p>
+              <MoneyAmount
+                amountMinor={balanceMinor}
+                currency={invoice.currency}
+                locale={shared.locale}
+                className="text-3xl font-semibold"
+              />
+              <p className="mt-1 text-sm text-muted-foreground">
+                Due {formatCalendarDate(invoice.dueDate, shared.locale)}
               </p>
-            )}
-          </div>
-        </section>
-      )}
-      {invoice.status === "PAID" && (
-        <p role="status" className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm shadow-xs">
-          Paid in full. Thank you!
-        </p>
-      )}
-      {closed && (
-        <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
-          {business.name} {invoice.status === "VOID" ? "voided" : "cancelled"} this{" "}
-          {invoiceTitle(invoice, market).toLowerCase()}. Nothing is owed on it. Contact them if you have questions.
-        </p>
-      )}
+            </div>
+            <div className="min-w-0 text-sm">
+              <p className="font-medium">How to pay</p>
+              {invoice.paymentInstructions ? (
+                <p className="mt-1 whitespace-pre-wrap">{invoice.paymentInstructions}</p>
+              ) : (
+                <p className="mt-1 text-muted-foreground">
+                  Contact {business.name}
+                  {contact ? ` (${contact})` : ""} for payment details.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+        {invoice.status === "PAID" && (
+          <p role="status" className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm shadow-xs">
+            Paid in full. Thank you!
+          </p>
+        )}
+        {closed && (
+          <p className="mb-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
+            {business.name} {invoice.status === "VOID" ? "voided" : "cancelled"} this{" "}
+            {invoiceTitle(invoice, market).toLowerCase()}. Nothing is owed on it. Contact them if you have questions.
+          </p>
+        )}
 
-      {updatedOn && !closed && (
-        <p className="mb-4 text-sm text-muted-foreground">
-          Updated {updatedOn}. This is the latest version.
-        </p>
-      )}
+        {updatedOn && !closed && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            Updated {updatedOn}. This is the latest version.
+          </p>
+        )}
 
-      {received.length > 0 && (
-        <section aria-label="Payments received" className="mb-6 rounded-xl border border-border bg-card p-5 text-sm shadow-xs">
-          <p className="font-medium">Payments received</p>
-          <ul className="mt-2 divide-y divide-border">
-            {received.map((payment) => (
-              <li key={payment.receiptNumber} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <span className="text-muted-foreground">
-                  {formatCalendarDate(payment.paidOn, shared.locale)} · {market.paymentMethodLabels[payment.method]} ·{" "}
-                  {market.documents.receipt.singular} {payment.receiptNumber}
-                  {payment.withheldMinor > 0 && market.taxWithheld
-                    ? ` · ${market.taxWithheld.label} ${formatMoney(payment.withheldMinor, payment.currency, { locale: shared.locale })}`
-                    : ""}
-                </span>
-                <span className="flex items-center gap-3">
-                  <MoneyAmount amountMinor={payment.amountMinor} currency={payment.currency} locale={shared.locale} className="font-medium" />
-                  <a
-                    href={`/i/${token}/receipts/${encodeURIComponent(payment.receiptNumber)}/pdf`}
-                    download
-                    className="font-medium text-primary underline-offset-4 hover:underline"
-                    aria-label={`Download ${market.documents.receipt.singular} ${payment.receiptNumber} as PDF`}
-                  >
-                    PDF
-                  </a>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        {received.length > 0 && (
+          <section aria-label="Payments received" className="mb-6 rounded-xl border border-border bg-card p-5 text-sm shadow-xs">
+            <p className="font-medium">Payments received</p>
+            <ul className="mt-2 divide-y divide-border">
+              {received.map((payment) => (
+                <li key={payment.receiptNumber} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span className="text-muted-foreground">
+                    {formatCalendarDate(payment.paidOn, shared.locale)} · {market.paymentMethodLabels[payment.method]} ·{" "}
+                    {market.documents.receipt.singular} {payment.receiptNumber}
+                    {payment.withheldMinor > 0 && market.taxWithheld
+                      ? ` · ${market.taxWithheld.label} ${formatMoney(payment.withheldMinor, payment.currency, { locale: shared.locale })}`
+                      : ""}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <MoneyAmount amountMinor={payment.amountMinor} currency={payment.currency} locale={shared.locale} className="font-medium" />
+                    <a
+                      href={`/i/${token}/receipts/${encodeURIComponent(payment.receiptNumber)}/pdf`}
+                      download
+                      className="font-medium text-primary underline-offset-4 hover:underline"
+                      aria-label={`Download ${market.documents.receipt.singular} ${payment.receiptNumber} as PDF`}
+                    >
+                      PDF
+                    </a>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-      <DocumentPaper view={view} />
+        <DocumentPaper view={view} />
 
-      <footer className="mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        Sent with <Wordmark size={12} />
-      </footer>
-      <LegalLinks className="mt-2" />
-    </main>
+        <footer className="mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          Sent with <Wordmark size={12} mark />
+        </footer>
+        <LegalLinks className="mt-2" />
+      </main>
+    </LightScope>
   );
 }

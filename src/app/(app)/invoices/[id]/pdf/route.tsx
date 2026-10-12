@@ -2,7 +2,7 @@ import { DocumentPdf } from "@/components/document/pdf/document-pdf";
 import { pdfResponse } from "@/components/document/pdf/pdf-response";
 import { requireOrgContext } from "@/modules/identity";
 import { countsAsPrint, getInvoice, recordInvoicePrint } from "@/modules/invoices";
-import { getBusinessProfile } from "@/modules/organizations";
+import { getBusinessProfile, withSeller } from "@/modules/organizations";
 import { pdfLetterhead } from "../../../_documents/pdf-letterhead";
 import { invoiceDocumentView } from "../../_lib/invoice-view";
 
@@ -14,7 +14,7 @@ export async function GET(_request: Request, context: RouteContext<"/invoices/[i
   const invoice = await getInvoice(ctx, id);
   if (!invoice) return new Response("Not found", { status: 404 });
   const profile = await getBusinessProfile(ctx);
-  const business = await pdfLetterhead(ctx.organizationId, profile, ctx.market);
+  const business = await pdfLetterhead(ctx.organizationId, withSeller(profile, invoice.sellerSnapshot), ctx.market);
   const print = countsAsPrint(invoice) ? await recordInvoicePrint(ctx, invoice.id) : null;
   // A draft shows today's payment instructions; an issued invoice keeps the ones it was sent with.
   const view = invoiceDocumentView(

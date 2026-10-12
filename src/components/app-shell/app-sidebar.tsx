@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PlusIcon } from "lucide-react";
 import { Wordmark } from "@/components/brand/wordmark";
+import { ThemeMenu } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -60,9 +61,10 @@ export function AppSidebar({
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
-      <div className="grid gap-0.5 px-5 pt-4 pb-3">
+      <div className="relative grid gap-0.5 px-5 pt-4 pb-3">
+        <ThemeMenu className="absolute top-3 right-3" />
         <Link href="/dashboard" className="w-fit rounded-sm">
-          <Wordmark size={19} />
+          <Wordmark size={19} mark />
         </Link>
         <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground" title={account.organizationName}>
           {account.organizationCategory && (

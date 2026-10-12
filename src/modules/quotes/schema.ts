@@ -18,6 +18,7 @@ import {
 import { id, timestamps } from "@/db/columns";
 import { customers } from "@/modules/customers/schema";
 import { users } from "@/modules/identity/schema";
+import type { SellerSnapshot } from "@/modules/organizations";
 import { organizations } from "@/modules/organizations/schema";
 import { QUOTE_STATUSES } from "./domain/status";
 
@@ -53,6 +54,8 @@ export const quotes = pgTable(
     issueDate: date("issue_date", { mode: "string" }).notNull(),
     validUntil: date("valid_until", { mode: "string" }).notNull(),
     customerSnapshot: jsonb("customer_snapshot").$type<CustomerSnapshot>(),
+    /** The business as it was when the quote was sent (D25); null on drafts. */
+    sellerSnapshot: jsonb("seller_snapshot").$type<SellerSnapshot>(),
     notes: text("notes"),
     terms: text("terms"),
     subtotalMinor: money("subtotal_minor"),

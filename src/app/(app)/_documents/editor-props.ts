@@ -7,15 +7,19 @@ import { formatRate, listTaxRates } from "@/modules/catalog";
 import { getOrganizationLogo } from "@/modules/files";
 import type { OrgContext } from "@/modules/identity";
 import { getInvoiceRegistration, registrationFooter } from "@/modules/invoices";
-import { getBusinessProfile } from "@/modules/organizations";
+import { getBusinessProfile, type SellerSnapshot, withSeller } from "@/modules/organizations";
 import { customerFormCopy } from "../customers/_components/customer-copy";
 import type { DocumentKind, TaxRateChoice } from "./editor-types";
 
-/** The business as it heads its documents: logo, names, address, contact and tax ID. */
-export async function documentBusiness(ctx: OrgContext): Promise<DocumentView["business"]> {
+/**
+ * The business as it heads its documents: logo, names, address, contact and tax
+ * ID. An issued document passes its `seller` snapshot so it keeps the details it
+ * was sent with (D25); a draft shows the live ones.
+ */
+export async function documentBusiness(ctx: OrgContext, seller?: SellerSnapshot | null): Promise<DocumentView["business"]> {
   const [profile, logo] = await Promise.all([getBusinessProfile(ctx), getOrganizationLogo(ctx)]);
   return letterhead(
-    profile,
+    withSeller(profile, seller),
     ctx.market,
     logo ? { src: `/api/files/${logo.id}`, width: logo.width, height: logo.height } : null,
   );

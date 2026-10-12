@@ -29,6 +29,8 @@ export const payments = pgTable(
     notes: text("notes"),
     /** The payment acknowledgement's number, from the receipt series. */
     receiptNumber: text("receipt_number").notNull(),
+    /** The attempt's idempotency key: a repeat of the same request finds this payment (§B.5). */
+    idempotencyKey: text("idempotency_key"),
     provider: text("provider").notNull().default("manual"),
     providerPaymentId: text("provider_payment_id"),
     recordedBy: uuid("recorded_by").references(() => users.id, { onDelete: "set null" }),
@@ -41,6 +43,7 @@ export const payments = pgTable(
     unique("payments_organization_id_id_unique").on(t.organizationId, t.id),
     unique("payments_organization_receipt_unique").on(t.organizationId, t.receiptNumber),
     unique("payments_provider_payment_unique").on(t.provider, t.providerPaymentId),
+    unique("payments_organization_idempotency_unique").on(t.organizationId, t.idempotencyKey),
     index("payments_invoice_idx").on(t.invoiceId),
     index("payments_organization_paid_on_idx").on(t.organizationId, t.paidOn.desc()),
     foreignKey({

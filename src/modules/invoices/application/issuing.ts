@@ -23,6 +23,8 @@ import {
   getBusinessProfile,
   getDocumentSettings,
   getLetterheadForSharedDocument,
+  sellerFrom,
+  withSeller,
 } from "@/modules/organizations";
 import type { CustomerSnapshot } from "@/modules/quotes";
 import { formatCalendarDate, todayIn } from "@/shared/dates/calendar";
@@ -154,6 +156,7 @@ export async function issueInvoice(
         status,
         number,
         customerSnapshot: snapshot,
+        sellerSnapshot: sellerFrom(profile),
         paymentInstructions: profile.paymentInstructions,
         registration: registered,
         sentAt: sql`now()`,
@@ -259,7 +262,7 @@ export async function getSharedInvoice(token: string, db: Database = getDb()): P
   if (!business) return null;
   return {
     invoice: { ...header, lines },
-    business,
+    business: withSeller(business, header.sellerSnapshot),
     countryCode: business.countryCode,
     locale: business.locale,
     organizationId: link.organizationId,

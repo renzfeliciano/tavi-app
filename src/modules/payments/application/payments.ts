@@ -16,6 +16,7 @@ import { getBusinessProfile, getDocumentSettings } from "@/modules/organizations
 import { type CalendarDate, formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { formatMoney } from "@/shared/money";
 import { tooLong } from "@/shared/validation/messages";
+import { parseIdempotencyKey } from "../domain/idempotency";
 import { parsePaymentInput, type RawPayment } from "../domain/payment-input";
 import { payments } from "../schema";
 
@@ -95,6 +96,8 @@ export type RecordPaymentOptions = {
   acknowledge: boolean;
   /** The business's market: methods, withheld tax and document wording. */
   market: MarketProfile;
+  /** This attempt's idempotency key; a repeat with the same key returns the first result. */
+  idempotencyKey?: string | null;
   now?: Date;
 };
 
@@ -102,11 +105,13 @@ export async function recordPayment(
   actor: OrgActor,
   invoiceId: string,
   raw: RawPayment,
-  { acknowledge, market, now = new Date() }: RecordPaymentOptions,
+  { acknowledge, market, idempotencyKey: rawKey, now = new Date() }: RecordPaymentOptions,
   db: Database = getDb(),
 ): Promise<RecordPaymentResult> {
   assertCan(actor, "payments.record");
   if (!isUuid(invoiceId)) return { ok: false, notFound: true };
+  const idempotencyKey = parseIdempotencyKey(rawKey);
+  if (idempotencyKey === false) return { ok: false, error: "That request wasn't valid. Please try again." };
   const [settings, profile] = await Promise.all([getDocumentSettings(actor, db), getBusinessProfile(actor, db)]);
   const today = todayIn(settings.timezone, now);
   // Checked before anything is recorded, so the person can retry without the email (§I).
@@ -117,6 +122,24 @@ export async function recordPayment(
   return db.transaction(async (tx): Promise<RecordPaymentResult> => {
     const invoice = await lockInvoiceForPayment(tx, actor, invoiceId);
     if (!invoice) return { ok: false, notFound: true };
+    // A repeat of an attempt that already went through (the invoice is locked, so this is race-free).
+    if (idempotencyKey) {
+      const [seen] = await tx
+        .select({ id: payments.id, invoiceId: payments.invoiceId, receiptNumber: payments.receiptNumber })
+        .from(payments)
+        .where(and(eq(payments.organizationId, actor.organizationId), eq(payments.idempotencyKey, idempotencyKey)));
+      if (seen) {
+        if (seen.invoiceId !== invoice.id) return { ok: false, error: "That request wasn't valid. Please try again." };
+        const settled = await settledOn(tx, invoice.id);
+        return {
+          ok: true,
+          paymentId: seen.id,
+          receiptNumber: seen.receiptNumber,
+          status: invoice.status,
+          balanceMinor: invoice.totalMinor - settled.settledMinor,
+        };
+      }
+    }
     if (!isPayable(invoice.status)) {
       return {
         ok: false,
@@ -152,6 +175,7 @@ export async function recordPayment(
         reference: input.reference,
         notes: input.notes,
         receiptNumber,
+        idempotencyKey,
         recordedBy: actor.userId,
       })
       .returning({ id: payments.id });

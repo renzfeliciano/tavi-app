@@ -26,7 +26,7 @@ export default async function PaymentPage({ params }: PageProps<"/payments/[id]"
   const view = acknowledgementView(payment, {
     invoiceName,
     customer: invoice.customerSnapshot,
-    business: await documentBusiness(ctx),
+    business: await documentBusiness(ctx, invoice.sellerSnapshot),
     market: ctx.market,
     locale: ctx.locale,
   });

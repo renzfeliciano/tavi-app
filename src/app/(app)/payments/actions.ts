@@ -16,9 +16,10 @@ export async function recordPaymentAction(
   invoiceId: string,
   raw: RawPayment,
   acknowledge: boolean,
+  idempotencyKey?: string,
 ): Promise<RecordPaymentResponse> {
   const ctx = await requireOrgContext();
-  const result = await recordPayment(ctx, invoiceId, raw, { acknowledge, market: ctx.market });
+  const result = await recordPayment(ctx, invoiceId, raw, { acknowledge, market: ctx.market, idempotencyKey });
   revalidatePath("/invoices");
   revalidatePath("/payments");
   if (result.ok) {

@@ -25,6 +25,8 @@ Prepared 2 Oct 2026 (proposal §M 1.13b, risk N.1) as the register of what perso
 | P10 | Data download and account closure | Data portability and erasure on request (Sec. 16(e), 18) | Users; the business's customers (in the file) | Everything listed above for the business | Legal obligation | A JSON file streamed to the person; `users.closed_at`, `organizations.closed_at` | Not stored: the file is made on request; closure is permanent |
 | P9 | Breached-password check | Refuse passwords known from breaches | Users | First 5 characters of the password's SHA-1 hash (not identifiable) | Legitimate interest | Have I Been Pwned (k-anonymity range API) | Not stored |
 
+**Theme cookie (D24).** `tavi-theme` stores one word (system, light or dark) so the first paint matches the person's choice. It holds no personal information, is not linked to the account, and is set only when someone picks a theme. Customer links set no cookies. The privacy notice mentions it; no `LEGAL.version` bump because the processing of personal information is unchanged.
+
 **Sensitive personal information.** An individual's TIN may count as sensitive personal information (RA 10173 Sec. 3(l)(3), "issued by government agencies peculiar to an individual"). It's processed because tax regulations require it on documents (Sec. 13(b)). To confirm with the lawyer.
 
 ## Service providers (sub-processors)

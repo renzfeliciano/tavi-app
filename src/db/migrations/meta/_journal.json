@@ -176,6 +176,20 @@
       "when": 1791530348746,
       "tag": "0024_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791771595089,
+      "tag": "0025_payment_idempotency",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791772008286,
+      "tag": "0026_seller_snapshot",
+      "breakpoints": true
     }
   ]
 }

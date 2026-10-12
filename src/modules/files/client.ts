@@ -6,3 +6,4 @@ export {
   MAX_UPLOAD_SIZE_LABEL,
   UPLOAD_MESSAGES,
 } from "./domain/limits";
+export { fitLogo, LOGO_BOXES, LOGO_EXTREME_RATIO, logoLooksExtreme, type LogoSize } from "./domain/logo-display";

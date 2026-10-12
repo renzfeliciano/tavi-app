@@ -1,9 +1,12 @@
 import { brand } from "@/config/brand";
 import { cn } from "@/lib/utils";
+import { LogoMark } from "./logo-mark";
 
 type WordmarkProps = {
   /** Cap height driver in px; the mark scales from it. */
   size?: number;
+  /** Put the stamp logo before the name (headers and footers); inline mentions stay plain. */
+  mark?: boolean;
   className?: string;
 };
 
@@ -11,7 +14,7 @@ type WordmarkProps = {
  * The TAVI wordmark: set in Geist Bold, with the V drawn as an asymmetric
  * check mark in stamp violet (approved / paid share one glyph).
  */
-export function Wordmark({ size = 20, className }: WordmarkProps) {
+export function Wordmark({ size = 20, mark = false, className }: WordmarkProps) {
   return (
     <span
       role="img"
@@ -22,6 +25,7 @@ export function Wordmark({ size = 20, className }: WordmarkProps) {
       )}
       style={{ fontSize: size, lineHeight: 1 }}
     >
+      {mark && <LogoMark size={size * 1.6} className="mr-[0.4em] self-center" />}
       <span aria-hidden>TA</span>
       <svg
         aria-hidden

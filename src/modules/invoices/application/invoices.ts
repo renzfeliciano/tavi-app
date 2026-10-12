@@ -14,7 +14,7 @@ import {
   quantityToNumeric,
   type TaxMode,
 } from "@/modules/documents";
-import { getDocumentSettings } from "@/modules/organizations";
+import { getDocumentSettings, type SellerSnapshot } from "@/modules/organizations";
 import { clearQuoteConversion, type CustomerSnapshot } from "@/modules/quotes";
 import { addDays, type CalendarDate, todayIn } from "@/shared/dates/calendar";
 import { escapeLikePattern } from "@/shared/text/search";
@@ -49,6 +49,8 @@ export type InvoiceHeader = {
   notes: string | null;
   terms: string | null;
   customerSnapshot: CustomerSnapshot | null;
+  /** The business as it was when issued (D25); null on drafts and older invoices without one. */
+  sellerSnapshot: SellerSnapshot | null;
   paymentInstructions: string | null;
   /** Set on registered invoices (invoice mode, 1.12); null on billing statements. */
   registration: InvoiceRegistrationSnapshot | null;
@@ -141,6 +143,7 @@ export const headerColumns = {
   notes: invoices.notes,
   terms: invoices.terms,
   customerSnapshot: invoices.customerSnapshot,
+  sellerSnapshot: invoices.sellerSnapshot,
   paymentInstructions: invoices.paymentInstructions,
   registration: invoices.registration,
   printCount: invoices.printCount,
