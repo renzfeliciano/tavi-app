@@ -10,8 +10,8 @@ import {
   PortalUnavailable,
   TOO_MANY_REQUESTS,
 } from "@/components/portal/portal-unavailable";
+import { PortalSignoff } from "@/components/portal/portal-signoff";
 import { StatusBadge } from "@/components/status/status-badge";
-import { Wordmark } from "@/components/brand/wordmark";
 import { LightScope } from "@/components/theme/light-scope";
 import { LegalLinks } from "@/components/legal/legal-document";
 import { marketFor } from "@/config/markets";
@@ -174,9 +174,7 @@ export default async function SharedInvoicePage({ params }: PageProps<"/i/[token
 
         <DocumentPaper view={view} />
 
-        <footer className="mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          Sent with <Wordmark size={12} mark />
-        </footer>
+        <PortalSignoff />
         <LegalLinks className="mt-2" />
       </main>
     </LightScope>

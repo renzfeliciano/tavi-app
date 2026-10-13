@@ -28,6 +28,22 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  audit:
+    name: Dependency audit (critical advisories)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Fails only on a critical advisory. The high ones that remain are in
+      # build-time tools and are recorded in docs/runbooks/security-checks.md;
+      # review them by hand before each release.
+      - run: npm audit --omit=dev --audit-level=critical
+
   integration:
     name: Integration tests (Postgres 18)
     runs-on: ubuntu-latest

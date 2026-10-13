@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { activateOrganization, requireSession } from "@/modules/identity";
 import { acceptInvitation } from "@/modules/organizations";
@@ -20,5 +21,7 @@ export async function acceptInvitationAction(token: unknown): Promise<AcceptInvi
     };
   }
   await activateOrganization(session.id, result.organizationId);
+  // The sidebar and every page visited so far were drawn for the business that was active before.
+  revalidatePath("/", "layout");
   redirect("/dashboard");
 }

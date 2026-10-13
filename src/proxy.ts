@@ -1,6 +1,6 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
-import { acceptRequestId, buildContentSecurityPolicy, isProtectedPath } from "@/shared/security/headers";
+import { acceptRequestId, buildContentSecurityPolicy, isDevOnlyPath, isProtectedPath } from "@/shared/security/headers";
 
 // Runs before every page request:
 // 1. Optimistic auth check (§D): no session cookie on a protected path → sign
@@ -9,7 +9,11 @@ import { acceptRequestId, buildContentSecurityPolicy, isProtectedPath } from "@/
 // 2. A fresh CSP nonce per request (§I). Next.js reads it from the request's
 //    CSP header and stamps it on its own scripts.
 // 3. A request ID for correlating logs.
+// The developer pages under /dev get a plain 404 in production (isDevOnlyPath).
 export function proxy(request: NextRequest) {
+  if (process.env.NODE_ENV === "production" && isDevOnlyPath(request.nextUrl.pathname)) {
+    return new NextResponse("Not found", { status: 404 });
+  }
   if (
     isProtectedPath(request.nextUrl.pathname) &&
     !getSessionCookie(request, { cookiePrefix: "tavi" })

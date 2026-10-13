@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AsyncCombobox } from "@/components/async-combobox";
+import { CatalogPrice } from "@/components/catalog-price";
 import {
   buyerTaxIdReminder,
   EMPTY_QUALIFIED_DISCOUNT,
@@ -29,6 +30,7 @@ import {
 import { DocumentPaper } from "@/components/document/document-paper";
 import { buildDocumentView, type DocumentView, type DocumentViewLineInput } from "@/components/document/document-view";
 import { FormAlert } from "@/components/form-alert";
+import { KindIcon } from "@/components/kind-icon";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -55,10 +57,12 @@ import {
 import { parseInvoiceDraft } from "@/modules/invoices/client";
 import { TRASH_RETENTION_DAYS } from "@/modules/trash/client";
 import { parseQuoteDraft } from "@/modules/quotes/client";
-import { formatAmountForInput, formatMoney } from "@/shared/money";
+import { formatMoney } from "@/shared/money";
 import { formatRate } from "@/shared/numbers/percent";
+import { eg } from "@/shared/text/example";
 import { CustomerForm, type CustomerFormCopy, EMPTY_CUSTOMER } from "../customers/_components/customer-form";
 import { customerForDocumentAction, searchCustomersAction, searchLineSourcesAction } from "./actions";
+import { catalogLinePrice } from "./catalog-line";
 import type {
   CustomerChoice,
   Delivery,
@@ -428,12 +432,12 @@ export function DocumentEditor(props: DocumentEditorProps) {
 
   const addFromCatalog = (source: LineSourceChoice | null) => {
     if (!source) return;
-    const samePrice = source.currency === state.currency;
+    const { unitPrice, notice } = catalogLinePrice(source, state.currency, locale);
     const line: EditorLine = {
       ...newLine(),
       description: source.description ? `${source.name}\n${source.description}` : source.name,
       unitLabel: source.unitLabel,
-      unitPrice: samePrice ? formatAmountForInput(source.unitPriceMinor, source.currency, locale) : "",
+      unitPrice,
       taxRateId: source.taxRateId ?? "",
       sourceKind: source.kind,
       sourceId: source.id,
@@ -445,7 +449,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
         ? [...state.lines.slice(0, -1), line]
         : [...state.lines, line];
     update({ lines });
-    if (!samePrice) toast.info(`${source.name} is priced in ${source.currency}. Enter its ${state.currency} price.`);
+    if (notice) toast.info(notice);
   };
 
   const chooseCustomer = async (choice: CustomerChoice | null) => {
@@ -632,14 +636,14 @@ export function DocumentEditor(props: DocumentEditorProps) {
               <span className="flex w-full items-start justify-between gap-3">
                 <span className="grid min-w-0">
                   <span className="truncate font-medium">{s.name}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <KindIcon kind={s.kind} />
                     {s.kind === "service" ? "Service" : "Product"}
                     {s.sku ? ` · ${s.sku}` : ""}
                   </span>
                 </span>
                 <span className="shrink-0 text-right text-xs tabular-nums">
-                  {formatMoney(s.unitPriceMinor, s.currency, { locale })}
-                  <span className="block text-muted-foreground">per {s.unitLabel}</span>
+                  <CatalogPrice priceMinor={s.unitPriceMinor} currency={s.currency} unitLabel={s.unitLabel} locale={locale} />
                 </span>
               </span>
             )}
@@ -725,6 +729,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
                           id="doc-qualified-id"
                           value={value.idNumber}
                           maxLength={QUALIFIED_DISCOUNT_LIMITS.idNumber}
+                          placeholder={eg(chosen.idExample)}
                           autoComplete="off"
                           onChange={(e) => change({ idNumber: e.target.value })}
                           onBlur={() => touch(QUALIFIED_DISCOUNT_FIELDS.idNumber)}
@@ -745,6 +750,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
                           id="doc-qualified-name"
                           value={value.holderName}
                           maxLength={QUALIFIED_DISCOUNT_LIMITS.holderName}
+                          placeholder={eg(props.customerCopy.examples.person)}
                           autoComplete="off"
                           onChange={(e) => change({ holderName: e.target.value })}
                           onBlur={() => touch(QUALIFIED_DISCOUNT_FIELDS.holderName)}
@@ -820,10 +826,10 @@ export function DocumentEditor(props: DocumentEditorProps) {
           </div>
           {(
             [
-              ["notes", "Notes", "Shown to the customer, e.g. what's included."],
-              ["terms", "Terms", "Payment and warranty terms."],
+              ["notes", "Notes", "Shown to the customer, e.g. what's included.", "e.g. Thank you for your business. Parts and labour are included."],
+              ["terms", "Terms", "Payment and warranty terms.", "e.g. 50% down payment before work starts. 30-day warranty on labour."],
             ] as const
-          ).map(([field, label, hint]) => (
+          ).map(([field, label, hint, example]) => (
             <div key={field} className="grid gap-1.5">
               <label htmlFor={`doc-${field}`} className="text-sm font-medium">
                 {label} <span className="font-normal text-muted-foreground">(optional)</span>
@@ -834,6 +840,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
                 onChange={(e) => update({ [field]: e.target.value }, [field])}
                 maxLength={DOCUMENT_LIMITS[field]}
                 rows={2}
+                placeholder={example}
                 aria-describedby={`doc-${field}-hint`}
               />
               <p id={`doc-${field}-hint`} className="text-sm text-muted-foreground">

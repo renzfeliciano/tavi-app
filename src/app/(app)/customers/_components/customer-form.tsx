@@ -11,13 +11,19 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { CurrencyOption } from "@/config/currencies";
+import type { MarketExamples } from "@/config/markets";
 import { CATEGORIES, CATEGORY_CODES } from "@/config/categories";
 import { CUSTOMER_LIMITS as LIMITS } from "@/modules/customers/client";
+import { eg } from "@/shared/text/example";
 import { type CustomerFormState, type CustomerFormValues, saveCustomer } from "../actions";
 
 /** Country-specific wording, from the business's market profile. */
 export type CustomerFormCopy = {
   taxIdLabel: string;
+  /** A tax number as the market writes it, for the empty field. */
+  taxIdExample: string;
+  /** What the empty fields show. */
+  examples: MarketExamples;
   /** e.g. "quotations and billing statements". */
   documents: string;
   address: { line2Label: string; cityLabel: string; regionLabel: string; postalCodeLabel: string };
@@ -96,13 +102,14 @@ export function CustomerForm({ customerId, initialValues, copy, onSaved }: Custo
                 {...p}
                 defaultValue={v.displayName}
                 maxLength={LIMITS.displayName}
+                placeholder={eg(copy.examples.person)}
                 autoComplete="off"
                 autoFocus={!customerId}
               />
             )}
           </FormField>
           <FormField name="company" label="Company" optional error={error("company")}>
-            {(p) => <Input {...p} defaultValue={v.company} maxLength={LIMITS.company} autoComplete="off" />}
+            {(p) => <Input {...p} defaultValue={v.company} maxLength={LIMITS.company} placeholder={eg(copy.examples.company)} autoComplete="off" />}
           </FormField>
           <FormField
             name="category"
@@ -123,25 +130,25 @@ export function CustomerForm({ customerId, initialValues, copy, onSaved }: Custo
             )}
           </FormField>
           <FormField name="email" label="Email" optional hint={`Where ${copy.documents} are sent.`} error={error("email")}>
-            {(p) => <Input {...p} type="email" defaultValue={v.email} maxLength={LIMITS.email} autoComplete="off" />}
+            {(p) => <Input {...p} type="email" defaultValue={v.email} maxLength={LIMITS.email} placeholder={eg(copy.examples.email)} autoComplete="off" />}
           </FormField>
           <FormField name="phone" label="Phone" optional error={error("phone")}>
-            {(p) => <Input {...p} type="tel" defaultValue={v.phone} maxLength={LIMITS.phone} autoComplete="off" />}
+            {(p) => <Input {...p} type="tel" defaultValue={v.phone} maxLength={LIMITS.phone} placeholder={eg(copy.examples.phone)} autoComplete="off" />}
           </FormField>
         </FormSection>
 
         <FormSection title="Billing details" description="Printed on documents you send them.">
           <FormField name="addressLine1" label="Street address" optional error={error("addressLine1")}>
-            {(p) => <Input {...p} defaultValue={v.addressLine1} maxLength={LIMITS.addressLine} autoComplete="off" />}
+            {(p) => <Input {...p} defaultValue={v.addressLine1} maxLength={LIMITS.addressLine} placeholder={eg(copy.examples.address.line1)} autoComplete="off" />}
           </FormField>
           <FormField name="addressLine2" label={copy.address.line2Label} optional error={error("addressLine2")}>
-            {(p) => <Input {...p} defaultValue={v.addressLine2} maxLength={LIMITS.addressLine} autoComplete="off" />}
+            {(p) => <Input {...p} defaultValue={v.addressLine2} maxLength={LIMITS.addressLine} placeholder={eg(copy.examples.address.line2)} autoComplete="off" />}
           </FormField>
           <FormField name="city" label={copy.address.cityLabel} optional error={error("city")}>
-            {(p) => <Input {...p} defaultValue={v.city} maxLength={LIMITS.city} autoComplete="off" />}
+            {(p) => <Input {...p} defaultValue={v.city} maxLength={LIMITS.city} placeholder={eg(copy.examples.address.city)} autoComplete="off" />}
           </FormField>
           <FormField name="region" label={copy.address.regionLabel} optional error={error("region")}>
-            {(p) => <Input {...p} defaultValue={v.region} maxLength={LIMITS.region} autoComplete="off" />}
+            {(p) => <Input {...p} defaultValue={v.region} maxLength={LIMITS.region} placeholder={eg(copy.examples.address.region)} autoComplete="off" />}
           </FormField>
           <FormField name="postalCode" label={copy.address.postalCodeLabel} optional error={error("postalCode")}>
             {(p) => (
@@ -149,6 +156,7 @@ export function CustomerForm({ customerId, initialValues, copy, onSaved }: Custo
                 {...p}
                 defaultValue={v.postalCode}
                 maxLength={LIMITS.postalCode}
+                placeholder={eg(copy.examples.address.postalCode)}
                 inputMode="numeric"
                 autoComplete="off"
                 className="sm:max-w-40"
@@ -162,7 +170,7 @@ export function CustomerForm({ customerId, initialValues, copy, onSaved }: Custo
             hint="For business customers who need it on their documents."
             error={error("taxId")}
           >
-            {(p) => <Input {...p} defaultValue={v.taxId} maxLength={LIMITS.taxId} className="font-mono" />}
+            {(p) => <Input {...p} defaultValue={v.taxId} maxLength={LIMITS.taxId} placeholder={eg(copy.taxIdExample)} className="font-mono" />}
           </FormField>
           <FormField
             name="currency"
@@ -194,7 +202,7 @@ export function CustomerForm({ customerId, initialValues, copy, onSaved }: Custo
             error={error("notes")}
             className="sm:col-span-2"
           >
-            {(p) => <Textarea {...p} defaultValue={v.notes} maxLength={LIMITS.notes} rows={3} />}
+            {(p) => <Textarea {...p} defaultValue={v.notes} maxLength={LIMITS.notes} rows={3} placeholder="e.g. Gate code 4821. Prefers calls after 5 pm." />}
           </FormField>
         </FormSection>
       </div>

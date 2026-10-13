@@ -20,7 +20,7 @@ describe("CtaScene", () => {
     expect(sheet).toHaveAttribute("data-theme", "light");
     expect(sheet).toHaveTextContent("Billing statement");
     expect(sheet).toHaveTextContent("INV-000012");
-    expect(sheet).toHaveTextContent("Travis Renz Repair Services");
+    expect(sheet).toHaveTextContent("Renzo Feliciano Payod Repair Services");
     expect(sheet).toHaveTextContent("Check-up and labour");
   });
 

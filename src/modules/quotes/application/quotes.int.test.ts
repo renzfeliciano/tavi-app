@@ -234,6 +234,27 @@ describe("listQuotes", () => {
   });
 });
 
+describe("listQuotes paging", () => {
+  it("says how many quotes match and cuts them by the size asked for", async () => {
+    const actor = await actorFor("member", "One");
+    const juan = await customer(actor, "Juan Dela Cruz");
+    for (let i = 0; i < 11; i++) await save(actor, draft());
+    await save(actor, draft({ customerId: juan.id }));
+
+    const second = await listQuotes(actor, { pageSize: 10, page: 2 }, testDb());
+    const found = await listQuotes(actor, { search: "juan" }, testDb());
+    const past = await listQuotes(actor, { pageSize: 10, page: 99 }, testDb());
+    const odd = await listQuotes(actor, { pageSize: 7 }, testDb());
+
+    expect(second).toMatchObject({ matching: 12, total: 12, page: 2, pageSize: 10, pageCount: 2, from: 11, to: 12, hasMore: false });
+    expect(second.quotes).toHaveLength(2);
+    // `total` is every quote the business has (it decides "nothing here yet"); `matching` follows the search.
+    expect(found).toMatchObject({ matching: 1, total: 12, from: 1, to: 1 });
+    expect(past).toMatchObject({ page: 2, from: 11, to: 12 });
+    expect(odd.pageSize).toBe(25);
+  });
+});
+
 describe("deleteDraftQuote", () => {
   it("deletes a never-sent draft and audits it; another business can't", async () => {
     const owner = await actorFor("member", "One");

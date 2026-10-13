@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { activateOrganization, requireSession } from "@/modules/identity";
 import { createOrganizationForUser } from "@/modules/organizations";
@@ -28,5 +29,7 @@ export async function createBusiness(
   if (!result.ok) return { fieldErrors: result.fieldErrors, values, submission: Date.now() };
 
   await activateOrganization(session.id, result.organization.id);
+  // The sidebar and every page visited so far were drawn for the business that was active before.
+  revalidatePath("/", "layout");
   redirect("/dashboard");
 }

@@ -3,26 +3,27 @@ import Link from "next/link";
 import { ReceiptTextIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { SectionEmpty } from "@/components/app-shell/section-empty";
-import { DocumentNumber } from "@/components/document-number";
+import { DataTable } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
-import { ListPager, ListSearch, ListViews, listHref, pageParam } from "@/components/list-controls";
-import { DocumentRow } from "../../_documents/document-row";
-import { MissingCustomer } from "@/components/missing-customer";
-import { MoneyAmount } from "@/components/money-amount";
+import { keptSize, ListSearch, ListViews, listHref, pageParam, pagedHref, sizeParam } from "@/components/list-controls";
+import { ListPending, ListResults } from "@/components/list-pending";
+import { SummaryStrip } from "@/components/summary-strip";
 import { invoiceStatusPresentation } from "@/components/status/presentation";
-import { StatusBadge } from "@/components/status/status-badge";
 import { buttonVariants } from "@/components/ui/button";
 import { requireOrgContext } from "@/modules/identity";
-import { INVOICE_STATUSES, type InvoiceStatus, listInvoices } from "@/modules/invoices";
-import { formatCalendarDate } from "@/shared/dates/calendar";
+import { INVOICE_STATUSES, type InvoiceStatus, invoiceMoneySummary, invoicePipeline, listInvoices } from "@/modules/invoices";
+import { todayIn } from "@/shared/dates/calendar";
+import { parsePageSize } from "@/shared/pagination/page-window";
 import { normalizeSearch } from "@/shared/text/search";
+import { InvoiceListSkeleton, invoiceColumns, invoiceSummary } from "../../_documents/document-list";
+import { invoiceStrip } from "../../_documents/summary";
 
 export const metadata: Metadata = { title: "Invoices" };
 
 const isStatus = (value: unknown): value is InvoiceStatus => INVOICE_STATUSES.includes(value as InvoiceStatus);
 
-const invoicesHref = (q: string | null, status: InvoiceStatus | null, page?: number) =>
-  listHref("/invoices", { q, status: status?.toLowerCase(), page: page && page > 1 ? page : null });
+const invoicesHref = (q: string | null, status: InvoiceStatus | null, size: number) =>
+  listHref("/invoices", { q, status: status?.toLowerCase(), size: sizeParam(size) });
 
 export default async function InvoicesPage({ searchParams }: PageProps<"/invoices">) {
   const ctx = await requireOrgContext();
@@ -31,8 +32,14 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
   const requested = String(params.status ?? "").toUpperCase();
   const status = isStatus(requested) ? requested : null;
   const page = pageParam(params.page);
-  const list = await listInvoices(ctx, { search, status: status ?? undefined, page });
+  const today = todayIn(ctx.timezone);
+  const [list, money, pipeline] = await Promise.all([
+    listInvoices(ctx, { search, status: status ?? undefined, page, pageSize: parsePageSize(params.size) }),
+    invoiceMoneySummary(ctx, { today }),
+    invoicePipeline(ctx, { today }),
+  ]);
   const { singular, plural } = ctx.market.documents.invoice;
+  const strip = invoiceStrip({ money, drafts: pipeline.drafts, names: ctx.market.documents.invoice, today, locale: ctx.locale, currency: ctx.currency });
   const description = "Bill for finished work and see what's paid, due and overdue.";
   const newLabel = `New ${singular.toLowerCase()}`;
 
@@ -62,63 +69,62 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
         }
       />
 
-      <div className="mt-8 grid gap-3">
-        <ListSearch
-          action="/invoices"
-          label={`Search ${plural.toLowerCase()}`}
-          placeholder="Number or customer"
-          value={search}
-          keep={{ status: status?.toLowerCase() }}
-        />
-        <div className="-mx-4 overflow-x-auto px-4 pb-1">
-          <ListViews
-            label={`${plural} by status`}
-            views={[
-              { href: invoicesHref(search, null), label: "All", current: status === null },
-              ...INVOICE_STATUSES.map((s) => ({
-                href: invoicesHref(search, s),
-                label: invoiceStatusPresentation[s].label,
-                current: status === s,
-              })),
-            ]}
+      <SummaryStrip label={`${singular} summary`} rows={strip} />
+
+      <ListPending>
+        <div className="mt-5 grid gap-3">
+          <ListSearch
+            action="/invoices"
+            label={`Search ${plural.toLowerCase()}`}
+            placeholder="Number or customer"
+            value={search}
+            keep={{ status: status?.toLowerCase(), size: keptSize(list.pageSize) }}
           />
+          <div className="-mx-4 overflow-x-auto px-4 pb-1">
+            <ListViews
+              label={`${plural} by status`}
+              views={[
+                { href: invoicesHref(search, null, list.pageSize), label: "All", current: status === null },
+                ...INVOICE_STATUSES.map((s) => ({
+                  href: invoicesHref(search, s, list.pageSize),
+                  label: invoiceStatusPresentation[s].label,
+                  current: status === s,
+                })),
+              ]}
+            />
+          </div>
         </div>
-      </div>
 
-      <section aria-label={`${singular} list`} className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-        {list.invoices.length === 0 ? (
-          <EmptyState
-            title={search ? `Nothing matches “${search}”` : "Nothing here"}
-            description={search ? "Try the number or the customer's name." : `${plural} with this status will appear here.`}
-            action={
-              <Link href={invoicesHref(null, null)} className={buttonVariants({ variant: "outline" })}>
-                Show all
-              </Link>
-            }
-          />
-        ) : (
-          <ul className="divide-y divide-border">
-            {list.invoices.map((invoice) => (
-              <li key={invoice.id}>
-                <DocumentRow
-                  href={`/invoices/${invoice.id}` as Route}
-                  customer={invoice.customerName ?? <MissingCustomer />}
-                  meta={
-                    <>
-                      {invoice.number !== null && <DocumentNumber number={invoice.number} />}
-                      <span>Due {formatCalendarDate(invoice.dueDate, ctx.locale)}</span>
-                    </>
-                  }
-                  status={<StatusBadge kind="invoice" status={invoice.status} />}
-                  amount={<MoneyAmount amountMinor={invoice.totalMinor} currency={invoice.currency} locale={ctx.locale} />}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <ListPager page={list.page} hasMore={list.hasMore} hrefFor={(p) => invoicesHref(search, status, p)} />
+        <ListResults label={`Loading ${plural.toLowerCase()}`} skeleton={<InvoiceListSkeleton label={`${singular} list`} />}>
+          {list.invoices.length === 0 ? (
+            <section aria-label={`${singular} list`} className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+              <EmptyState
+                title={search ? `Nothing matches “${search}”` : "Nothing here"}
+                description={search ? "Try the number or the customer's name." : `${plural} with this status will appear here.`}
+                action={
+                  <Link href={invoicesHref(null, null, list.pageSize)} className={buttonVariants({ variant: "outline" })}>
+                    Show all
+                  </Link>
+                }
+              />
+            </section>
+          ) : (
+            <DataTable
+              label={`${singular} list`}
+              columns={invoiceColumns(ctx.locale)}
+              rows={list.invoices}
+              rowKey={(invoice) => invoice.id}
+              rowHref={(invoice) => `/invoices/${invoice.id}` as Route}
+              phoneSummary={invoiceSummary(ctx.locale)}
+              controls={2}
+              strip
+              meta={list}
+              noun={{ singular: singular.toLowerCase(), plural: plural.toLowerCase() }}
+              hrefFor={pagedHref("/invoices", { q: search, status: status?.toLowerCase() }, list.pageSize)}
+            />
+          )}
+        </ListResults>
+      </ListPending>
     </>
   );
 }

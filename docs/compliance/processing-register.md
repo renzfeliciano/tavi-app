@@ -6,7 +6,7 @@ Prepared 2 Oct 2026 (proposal §M 1.13b, risk N.1) as the register of what perso
 
 | Information | Tavi's role | The controller |
 |---|---|---|
-| People who use Tavi: accounts, sign-ins, business profiles, activity history | Personal information controller (PIC) | The operator in `LEGAL.operator` (still placeholders) |
+| People who use Tavi: accounts, sign-ins, business profiles, activity history | Personal information controller (PIC) | The operator in `LEGAL.operator` (filled in on 14 October 2026) |
 | A business's customers and their documents | Personal information processor (PIP) | The business, under the data processing terms in the Terms of Service (RA 10173 Sec. 14; IRR Sec. 43–44) |
 
 ## Activities
@@ -14,12 +14,12 @@ Prepared 2 Oct 2026 (proposal §M 1.13b, risk N.1) as the register of what perso
 | # | Activity | Purpose | Data subjects | Personal information | Basis | Where it's stored | Retention |
 |---|---|---|---|---|---|---|---|
 | P1 | Accounts and sign-in | Provide the service; security | Users | Name, email, password hash (scrypt), email confirmed, terms version and time agreed | Contract (Sec. 12(b)) | `users`, `accounts`, `verifications` | While the account is open |
-| P2 | Sessions and devices | Keep people signed in; let them see and sign out devices | Users | Session ID, IP address, user agent, times | Contract; legitimate interest in security (Sec. 12(f)) | `sessions` | Until sign-out, 7 days idle or 30 days after sign-in (`SESSION_POLICY`) |
+| P2 | Sessions and devices | Keep people signed in; let them see and sign out devices | Users | Session ID, IP address, user agent, times | Contract; legitimate interest in security (Sec. 12(f)) | `sessions` | Until sign-out, 30 minutes idle or 30 days after sign-in (`SESSION_POLICY`) |
 | P3 | Business profile | Print the seller's details on documents | Users (sole proprietors: the business is the person) | Registered name, TIN, address, contact details, logo, payment instructions, payment QR codes (the link or QR text the business gives us), tax registration details, registration details (taxpayer type, income tax option, tax office code, line of business, business name registration) and optional copies of registration certificates (BIR COR, DTI/SEC/CDA, permits; owners and admins only) | Contract; legal obligation, as tax rules require them on documents (Sec. 12(c)) | `organizations`, `files`, `invoice_registrations` | While the account is open, then as tax rules require for issued documents |
 | P4 | Customers and documents (as processor) | Quotes, bills, payments, PDFs and links, for the business | The business's customers | Name, company, email, phone, address, TIN; what was sold and paid, with the payment details the business types (reference or cheque / deposit slip number, bank or wallet, payer's name or account, time paid, date on a cheque); for a qualified buyer's discount (D19), the number and name on their senior citizen, PWD, solo parent, athlete or Medal of Valor ID (sensitive: it reveals age or disability; required on the invoice by RR 7-2024 Sec. 6 B.18) | The business's own basis; our instructions are the Terms | `customers`, `quotes`, `invoices`, `payments`, `trash_items` and their line tables | As the business directs; issued documents as tax rules require; a deleted draft waits in the recycle bin for 30 days, then is removed |
 | P5 | Customer decisions on links | Evidence of a quote's approval or decline; "opened" status | The business's customers | Name typed, decision reason, IP address, user agent, time | The business's basis (evidence of agreement) | `quotes`, `audit_events` | With the quote |
 | P6 | Activity history | Accountability, security and support; the product funnel | Users; customers (as actors) | Who did what and when; IP and user agent for sign-ins and customer decisions | Legitimate interest (Sec. 12(f)) | `audit_events` (append-only) | For as long as the records it describes exist |
-| P7 | Email delivery | Send account emails and the documents a business sends | Users; customers | Address, subject, body | Contract | `outbox_messages`; Google (Gmail SMTP) | Body deleted once delivered; address and subject kept as a delivery record |
+| P7 | Email delivery | Send account emails and the documents a business sends | Users; customers | Address, subject, body, and the ID of the person whose action queued it (used for a per-person sending cap) | Contract | `outbox_messages`; Google (Gmail SMTP) | Body deleted once delivered; address and subject kept as a delivery record |
 | P8 | Rate limiting | Stop abuse of sign-in and customer links | Anyone | A key derived from the IP address, counts | Legitimate interest (Sec. 12(f)) | `request_limits`, `rate_limits` | Pruned after a day |
 | P11 | Team invitations (D17) | Invite people to a business by email | People invited by a business | Email address, role, who invited them, when it was accepted | Contract with the inviting business; the invitee's own contract once they accept | `invitations`; Google (Gmail SMTP) | Kept with the business; an unused invitation stops working after 7 days |
 | P10 | Data download and account closure | Data portability and erasure on request (Sec. 16(e), 18) | Users; the business's customers (in the file) | Everything listed above for the business | Legal obligation | A JSON file streamed to the person; `users.closed_at`, `organizations.closed_at` | Not stored: the file is made on request; closure is permanent |
@@ -43,7 +43,7 @@ No analytics, advertising or error-tracking SDK is in use (Sentry is deferred, �
 
 ## Security measures (RA 10173 Sec. 20)
 
-HTTPS with HSTS; nonce-based CSP; passwords hashed by Better Auth; breached-password check; session limits and instant revocation; every query scoped to the business, composite foreign keys between a business's rows; customer-link tokens stored only as SHA-256; rate limits on every token route; append-only activity history (database trigger); logs redact secrets and drop query strings and link tokens; database point-in-time restore (restore drill: `docs/runbooks/restore-drill.md`).
+HTTPS with HSTS; nonce-based CSP; passwords hashed by Better Auth; breached-password check; session limits and instant revocation; every query scoped to the business, composite foreign keys between a business's rows; customer-link tokens stored only as SHA-256; rate limits on every token route; append-only activity history (database trigger); logs redact secrets and drop query strings and link tokens; database point-in-time restore (restore drill: `docs/runbooks/restore-drill.md`). Reviewed against the code on 14 October 2026 (`docs/runbooks/security-checks.md`): dependency audit, SonarJS rules, an OWASP Top 10 code review, a live test and an OWASP ZAP scan on a local copy found no way into another business's records; eight issues were fixed. An independent penetration test is still to do, and ZAP should be run again against staging.
 
 ## Breach response
 
@@ -51,10 +51,11 @@ Within 72 hours of knowledge or reasonable belief of a breach that puts people a
 
 ## Open items before the beta
 
-1. Fill in `LEGAL.operator` (name, registered address, privacy email, data protection officer). The legal pages say "Draft" until then.
+1. `LEGAL.operator` was filled in on 14 October 2026 (the owner as operator and as data protection officer, the owner's address, a privacy mailbox). Keep it current if any of them change, and have the lawyer confirm the owner may act as their own data protection officer.
 2. Lawyer review of the Privacy Notice, Terms of Service and this register.
 3. Ask whether Tavi must register with the NPC (NPC Circular 2022-04 sets who must register; the answer depends on the number of people and whether sensitive personal information is processed).
 4. Delete a closed business's records once its tax retention period ends. Closing an account (D16) anonymises the person straight away and closes the business, but its records stay until then; there's no deletion job yet, and the lawyer should confirm the period.
 5. An owner whose business others still use must transfer ownership (Settings → Team) before closing their account; members leave the shared business when they close theirs (D17).
+6. Run the OWASP ZAP baseline against staging, and commission an independent penetration test (`docs/runbooks/security-checks.md`).
 
 Done in 1.13c (D16): "Download your data" (Settings → Account and data, one JSON file, owners and admins), "Close account" (password, then the steps above) and agreeing again after `LEGAL.version` changes (`/accept-terms`).

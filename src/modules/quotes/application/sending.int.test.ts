@@ -13,7 +13,12 @@ import { MARKETS } from "@/config/markets";
 import type { OrgActor, Role } from "@/modules/authz";
 import { createCustomer } from "@/modules/customers";
 import { blankLine } from "@/modules/documents";
-import { DOCUMENT_EMAIL_LIMIT, documentEmailLimitMessage } from "@/modules/notifications";
+import {
+  DOCUMENT_EMAIL_LIMIT,
+  documentEmailLimitMessage,
+  GLOBAL_EMAIL_LIMIT,
+  PERSON_EMAIL_LIMIT,
+} from "@/modules/notifications";
 import { BUSINESS_PROFILE_FIELDS, getBusinessProfile, updateBusinessProfile } from "@/modules/organizations";
 import type { RawQuoteDraft } from "../domain/quote-draft";
 import { getQuote, saveQuoteDraft } from "./quotes";
@@ -139,6 +144,36 @@ describe("sendQuote", () => {
     expect((await getQuote(actor, draft.id, testDb()))?.status).toBe("DRAFT");
     expect(await listAllOutboxMessages(testDb())).toHaveLength(DOCUMENT_EMAIL_LIMIT.max);
 
+    expect(await sendQuote(actor, draft.id, options(), testDb())).toMatchObject({ ok: true });
+  });
+
+  it("won't email for a person who has sent the most across all their businesses, even from a quiet one", async () => {
+    const actor = await actorFor();
+    const draft = await draftQuote(actor);
+    // The same person's emails from other businesses: none from this one.
+    const elsewhere = await createTestOrganization();
+    await fillTestOutbox(elsewhere.id, PERSON_EMAIL_LIMIT.max, testDb(), actor.userId);
+
+    expect(
+      await sendQuote(actor, draft.id, options({ email: { to: "juan@example.com", message: "" } }), testDb()),
+    ).toEqual({ ok: false, error: documentEmailLimitMessage(undefined, "person") });
+    expect((await getQuote(actor, draft.id, testDb()))?.status).toBe("DRAFT");
+
+    expect(await sendQuote(actor, draft.id, options(), testDb())).toMatchObject({ ok: true });
+  });
+
+  it("won't email at all while Tavi as a whole is over its hourly limit", async () => {
+    const actor = await actorFor();
+    const draft = await draftQuote(actor);
+    // Other businesses, each well under its own cap, add up to the global cap.
+    for (let i = 0; i < 4; i++) {
+      const other = await createTestOrganization();
+      await fillTestOutbox(other.id, Math.ceil(GLOBAL_EMAIL_LIMIT.max / 4));
+    }
+
+    expect(
+      await sendQuote(actor, draft.id, options({ email: { to: "juan@example.com", message: "" } }), testDb()),
+    ).toEqual({ ok: false, error: documentEmailLimitMessage(undefined, "global") });
     expect(await sendQuote(actor, draft.id, options(), testDb())).toMatchObject({ ok: true });
   });
 

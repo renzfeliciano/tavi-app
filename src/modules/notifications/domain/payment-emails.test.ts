@@ -60,9 +60,9 @@ describe("paymentAcknowledgementEmail", () => {
     expect(paymentAcknowledgementEmail(base).text).not.toContain("Reference no.");
   });
 
-  it("signs off with the lockup when it knows the app's address, and in text when it doesn't", () => {
+  it("signs off with the wordmark when it knows the app's address, and in text when it doesn't", () => {
     expect(paymentAcknowledgementEmail({ ...base, appUrl: "https://tavi.example" }).html).toContain(
-      'src="https://tavi.example/icons/tavi-email-lockup.png"',
+      'src="https://tavi.example/icons/tavi-email-wordmark.png"',
     );
     const plain = paymentAcknowledgementEmail(base).html;
     expect(plain).not.toContain("<img");

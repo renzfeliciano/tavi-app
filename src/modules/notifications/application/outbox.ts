@@ -13,11 +13,12 @@ import { outboxMessages } from "../schema";
 export async function enqueueEmail(
   executor: Executor,
   message: EmailMessage,
-  options: { organizationId?: string | null } = {},
+  options: { organizationId?: string | null; actorUserId?: string | null } = {},
 ): Promise<void> {
   await executor.insert(outboxMessages).values({
     kind: "email",
     organizationId: options.organizationId ?? null,
+    actorUserId: options.actorUserId ?? null,
     payload: message,
   });
 }

@@ -42,6 +42,52 @@ describe("market profiles", () => {
       expect(market.taxId.pattern.test(market.taxId.example)).toBe(true);
     });
 
+    it("has examples for what an empty field shows, written without the \"e.g.\" the form adds", () => {
+      const { examples } = market;
+      const values = [
+        examples.person,
+        examples.company,
+        examples.business,
+        examples.email,
+        examples.phone,
+        examples.address.line1,
+        examples.address.line2,
+        examples.address.city,
+        examples.address.region,
+        examples.address.postalCode,
+      ];
+      for (const value of values) {
+        expect(value.trim()).not.toBe("");
+        expect(value).not.toMatch(/^e\.g\./i);
+      }
+      expect(examples.email).toMatch(/^[^@\s]+@[^@\s]+\.[^@\s]+$/);
+    });
+
+    it("has an example for each payment detail a method asks for, and none for one it doesn't", () => {
+      for (const code of PAYMENT_METHODS) {
+        const labels = market.paymentDetailLabels[code];
+        const examples = market.paymentDetailExamples[code];
+        expect(examples.reference.trim(), `${code} reference`).not.toBe("");
+        expect(examples.payer.trim(), `${code} payer`).not.toBe("");
+        if (labels.institution === null) expect(examples.institution, `${code} institution`).toBeNull();
+        else expect(examples.institution?.trim(), `${code} institution`).toBeTruthy();
+      }
+    });
+
+    it("gives each qualified-buyer discount an example ID number for its empty field", () => {
+      for (const kind of market.qualifiedDiscounts?.kinds ?? []) {
+        expect(kind.idExample.trim(), kind.code).not.toBe("");
+        expect(kind.idExample).not.toMatch(/^e\.g\./i);
+      }
+    });
+
+    it("has an example line of business for its registration form's empty field", () => {
+      if (market.registration) {
+        expect(market.registration.lineOfBusinessExample.trim()).not.toBe("");
+        expect(market.registration.lineOfBusinessExample).not.toMatch(/^e\.g\./i);
+      }
+    });
+
     it("suggests tax rates within 0–100%", () => {
       for (const rate of market.suggestedTaxRates) {
         expect(Number.isInteger(rate.rateBps)).toBe(true);
@@ -94,6 +140,15 @@ describe("marketFor", () => {
     expect(marketFor(null)).toBe(MARKETS[DEFAULT_MARKET]);
     expect(isMarketCode("ph")).toBe(false);
     expect(isMarketCode("toString")).toBe(false);
+  });
+});
+
+describe("Philippine examples", () => {
+  it("are written the way people here write them", () => {
+    const { examples } = MARKETS.PH;
+    expect(examples.phone).toMatch(/^09\d{2} \d{3} \d{4}$/);
+    expect(examples.address.postalCode).toMatch(/^\d{4}$/);
+    expect(examples.business).toMatch(/\w/);
   });
 });
 

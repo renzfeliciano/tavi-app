@@ -17,7 +17,7 @@ export const SAMPLE_ITEMS = [
   { name: "Check-up and labour", detail: "1 × ₱700.00", note: "Discount −₱100.00", amountMinor: 60_000 },
 ] as const;
 
-export const SAMPLE_BUSINESS = "Travis Renz Repair Services";
+export const SAMPLE_BUSINESS = "Renzo Feliciano Payod Repair Services";
 export const SAMPLE_NUMBER = "QUO-000012";
 export const SAMPLE_TOTAL_MINOR = SAMPLE_ITEMS.reduce((sum, item) => sum + item.amountMinor, 0);
 export const SAMPLE_DOWNPAYMENT_MINOR = SAMPLE_TOTAL_MINOR / 2;

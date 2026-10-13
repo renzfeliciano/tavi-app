@@ -22,10 +22,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { PAYMENT_METHODS, type PaymentDetailLabels, type PaymentMethod } from "@/config/markets";
+import { PAYMENT_METHODS, type PaymentDetailExamples, type PaymentDetailLabels, type PaymentMethod } from "@/config/markets";
 import { MAX_ACK_RECIPIENTS, PAYMENT_LIMITS, parseAckRecipients, type ProofRow, type RawPayment } from "@/modules/payments/client";
 import { formatCalendarDate } from "@/shared/dates/calendar";
 import { formatAmountForInput, formatMoney } from "@/shared/money";
+import { eg } from "@/shared/text/example";
 import { recordPaymentAction, voidPaymentAction } from "../../payments/actions";
 
 export type InvoicePaymentRow = {
@@ -55,6 +56,8 @@ type InvoicePaymentsProps = {
   methodLabels: Record<PaymentMethod, string>;
   /** What each proof-of-payment field is called for each method. */
   detailLabels: Record<PaymentMethod, PaymentDetailLabels>;
+  /** What those fields show while empty, for each method. */
+  detailExamples: PaymentDetailExamples;
   chequeDateLabel: string;
   taxWithheld: { label: string; hint: string } | null;
   /** e.g. "Payment acknowledgement". */
@@ -101,7 +104,9 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
   const id = useId();
-  const labels = props.detailLabels[PAYMENT_METHODS.includes(raw.method as PaymentMethod) ? (raw.method as PaymentMethod) : "other"];
+  const method: PaymentMethod = PAYMENT_METHODS.includes(raw.method as PaymentMethod) ? (raw.method as PaymentMethod) : "other";
+  const labels = props.detailLabels[method];
+  const examples = props.detailExamples[method];
 
   const set = (patch: Partial<RawPayment>) => {
     setRaw((current) => ({ ...current, ...patch }));
@@ -282,7 +287,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
       )}
 
       <Dialog open={recording} onOpenChange={(open) => !pending && setRecording(open)}>
-        <DialogContent mascot="curious">
+        <DialogContent mascot="curious" className="sm:max-w-[min(42rem,calc(100%-2rem))]">
           <form
             className="grid gap-4"
             onSubmit={(event) => {
@@ -303,7 +308,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
                   <label htmlFor={`${id}-amount`} className="text-sm font-medium">
                     Amount received ({currency})
                   </label>
-                  <Input {...field("amount")} inputMode="decimal" className="tabular-nums" value={raw.amount} onChange={(e) => set({ amount: e.target.value })} />
+                  <Input {...field("amount")} inputMode="decimal" placeholder="0.00" className="tabular-nums" value={raw.amount} onChange={(e) => set({ amount: e.target.value })} />
                   {fieldError("amount")}
                 </div>
                 <div className="grid gap-1.5">
@@ -322,6 +327,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
                       {...field("withheld")}
                       aria-describedby={errors.withheld ? `${id}-withheld-error` : `${id}-withheld-hint`}
                       inputMode="decimal"
+                      placeholder="0.00"
                       className="tabular-nums"
                       value={raw.withheld}
                       onChange={(e) => set({ withheld: e.target.value })}
@@ -353,6 +359,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
                   <Input
                     {...field("reference")}
                     maxLength={PAYMENT_LIMITS.reference}
+                    placeholder={eg(examples.reference)}
                     value={raw.reference}
                     onChange={(e) => set({ reference: e.target.value })}
                   />
@@ -366,6 +373,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
                     <Input
                       {...field("institution")}
                       maxLength={PAYMENT_LIMITS.institution}
+                      placeholder={examples.institution ? eg(examples.institution) : undefined}
                       value={raw.institution}
                       onChange={(e) => set({ institution: e.target.value })}
                     />
@@ -376,7 +384,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
                   <label htmlFor={`${id}-payer`} className="text-sm font-medium">
                     {labels.payer} <span className="font-normal text-muted-foreground">(optional)</span>
                   </label>
-                  <Input {...field("payer")} maxLength={PAYMENT_LIMITS.payer} value={raw.payer} onChange={(e) => set({ payer: e.target.value })} />
+                  <Input {...field("payer")} maxLength={PAYMENT_LIMITS.payer} placeholder={eg(examples.payer)} value={raw.payer} onChange={(e) => set({ payer: e.target.value })} />
                   {fieldError("payer")}
                 </div>
                 <div className="grid gap-1.5">
@@ -399,7 +407,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
                   <label htmlFor={`${id}-notes`} className="text-sm font-medium">
                     Notes <span className="font-normal text-muted-foreground">(optional, only your team sees them)</span>
                   </label>
-                  <Textarea {...field("notes")} rows={2} maxLength={PAYMENT_LIMITS.notes} value={raw.notes} onChange={(e) => set({ notes: e.target.value })} />
+                  <Textarea {...field("notes")} rows={2} maxLength={PAYMENT_LIMITS.notes} placeholder="e.g. Paid in person. Received by Ana." value={raw.notes} onChange={(e) => set({ notes: e.target.value })} />
                   {fieldError("notes")}
                 </div>
               </div>
@@ -502,6 +510,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
                   id={`${id}-void-reason`}
                   rows={2}
                   maxLength={500}
+                  placeholder="e.g. The transfer bounced."
                   value={reason}
                   onChange={(e) => {
                     setReason(e.target.value);

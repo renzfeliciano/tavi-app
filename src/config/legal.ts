@@ -22,10 +22,10 @@ export type LegalOperator = {
 };
 
 const operator: LegalOperator = {
-  name: null,
-  address: null,
-  privacyEmail: null,
-  dataProtectionOfficer: null,
+  name: "Renzo Feliciano Payod",
+  address: "Blk 40 Lot 42 8th Ave., Phase 1, Phirst Park Homes, Buenavista II, City of General Trias, Cavite",
+  privacyEmail: "renzofelicianopayod.work@gmail.com",
+  dataProtectionOfficer: "Renzo Feliciano Payod",
 };
 
 export const LEGAL = {

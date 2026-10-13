@@ -27,7 +27,7 @@ import {
 } from "@/modules/quotes";
 import { listTrash } from "@/modules/trash";
 import { convertQuoteToInvoice } from "./conversion";
-import { deleteDraftInvoice, getInvoice, listInvoices, saveInvoiceDraft } from "./invoices";
+import { deleteDraftInvoice, findInvoiceIds, getInvoice, getInvoiceLabels, listInvoices, saveInvoiceDraft } from "./invoices";
 import { restoreDeletedInvoice } from "./trash";
 import { createInvoiceLink, getSharedInvoice, issueInvoice, recordSharedInvoiceOpen } from "./issuing";
 import { editIssuedInvoice, voidAndDuplicateInvoice } from "./corrections";
@@ -122,6 +122,55 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await closeTestDb();
+});
+
+describe("listInvoices paging", () => {
+  it("says how many invoices match and cuts them by the size asked for", async () => {
+    const { actor, customerId } = await setup();
+    const ana = await createCustomer(actor, { displayName: "Ana Reyes" }, testDb());
+    if (!ana.ok) throw new Error("customer");
+    for (let i = 0; i < 11; i++) await draftInvoice(actor, customerId);
+    await draftInvoice(actor, ana.customer.id);
+
+    const second = await listInvoices(actor, { pageSize: 10, page: 2 }, testDb());
+    const found = await listInvoices(actor, { search: "ana" }, testDb());
+    const past = await listInvoices(actor, { pageSize: 10, page: 99 }, testDb());
+    const odd = await listInvoices(actor, { pageSize: 7 }, testDb());
+
+    expect(second).toMatchObject({ matching: 12, total: 12, page: 2, pageSize: 10, pageCount: 2, from: 11, to: 12, hasMore: false });
+    expect(second.invoices).toHaveLength(2);
+    // `total` is every invoice the business has (it decides "nothing here yet"); `matching` follows the search.
+    expect(found).toMatchObject({ matching: 1, total: 12, from: 1, to: 1 });
+    expect(past).toMatchObject({ page: 2, from: 11, to: 12 });
+    expect(odd.pageSize).toBe(25);
+  });
+});
+
+describe("invoice lookups for other lists", () => {
+  it("finds invoices by number or customer and names them by id, never across businesses", async () => {
+    const { actor, customerId } = await setup();
+    const ana = await createCustomer(actor, { displayName: "Ana Reyes" }, testDb());
+    if (!ana.ok) throw new Error("customer");
+    const first = await draftInvoice(actor, customerId);
+    const second = await draftInvoice(actor, ana.customer.id);
+    const issued = await issueInvoice(actor, first.id, issueOptions(), testDb());
+    if (!issued.ok) throw new Error("issue");
+    const other = await setup();
+    const foreign = await draftInvoice(other.actor, other.customerId);
+
+    expect(await findInvoiceIds(actor, "INV-0000", testDb())).toEqual([first.id]);
+    expect(await findInvoiceIds(actor, "ana", testDb())).toEqual([second.id]);
+    expect(await findInvoiceIds(actor, "juan", testDb())).toEqual([first.id]);
+    expect(await findInvoiceIds(actor, "nobody", testDb())).toEqual([]);
+    expect(await findInvoiceIds(actor, "100%", testDb())).toEqual([]);
+
+    const labels = await getInvoiceLabels(actor, [first.id, second.id, foreign.id], testDb());
+    // A draft has no number yet and shows the customer as they are now; an issued one shows its snapshot.
+    expect(labels.get(first.id)).toEqual({ number: "INV-000001", customerName: "Juan Dela Cruz" });
+    expect(labels.get(second.id)).toEqual({ number: null, customerName: "Ana Reyes" });
+    expect(labels.has(foreign.id)).toBe(false);
+    expect((await getInvoiceLabels(actor, [], testDb())).size).toBe(0);
+  });
 });
 
 describe("saveInvoiceDraft", () => {

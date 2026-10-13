@@ -4,7 +4,6 @@ export {
   listQuotes,
   type NewQuoteDefaults,
   newQuoteDefaults,
-  QUOTE_PAGE_SIZE,
   type QuoteCommandResult,
   type QuoteDetail,
   type QuoteHeader,
@@ -31,7 +30,9 @@ export { type RestoreQuoteResult, restoreDeletedQuote } from "./application/tras
 export {
   type AttentionQuote,
   countDraftQuotes,
+  type QuotePipeline,
   type QuotesAttention,
+  quotePipeline,
   quoteProgress,
   quotesNeedingAttention,
 } from "./application/attention";

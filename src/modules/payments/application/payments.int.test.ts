@@ -77,6 +77,44 @@ afterAll(async () => {
   await closeTestDb();
 });
 
+describe("listPayments paging and search", () => {
+  it("says how many payments match, finds them by payer, reference, receipt, invoice or customer, and cuts them by the size asked for", async () => {
+    const { actor, id } = await sentInvoice();
+    for (let i = 0; i < 11; i++) await record(actor, id, pay({ amount: "100", reference: `GC-${i}` }));
+    await record(actor, id, pay({ amount: "100", reference: "SLIP-88", payer: "Ana Reyes" }));
+
+    const matching = async (search: string) => (await listPayments(actor, { search }, testDb())).matching;
+    const second = await listPayments(actor, { pageSize: 10, page: 2 }, testDb());
+    const past = await listPayments(actor, { pageSize: 10, page: 99 }, testDb());
+    const odd = await listPayments(actor, { pageSize: 7 }, testDb());
+
+    expect(second).toMatchObject({ matching: 12, total: 12, page: 2, pageSize: 10, pageCount: 2, from: 11, to: 12, hasMore: false });
+    expect(second.payments).toHaveLength(2);
+    expect(past).toMatchObject({ page: 2, from: 11, to: 12 });
+    expect(odd.pageSize).toBe(25);
+    expect(await matching("ana")).toBe(1);
+    expect(await matching("slip-88")).toBe(1);
+    expect(await matching("REC-000003")).toBe(1);
+    expect(await matching("juan")).toBe(12);
+    expect(await matching("INV-000001")).toBe(12);
+    expect(await matching("nobody")).toBe(0);
+    // `total` stays every payment the business has, so a search with no match isn't "nothing recorded yet".
+    expect((await listPayments(actor, { search: "nobody" }, testDb())).total).toBe(12);
+  });
+
+  it("names the billing statement and the customer beside each payment, never another business's", async () => {
+    const { actor, id } = await sentInvoice();
+    await record(actor, id, pay({ amount: "100" }));
+    const other = await sentInvoice();
+    await record(other.actor, other.id, pay({ amount: "100" }));
+
+    const list = await listPayments(actor, {}, testDb());
+
+    expect(list.payments).toHaveLength(1);
+    expect(list.payments[0]).toMatchObject({ invoiceNumber: "INV-000001", customerName: "Juan Dela Cruz" });
+  });
+});
+
 describe("recordPayment", () => {
   it("keeps the proof of payment as typed and shows it on every list that carries the payment", async () => {
     const { actor, id } = await sentInvoice();

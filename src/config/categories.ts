@@ -36,6 +36,8 @@ export type Category = {
   hint: string;
   /** A believable first line item, for placeholders. */
   itemExample: string;
+  /** A believable product, for the product form's placeholder (`itemExample` reads as a service). */
+  productExample: string;
   /** Units this kind of work is usually sold in, best guess first. */
   units: string[];
   /** Names to offer as catalog items. No prices: those are the business's to set. */
@@ -51,6 +53,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Food & beverage",
     hint: "Catering, bakery, restaurant, coffee",
     itemExample: "Party tray, 20 pax",
+    productExample: "Banana bread loaf",
     units: ["pack", "pax", "pc"],
     starterItems: [
       { name: "Party tray", unit: "pack" },
@@ -65,6 +68,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Home services",
     hint: "Aircon, plumbing, cleaning, pest control",
     itemExample: "Aircon deep cleaning",
+    productExample: "Aircon filter",
     units: ["unit", "visit", "hour"],
     starterItems: [
       { name: "Service call", unit: "visit" },
@@ -79,6 +83,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Construction & trades",
     hint: "Building, electrical, carpentry, fabrication",
     itemExample: "Wall painting, per square metre",
+    productExample: "Cement, 40 kg bag",
     units: ["sq m", "lot", "day"],
     starterItems: [
       { name: "Labour, per day", unit: "day" },
@@ -93,6 +98,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Beauty & wellness",
     hint: "Salon, spa, barber, fitness",
     itemExample: "Haircut and blow-dry",
+    productExample: "Hair serum, 100 ml",
     units: ["session", "pc", "hour"],
     starterItems: [
       { name: "Haircut", unit: "session" },
@@ -107,6 +113,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Health & clinics",
     hint: "Clinic, dental, therapy, veterinary",
     itemExample: "Consultation",
+    productExample: "Face mask, box of 50",
     units: ["visit", "session", "pc"],
     starterItems: [
       { name: "Consultation", unit: "visit" },
@@ -121,6 +128,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Education & tutoring",
     hint: "Tutoring, training, coaching, lessons",
     itemExample: "Tutoring, one hour",
+    productExample: "Workbook",
     units: ["hour", "session", "month"],
     starterItems: [
       { name: "Tutoring session", unit: "hour" },
@@ -135,6 +143,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Creative & media",
     hint: "Photo, video, design, printing",
     itemExample: "Photo shoot, half day",
+    productExample: "Printed photo, 8×10",
     units: ["day", "pc", "hour"],
     starterItems: [
       { name: "Photo shoot, half day", unit: "day" },
@@ -149,6 +158,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Tech & IT",
     hint: "Web, software, devices, support",
     itemExample: "Website maintenance",
+    productExample: "USB-C cable, 1 m",
     units: ["hour", "month", "pc"],
     starterItems: [
       { name: "Development", unit: "hour" },
@@ -163,6 +173,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Retail & wholesale",
     hint: "Shop, online store, distribution",
     itemExample: "Case of 24",
+    productExample: "Bottled water, 500 ml",
     units: ["pc", "box", "kg"],
     starterItems: [
       { name: "Product", unit: "pc" },
@@ -177,6 +188,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Transport & delivery",
     hint: "Delivery, hauling, courier, car hire",
     itemExample: "Delivery within Metro Manila",
+    productExample: "Packing tape, roll",
     units: ["trip", "trip", "day"],
     starterItems: [
       { name: "Delivery", unit: "trip" },
@@ -191,6 +203,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Auto & motorcycle repair",
     hint: "Repair shop, car wash, detailing, vulcanizing",
     itemExample: "Change oil and filter",
+    productExample: "Engine oil, 1 litre",
     units: ["job", "hour", "pc"],
     starterItems: [
       { name: "Labour", unit: "hour" },
@@ -205,6 +218,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Events & entertainment",
     hint: "Events, hosting, rentals, production",
     itemExample: "Sound system rental",
+    productExample: "Balloon arch kit",
     units: ["job", "day", "hour"],
     starterItems: [
       { name: "Event coordination", unit: "job" },
@@ -219,6 +233,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Professional services",
     hint: "Consulting, accounting, legal, agency",
     itemExample: "Consulting, per hour",
+    productExample: "Bound report copy",
     units: ["hour", "month", "lot"],
     starterItems: [
       { name: "Consulting", unit: "hour" },
@@ -233,6 +248,7 @@ export const CATEGORIES: Record<CategoryCode, Category> = {
     label: "Something else",
     hint: "None of these fit",
     itemExample: "Service",
+    productExample: "Product",
     units: ["pc", "hour", "lot"],
     starterItems: [],
     accessory: null,

@@ -1,4 +1,5 @@
 import type { Route } from "next";
+import { KIND_ICON } from "@/components/kind-icon";
 import type { ShellFacts } from "./facts";
 import {
   BanknoteIcon,
@@ -12,7 +13,6 @@ import {
   UserPlusIcon,
   UsersIcon,
   WalletIcon,
-  WrenchIcon,
 } from "lucide-react";
 
 export type NavItem = {
@@ -168,7 +168,7 @@ export function newMenuFor(documents: DocumentNames): NewAction[] {
     quote!,
     invoice!,
     customer!,
-    { href: "/catalog/services/new" as Route, label: "Service", description: "Something you do, priced once", icon: WrenchIcon },
-    { href: "/catalog/products/new" as Route, label: "Product", description: "Something you sell, priced once", icon: PackageIcon },
+    { href: "/catalog/products/new" as Route, label: "Product", description: "Something you sell, priced once", icon: KIND_ICON.product },
+    { href: "/catalog/services/new" as Route, label: "Service", description: "Something you do, priced once", icon: KIND_ICON.service },
   ];
 }

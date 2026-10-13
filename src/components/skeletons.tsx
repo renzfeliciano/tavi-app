@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "cn";
 import { PageLoader } from "@/components/brand/page-loader";
 import { LightScope } from "@/components/theme/light-scope";
+import { STRIP_SECTION, STRIP_TILE, stripRowClass } from "@/components/summary-strip";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /*
@@ -538,5 +539,27 @@ export function PortalDocumentSkeleton({ label, balance = false }: { label: stri
         </LoadingScreen>
       </main>
     </LightScope>
+  );
+}
+
+/**
+ * SummaryStrip: one row of figure tiles over a list, each a label, an amount and a line of detail. `phoneHides`
+ * is the tile (by position) the strip leaves out on a phone, so the skeleton and the strip match at every width.
+ */
+export function SummaryStripSkeleton({ figures = 3, phoneHides }: { figures?: number; phoneHides?: number }) {
+  return (
+    <div className={STRIP_SECTION}>
+      <ul className={stripRowClass(phoneHides === undefined ? figures : figures - 1, figures)}>
+        {Array.from({ length: figures }, (_, i) => (
+          <li key={i} className={cn("bg-card", i === phoneHides && "max-sm:hidden")}>
+            <div className={STRIP_TILE}>
+              <TextSkeleton size="xs" width="w-20" />
+              <TextSkeleton size="lg" width="w-28" className="mt-0.5" />
+              <TextSkeleton size="xs" width="w-24" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -12,7 +12,7 @@ import {
 } from "@/modules/documents";
 import {
   documentEmailLimitMessage,
-  documentEmailsAllowed,
+  emailLimitReached,
   documentLinkEmail,
   enqueueEmail,
 } from "@/modules/notifications";
@@ -94,9 +94,8 @@ export async function sendQuote(
   const customer = current.customerId ? await getCustomer(actor, current.customerId, db) : null;
   if (!customer) return { ok: false, errors: { customerId: "Choose a customer before sending." } };
   // Checked before anything changes, so a refusal leaves the draft as it was (§I).
-  if (email && !(await documentEmailsAllowed(db, actor.organizationId, now))) {
-    return { ok: false, error: documentEmailLimitMessage() };
-  }
+  const limited = email ? await emailLimitReached(db, actor, now) : null;
+  if (limited) return { ok: false, error: documentEmailLimitMessage(undefined, limited) };
 
   // The customer as they are now, kept with the quote: later edits to the
   // customer never change what was sent (§B.1).
@@ -150,7 +149,7 @@ export async function sendQuote(
           action: "View the quote",
           paymentQrs: (sellerSnapshot.paymentQrs ?? []).map((qr, index) => ({ label: qr.label, imageUrl: `${url}/qr/${index}` })),
         }),
-        { organizationId: actor.organizationId },
+        { organizationId: actor.organizationId, actorUserId: actor.userId },
       );
     }
     return { number, url };

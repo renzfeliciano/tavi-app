@@ -126,6 +126,7 @@ export function SendDocumentDialog(props: SendDocumentDialogProps) {
                       id={toId}
                       type="email"
                       maxLength={DELIVERY_LIMITS.emailTo}
+                      placeholder="name@example.com"
                       value={to}
                       onChange={(e) => setTo(e.target.value)}
                       aria-invalid={emailError ? true : undefined}
@@ -141,7 +142,14 @@ export function SendDocumentDialog(props: SendDocumentDialogProps) {
                     <label htmlFor={messageId} className="text-sm font-medium">
                       Message
                     </label>
-                    <Textarea id={messageId} value={message} onChange={(e) => setMessage(e.target.value)} rows={5} maxLength={DELIVERY_LIMITS.message} />
+                    <Textarea
+                      id={messageId}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      rows={5}
+                      maxLength={DELIVERY_LIMITS.message}
+                      placeholder="e.g. Hi, thanks for asking. Here it is. Let me know if you have any questions."
+                    />
                   </div>
                 </div>
               )}

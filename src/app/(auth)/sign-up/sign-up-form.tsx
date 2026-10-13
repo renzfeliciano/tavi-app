@@ -56,11 +56,11 @@ export function SignUpForm({ next }: { next?: Route } = {}) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-5">
+    <form method="post" onSubmit={onSubmit} className="grid gap-5">
       <FormAlert message={error} />
       <Field>
         <FieldLabel htmlFor="name">Your name</FieldLabel>
-        <Input id="name" name="name" autoComplete="name" required maxLength={120} placeholder="e.g. Travis Renz" />
+        <Input id="name" name="name" autoComplete="name" required maxLength={120} placeholder="e.g. Renzo Feliciano Payod" />
       </Field>
       <Field>
         <FieldLabel htmlFor="email">Work email</FieldLabel>
@@ -71,7 +71,7 @@ export function SignUpForm({ next }: { next?: Route } = {}) {
           autoComplete="email"
           inputMode="email"
           required
-          placeholder="e.g. travisrenz.repairservices@gmail.com"
+          placeholder="e.g. renzofelicianopayod.repairservices@gmail.com"
         />
       </Field>
       <Field>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { REGISTRATION_LIMITS, type RegistrationField } from "@/modules/organizations/client";
+import { eg } from "@/shared/text/example";
 import { type RegistrationFormState, type RegistrationValues, saveRegistrationAction } from "./actions";
 
 /** The market's registration wording, without anything a browser can't receive (no patterns). */
@@ -19,6 +20,7 @@ export type RegistrationCopy = {
   office: { label: string; hint: string; example: string };
   taxRegisteredOnLabel: string;
   lineOfBusinessHint: string;
+  lineOfBusinessExample: string;
   industryCode: { label: string; hint: string; example: string };
   authorities: { code: string; label: string; numberLabel: string; scoped: boolean; expires: boolean }[];
   scopes: { code: string; label: string }[];
@@ -103,7 +105,14 @@ export function RegistrationForm({
             hint={copy.lineOfBusinessHint}
             error={error("lineOfBusiness")}
           >
-            {(p) => <Input {...p} defaultValue={values.lineOfBusiness} maxLength={REGISTRATION_LIMITS.lineOfBusiness} />}
+            {(p) => (
+              <Input
+                {...p}
+                defaultValue={values.lineOfBusiness}
+                maxLength={REGISTRATION_LIMITS.lineOfBusiness}
+                placeholder={eg(copy.lineOfBusinessExample)}
+              />
+            )}
           </FormField>
           <FormField
             name="industryCode"
@@ -138,7 +147,14 @@ export function RegistrationForm({
               error={error("nameRegistrationNumber")}
             >
               {(p) => (
-                <Input {...p} defaultValue={values.nameRegistrationNumber} maxLength={REGISTRATION_LIMITS.registrationNumber} spellCheck={false} className="font-mono" />
+                <Input
+                  {...p}
+                  defaultValue={values.nameRegistrationNumber}
+                  maxLength={REGISTRATION_LIMITS.registrationNumber}
+                  placeholder={eg("1234567")}
+                  spellCheck={false}
+                  className="font-mono"
+                />
               )}
             </FormField>
           ) : (

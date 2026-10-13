@@ -79,11 +79,12 @@ export function SidebarBody({ account, facts, showNote, signOutAction, switchAct
         <NewMenu actions={newMenuFor(account.documents)} collapsed={collapsed} onNavigate={onNavigate} />
       </div>
       {/* Links and Today scroll together, so a short window never hides the foot of the sidebar. */}
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-color:var(--border-strong)_transparent] [scrollbar-width:thin]">
         <SidebarNav groups={navGroupsFor(account)} facts={facts} collapsed={collapsed} onNavigate={onNavigate} />
         <TodayCard facts={facts} documents={account.documents} showNote={showNote} />
       </div>
-      <div className="grid gap-1 border-t border-sidebar-border p-3">
+      {/* One column that may shrink: with the default `auto` column a long account name would widen the foot past the sidebar and push "Ctrl B" out. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-1 border-t border-sidebar-border p-3">
         {variant === "desktop" && <CollapseToggle collapsed={collapsed} />}
         <UserMenu account={account} signOutAction={signOutAction} collapsed={collapsed} onNavigate={onNavigate} />
       </div>

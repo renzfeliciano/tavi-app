@@ -1,15 +1,14 @@
-// Builds the TAVI icon set and the email lockup from the two source pictures.
+// Builds the TAVI icon set and the email wordmark from the logo picture.
 //
 //   public/icons/tavi-stamp.png   the logo: the stamp with TAVI on its body (512 px, master)
-//   docs/brand/stamp-mascot.png   the plain stamp, used beside the wordmark in emails
 //
 // Run `npm run brand:build` after replacing either picture. It writes:
 //   public/icons/icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png
 //   public/favicon.ico             (16, 32 and 48 px; linked from the root layout, not a file convention)
 //   public/icons/favicon-32.png, favicon-48.png   the same tile as PNG, for tabs that skip the ICO
-//   public/icons/tavi-email-lockup.png   the stamp and the TAVI wordmark side by side, on a
-//                                        transparent ground, for HTML email (mail clients
-//                                        can't draw SVG, so it is a PNG served from the app)
+//   public/icons/tavi-email-wordmark.png   the TAVI wordmark alone, on a white plate, for HTML
+//                                          email (mail clients can't draw SVG, so it is a PNG
+//                                          served from the app)
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import sharp from "sharp";
@@ -99,65 +98,22 @@ sizes.forEach((size, i) => {
 });
 await writeFile("public/favicon.ico", Buffer.concat([header, ...pngs]));
 
-// --- Email lockup ---------------------------------------------------------
-// The plain stamp with its paper ground cut away (flood fill from the corners, so the white
-// head inside the outline stays), then the wordmark beside it.
-const { data, info } = await sharp("docs/brand/stamp-mascot.png").ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-const { width: w, height: h } = info;
-const near = (i) => Math.hypot(data[i] - BG.r, data[i + 1] - BG.g, data[i + 2] - BG.b) <= 10;
-const outside = new Uint8Array(w * h);
-const queue = [];
-const push = (x, y) => {
-  const p = y * w + x;
-  if (x < 0 || y < 0 || x >= w || y >= h || outside[p] || !near(p * 4)) return;
-  outside[p] = 1;
-  queue.push(p);
-};
-for (let x = 0; x < w; x++) {
-  push(x, 0);
-  push(x, h - 1);
-}
-for (let y = 0; y < h; y++) {
-  push(0, y);
-  push(w - 1, y);
-}
-while (queue.length) {
-  const p = queue.pop();
-  const x = p % w;
-  const y = (p / w) | 0;
-  push(x + 1, y);
-  push(x - 1, y);
-  push(x, y + 1);
-  push(x, y - 1);
-}
-for (let p = 0; p < w * h; p++) {
-  if (outside[p]) {
-    data[p * 4 + 3] = 0;
-    continue;
-  }
-  // A soft edge: pixels touching the cut-away ground fade by how far they are from it.
-  const x = p % w;
-  const y = (p / w) | 0;
-  const touches = [p - 1, p + 1, p - w, p + w].some((q, k) => (k < 2 ? (k === 0 ? x > 0 : x < w - 1) : k === 2 ? y > 0 : y < h - 1) && outside[q]);
-  if (touches) {
-    const d = Math.hypot(data[p * 4] - BG.r, data[p * 4 + 1] - BG.g, data[p * 4 + 2] - BG.b);
-    data[p * 4 + 3] = Math.min(255, Math.round(d * 7));
-  }
-}
-const cut = sharp(data, { raw: { width: w, height: h, channels: 4 } });
-const stampHeight = 104; // 2x of a 52 px tall lockup
-const stamp = await cut.clone().trim({ threshold: 1 }).resize({ height: stampHeight }).png().toBuffer({ resolveWithObject: true });
-
+// --- Email wordmark ---------------------------------------------------------
+// The wordmark alone: no stamp or mascot beside it (the same rule as the PDF and customer links).
 // The wordmark: Geist SemiBold TA, the V drawn as the brand's check mark, then I (same drawing as <Wordmark>).
+// It sits inline after "Sent with" in a 12px line, so it is drawn for a 15px letter size and
+// made at 3x that, which stays sharp on 3x phone screens. src/modules/notifications/domain/email.ts
+// shows it at a third of the pixel size (a test keeps the two in step).
+const SCALE = 3;
 const font = fontkit.openSync("src/components/document/pdf/fonts/Geist-SemiBold.ttf");
-const fontSize = 62;
+const fontSize = 15 * SCALE;
 const k = fontSize / font.unitsPerEm;
 const glyph = (ch) => font.layout(ch).glyphs[0];
 const T = glyph("T");
 const A = glyph("A");
 const I = glyph("I");
 const checkSize = fontSize * 0.8;
-const baseline = 82; // y of the text baseline in the lockup
+const baseline = Math.round(fontSize * 0.82); // y of the text baseline in the wordmark
 let x = 0;
 const parts = [];
 const place = (g) => {
@@ -173,20 +129,23 @@ parts.push(
 x += checkSize + fontSize * 0.01;
 place(I);
 const wordWidth = Math.ceil(x);
-const gap = 22;
-const total = stamp.info.width + gap + wordWidth;
-const pad = 14; // white plate around the lockup so it reads on a dark-mode mail background too
+const below = Math.round(fontSize * 0.08); // a little air under the baseline, for the check mark's point
+const textHeight = baseline + below;
+const pad = 2 * SCALE; // white plate around the wordmark so it reads on a dark-mode mail background too
+// The picture's sides are whole multiples of SCALE, so showing it at 1/SCALE size never smears a pixel.
+const roundUp = (n) => Math.ceil(n / SCALE) * SCALE;
+const plateWidth = roundUp(wordWidth + pad * 2);
+const plateHeight = roundUp(textHeight + pad * 2);
 const wordmark = Buffer.from(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${wordWidth}" height="${stampHeight}" viewBox="0 0 ${wordWidth} ${stampHeight}">${parts.join("")}</svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${wordWidth}" height="${textHeight}" viewBox="0 0 ${wordWidth} ${textHeight}">${parts.join("")}</svg>`,
 );
-const lockup = await sharp({
-  create: { width: total + pad * 2, height: stampHeight + pad * 2, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+const plate = await sharp({
+  create: { width: plateWidth, height: plateHeight, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
 })
-  .composite([
-    { input: stamp.data, left: pad, top: pad },
-    { input: wordmark, left: pad + stamp.info.width + gap, top: pad },
-  ])
+  // Any rounding spare goes above the letters, so the gap under the baseline stays `below + pad`.
+  .composite([{ input: wordmark, left: pad, top: plateHeight - textHeight - pad }])
   .png({ compressionLevel: 9 })
   .toBuffer({ resolveWithObject: true });
-await writeFile("public/icons/tavi-email-lockup.png", lockup.data);
-console.log(`email lockup ${lockup.info.width}x${lockup.info.height}`);
+await writeFile("public/icons/tavi-email-wordmark.png", plate.data);
+const drop = (below + pad) / SCALE;
+console.log(`email wordmark ${plate.info.width}x${plate.info.height}, shown ${plate.info.width / SCALE}x${plate.info.height / SCALE}, baseline ${drop}px above the picture's bottom edge`);

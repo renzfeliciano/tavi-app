@@ -12,6 +12,3 @@ export const CUSTOMER_LIMITS = {
   taxId: 20,
   notes: 2000,
 } as const;
-
-/** Customers per page in the list. */
-export const CUSTOMER_PAGE_SIZE = 25;

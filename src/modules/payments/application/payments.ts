@@ -1,20 +1,29 @@
-import { and, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { MarketProfile, PaymentMethod } from "@/config/markets";
 import { type Database, type Executor, getDb } from "@/db";
 import { recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import { allocateDocumentNumber } from "@/modules/documents";
-import { isPayable, lockInvoiceForPayment, settleInvoice, invoiceTitle } from "@/modules/invoices";
+import {
+  findInvoiceIds,
+  getInvoiceLabels,
+  invoiceTitle,
+  isPayable,
+  lockInvoiceForPayment,
+  settleInvoice,
+} from "@/modules/invoices";
 import {
   documentEmailLimitMessage,
-  documentEmailsAllowed,
+  emailLimitReached,
   enqueueEmail,
   paymentAcknowledgementEmail,
 } from "@/modules/notifications";
 import { getBusinessProfile, getDocumentSettings } from "@/modules/organizations";
 import { type CalendarDate, formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { formatMoney } from "@/shared/money";
+import { type PageMeta, pageMeta, pageWindow } from "@/shared/pagination/page-window";
+import { escapeLikePattern } from "@/shared/text/search";
 import { tooLong } from "@/shared/validation/messages";
 import { parseAckRecipients } from "../domain/ack-recipients";
 import { parseIdempotencyKey } from "../domain/idempotency";
@@ -26,9 +35,6 @@ import { auditCertificate } from "./certificate-audit";
 // Recording and voiding payments (§B.5). Each runs in one transaction with the
 // invoice locked first, so two people recording at once can't overpay it; the
 // invoice then recomputes its own status from what's settled.
-
-/** Payments per page on the Payments list. */
-export const PAYMENT_PAGE_SIZE = 25;
 
 export type Payment = {
   id: string;
@@ -134,8 +140,9 @@ export async function recordPayment(
   const [settings, profile] = await Promise.all([getDocumentSettings(actor, db), getBusinessProfile(actor, db)]);
   const today = todayIn(settings.timezone, now);
   // Checked before anything is recorded, so the person can retry without the email (§I).
-  if (recipients.length > 0 && !(await documentEmailsAllowed(db, actor.organizationId, now, recipients.length))) {
-    return { ok: false, error: documentEmailLimitMessage("Record it without emailing the acknowledgement") };
+  const limited = recipients.length > 0 ? await emailLimitReached(db, actor, now, recipients.length) : null;
+  if (limited) {
+    return { ok: false, error: documentEmailLimitMessage("Record it without emailing the acknowledgement", limited) };
   }
 
   return db.transaction(async (tx): Promise<RecordPaymentResult> => {
@@ -248,7 +255,7 @@ export async function recordPayment(
           disclaimer: market.documents.receipt.disclaimer ?? null,
           ...(appUrl ? { appUrl } : {}),
         }),
-        { organizationId: actor.organizationId },
+        { organizationId: actor.organizationId, actorUserId: actor.userId },
       );
       }
     }
@@ -344,31 +351,56 @@ export async function getPayment(actor: OrgActor, id: string, db: Database = get
   return row ?? null;
 }
 
-export type PaymentList = { payments: Payment[]; page: number; hasMore: boolean; total: number };
+/** A payment on the Payments list, with the billing statement it settles and who it is for. */
+export type PaymentListItem = Payment & { invoiceNumber: string | null; customerName: string | null };
 
-/** Every payment the business recorded, newest first. */
+export type PaymentList = PageMeta & { payments: PaymentListItem[]; total: number };
+
+/**
+ * Every payment the business recorded, newest first, optionally searched by receipt number, reference, who paid,
+ * bank or wallet, or the billing statement's number or customer.
+ */
 export async function listPayments(
   actor: OrgActor,
-  { page = 1 }: { page?: number },
+  { search = null, page = 1, pageSize }: { search?: string | null; page?: number; pageSize?: number },
   db: Database = getDb(),
 ): Promise<PaymentList> {
   assertCan(actor, "payments.read");
-  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
   const ofOrganization = eq(payments.organizationId, actor.organizationId);
-  const [rows, [total]] = await Promise.all([
-    db
-      .select(columns)
-      .from(payments)
-      .where(ofOrganization)
-      .orderBy(desc(payments.paidOn), desc(payments.createdAt))
-      .limit(PAYMENT_PAGE_SIZE + 1)
-      .offset((safePage - 1) * PAYMENT_PAGE_SIZE),
+  let matches;
+  if (search) {
+    const pattern = `%${escapeLikePattern(search)}%`;
+    const invoiceIds = await findInvoiceIds(actor, search, db);
+    matches = or(
+      ilike(payments.receiptNumber, pattern),
+      ilike(payments.reference, pattern),
+      ilike(payments.payerName, pattern),
+      ilike(payments.institution, pattern),
+      invoiceIds.length > 0 ? inArray(payments.invoiceId, invoiceIds) : undefined,
+    );
+  }
+  const where = and(ofOrganization, matches);
+
+  const [[matching], [total]] = await Promise.all([
+    db.select({ value: count() }).from(payments).where(where),
     db.select({ value: count() }).from(payments).where(ofOrganization),
   ]);
+  const window = pageWindow({ page, pageSize, matching: matching?.value ?? 0 });
+  const rows = await db
+    .select(columns)
+    .from(payments)
+    .where(where)
+    .orderBy(desc(payments.paidOn), desc(payments.createdAt), desc(payments.id))
+    .limit(window.pageSize)
+    .offset(window.offset);
+  const labels = await getInvoiceLabels(actor, [...new Set(rows.map((row) => row.invoiceId))], db);
   return {
-    payments: rows.slice(0, PAYMENT_PAGE_SIZE),
-    page: safePage,
-    hasMore: rows.length > PAYMENT_PAGE_SIZE,
+    payments: rows.map((row) => ({
+      ...row,
+      invoiceNumber: labels.get(row.invoiceId)?.number ?? null,
+      customerName: labels.get(row.invoiceId)?.customerName ?? null,
+    })),
+    ...pageMeta(window),
     total: total?.value ?? 0,
   };
 }
@@ -406,12 +438,13 @@ export async function paymentsReceivedSince(
   actor: OrgActor,
   since: CalendarDate,
   db: Database = getDb(),
-): Promise<{ currency: string; receivedMinor: number }[]> {
+): Promise<{ currency: string; receivedMinor: number; paymentCount: number }[]> {
   assertCan(actor, "payments.read");
   return db
     .select({
       currency: payments.currency,
       receivedMinor: sql<number>`coalesce(sum(${payments.amountMinor}), 0)::bigint`.mapWith(Number),
+      paymentCount: sql<number>`count(*)::int`.mapWith(Number),
     })
     .from(payments)
     .where(and(eq(payments.organizationId, actor.organizationId), isNull(payments.voidedAt), gte(payments.paidOn, since)))

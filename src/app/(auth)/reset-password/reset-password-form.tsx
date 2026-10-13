@@ -51,7 +51,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-5">
+    <form method="post" onSubmit={onSubmit} className="grid gap-5">
       <FormAlert message={error} />
       <Field>
         <FieldLabel htmlFor="password">New password</FieldLabel>

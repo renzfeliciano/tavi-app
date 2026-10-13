@@ -34,6 +34,11 @@ describe("business and customer categories (D21)", () => {
       expect(category.itemExample.trim()).not.toBe("");
     });
 
+    it("has an example product as well, for the product form's empty name", () => {
+      expect(category.productExample.trim()).not.toBe("");
+      expect(category.productExample).not.toBe(category.itemExample);
+    });
+
     it("suggests units and starter items that fit the catalog's limits", () => {
       expect(category.units.length).toBeGreaterThan(0);
       for (const unit of category.units) expect(unit.length).toBeLessThanOrEqual(CATALOG_ITEM_LIMITS.unitLabel);

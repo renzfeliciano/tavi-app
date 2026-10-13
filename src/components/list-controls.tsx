@@ -1,55 +1,19 @@
 import type { Route } from "next";
 import Link from "next/link";
-import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { MAX_SEARCH_LENGTH } from "@/shared/text/search";
+import { PAGE_SIZES, type PageSize } from "@/shared/pagination/page-window";
+import { keptSize, listHref, pagedHref, sizeParam } from "./list-href";
+import { LinkPending, ListLink } from "./list-pending";
+import { ListSearch } from "./list-search";
+
+export { keptSize, listHref, ListSearch, pagedHref, sizeParam };
 
 // The controls every list page shares (DESIGN.md "Lists and records"). They
 // are plain links and a GET form, so lists work without JavaScript and every
-// view has its own URL.
-
-/** A search box that submits `?q=` to `action`, keeping the other params. */
-export function ListSearch({
-  action,
-  label,
-  placeholder,
-  value,
-  keep = {},
-}: {
-  action: Route;
-  label: string;
-  placeholder: string;
-  value: string | null;
-  /** Other params to keep, e.g. the current view. */
-  keep?: Record<string, string | undefined>;
-}) {
-  const id = `search-${action.replace(/\W+/g, "-")}`;
-  return (
-    <form role="search" action={action} className="relative w-full sm:max-w-sm">
-      <label htmlFor={id} className="sr-only">
-        {label}
-      </label>
-      <SearchIcon
-        aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-      />
-      <Input
-        id={id}
-        type="search"
-        name="q"
-        defaultValue={value ?? ""}
-        maxLength={MAX_SEARCH_LENGTH}
-        placeholder={placeholder}
-        className="pl-9"
-      />
-      {Object.entries(keep).map(([name, keptValue]) =>
-        keptValue ? <input key={name} type="hidden" name={name} value={keptValue} /> : null,
-      )}
-    </form>
-  );
-}
+// view has its own URL. With JavaScript they also tell the list's rows (see
+// list-pending.tsx) that a navigation is on its way.
 
 /** Links between views of one list (e.g. Active / Archived); the current one is marked. */
 export function ListViews({
@@ -72,54 +36,86 @@ export function ListViews({
           )}
         >
           {view.label}
+          <LinkPending />
         </Link>
       ))}
     </nav>
   );
 }
 
-/** Previous / Next for a paged list; renders nothing when everything fits on one page. */
+/** Previous / Next with "Page 2 of 6"; renders nothing when everything fits on one page. Spreads across a phone's width. */
 export function ListPager({
   page,
-  hasMore,
+  pageCount,
   hrefFor,
 }: {
   page: number;
-  hasMore: boolean;
+  pageCount: number;
   hrefFor: (page: number) => Route;
 }) {
-  if (page <= 1 && !hasMore) return null;
+  if (pageCount <= 1) return null;
+  const button = buttonVariants({ variant: "outline", size: "sm" });
   return (
-    <nav aria-label="Pages" className="mt-4 flex items-center justify-between gap-2">
+    <nav aria-label="Pages" className="flex items-center justify-between gap-2 sm:justify-start">
       {page > 1 ? (
-        <Link href={hrefFor(page - 1)} className={buttonVariants({ variant: "outline" })}>
+        <ListLink href={hrefFor(page - 1)} className={button}>
           <ChevronLeftIcon aria-hidden="true" />
           Previous
-        </Link>
+        </ListLink>
       ) : (
-        <span />
+        <span aria-disabled="true" className={cn(button, "opacity-50")}>
+          <ChevronLeftIcon aria-hidden="true" />
+          Previous
+        </span>
       )}
-      <span className="text-sm text-muted-foreground">Page {page}</span>
-      {hasMore ? (
-        <Link href={hrefFor(page + 1)} className={buttonVariants({ variant: "outline" })}>
+      <span className="text-center text-sm whitespace-nowrap text-muted-foreground tabular-nums sm:min-w-24">
+        Page {page} of {pageCount}
+      </span>
+      {page < pageCount ? (
+        <ListLink href={hrefFor(page + 1)} className={button}>
           Next
           <ChevronRightIcon aria-hidden="true" />
-        </Link>
+        </ListLink>
       ) : (
-        <span />
+        <span aria-disabled="true" className={cn(button, "opacity-50")}>
+          Next
+          <ChevronRightIcon aria-hidden="true" />
+        </span>
       )}
     </nav>
   );
 }
 
-/** Builds a list URL from its params, leaving out empty and default ones. */
-export function listHref(path: string, params: Record<string, string | number | null | undefined>): Route {
-  const search = new URLSearchParams();
-  for (const [name, value] of Object.entries(params)) {
-    if (value !== null && value !== undefined && value !== "") search.set(name, String(value));
-  }
-  const query = search.toString();
-  return (query ? `${path}?${query}` : path) as Route;
+/** The page sizes of a list, as links; the one in use is marked. Changing the size starts again at page 1. */
+export function PageSizeLinks({
+  pageSize,
+  hrefFor,
+  className,
+}: {
+  pageSize: PageSize;
+  hrefFor: (change: { size: PageSize }) => Route;
+  className?: string;
+}) {
+  return (
+    <nav aria-label="Rows per page" className={cn("flex items-center gap-1 text-sm", className)}>
+      <span aria-hidden="true" className="mr-1 text-muted-foreground">
+        Rows
+      </span>
+      {PAGE_SIZES.map((size) => (
+        <ListLink
+          key={size}
+          href={hrefFor({ size })}
+          aria-current={size === pageSize ? "true" : undefined}
+          className={cn(
+            "inline-flex items-center justify-center rounded-md px-2 py-1 font-medium tabular-nums text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:px-2.5",
+            size === pageSize && "bg-surface-sunken text-foreground ring-1 ring-border",
+          )}
+        >
+          {size}
+        </ListLink>
+      ))}
+    </nav>
+  );
 }
 
 /** The first value of a search param, e.g. `?page=2` → "2". */

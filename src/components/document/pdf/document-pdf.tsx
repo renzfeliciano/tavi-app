@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Circle, Document, Font, Image, Page, Path, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
+import { Document, Font, Image, Page, Path, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { brand } from "@/config/brand";
 import { fitLogo, LOGO_BOXES } from "@/modules/files/client";
 import { qrMatrix, qrPath } from "@/shared/qr/qr-matrix";
@@ -140,31 +140,14 @@ function PdfWordmark({ size = 13 }: { size?: number }) {
   );
 }
 
-/** The TAVI logo (components/brand/logo-mark.tsx) for the PDF footer: a rubber stamp pressing a violet check. */
-function PdfLogoMark({ height = 16 }: { height?: number }) {
+/** The footer's sign-off: "Sent with" and the wordmark alone, no stamp or mascot beside it. */
+export function PdfSignoff() {
   return (
-    <Svg viewBox="88 22 336 468" style={{ width: height * (336 / 468), height }}>
-      <Rect x={190} y={30} width={132} height={118} rx={54} fill={C.ink} />
-      <Rect x={226} y={136} width={60} height={46} fill={C.ink} />
-      <Rect x={96} y={176} width={320} height={58} rx={22} fill={C.ink} />
-      <Rect x={116} y={234} width={280} height={22} rx={8} fill={C.accent} />
-      <Rect x={96} y={286} width={320} height={196} rx={30} fill={C.accent} />
-      <Path d="M160.5 383 L227.5 464.9 L351.5 311.7" fill="none" stroke="#ffffff" strokeWidth={24.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-/** The Stamp, small and still (a PDF can't move): white head, ink body, violet pad. */
-function PdfStamp({ height = 15 }: { height?: number }) {
-  return (
-    <Svg viewBox="0 0 64 70" style={{ width: height * (64 / 70), height }}>
-      <Rect x={10} y={55} width={44} height={7} rx={2.5} fill={C.accent} />
-      <Rect x={7} y={38} width={50} height={19} rx={6.5} fill={C.ink} />
-      <Path d="M9.5 22 C9.5 8 19.5 1.5 32 1.5 C44.5 1.5 54.5 8 54.5 22 C54.5 32 48.2 36.5 40 36.5 H24 C15.8 36.5 9.5 32 9.5 22 Z" fill="#ffffff" stroke={C.ink} strokeWidth={3} />
-      <Circle cx={24} cy={19} r={3.6} fill={C.ink} />
-      <Circle cx={40} cy={19} r={3.6} fill={C.ink} />
-      <Path d="M28 27.5 Q32 31.5 36 27.5" fill="none" stroke={C.ink} strokeWidth={2.4} strokeLinecap="round" />
-    </Svg>
+    <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+      {/* The wordmark's box ends at the tip of its check-mark, below its letters' baseline, so the words are lifted to share that baseline. */}
+      <Text style={{ marginRight: 4, marginBottom: 1.8 }}>Sent with</Text>
+      <PdfWordmark />
+    </View>
   );
 }
 
@@ -174,16 +157,7 @@ function PageFooter({ label, business }: { label: string; business: string }) {
       <Text style={{ flex: 1 }}>
         {business} · {label}
       </Text>
-      <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
-        <Text style={{ marginRight: 4 }}>Sent with</Text>
-        <View style={{ marginRight: 3, alignSelf: "center" }}>
-          <PdfLogoMark />
-        </View>
-        <PdfWordmark />
-        <View style={{ marginLeft: 4 }}>
-          <PdfStamp />
-        </View>
-      </View>
+      <PdfSignoff />
       <Text style={{ flex: 1, textAlign: "right" }} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
     </View>
   );

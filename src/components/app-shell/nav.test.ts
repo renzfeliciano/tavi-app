@@ -107,13 +107,19 @@ describe("count badges", () => {
 });
 
 describe("the New menu", () => {
-  it("offers the two documents, a customer, a service and a product, worded for the market", () => {
+  it("offers the two documents, a customer, a product and a service, worded for the market", () => {
     expect(newMenuFor(PH_DOCS).map((a) => a.label)).toEqual([
       "New quotation",
       "New billing statement",
       "Add customer",
-      "Service",
       "Product",
+      "Service",
     ]);
+  });
+
+  it("names products before services, in the order of the page they belong to (Products & Services)", () => {
+    const hrefs: string[] = newMenuFor(PH_DOCS).map((a) => a.href);
+
+    expect(hrefs.indexOf("/catalog/products/new")).toBeLessThan(hrefs.indexOf("/catalog/services/new"));
   });
 });

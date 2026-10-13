@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { render } from "@testing-library/react";
@@ -90,5 +90,33 @@ describe("loading states", () => {
     const skeleton = status.querySelector('[aria-hidden="true"]:not(.page-loader)');
     expect(skeleton?.querySelector('[data-slot="skeleton"]')).not.toBeNull();
     expect(skeleton?.contains(loader)).toBe(false);
+  });
+});
+
+// A tab, a page link or a search on a list only changes its query string, so Next
+// keeps the old rows on screen and never shows loading.tsx for it. Every page with
+// list controls draws its list's skeleton itself while that navigation is slow
+// (src/components/list-pending.tsx).
+const listPages = pages.filter(({ folder }) =>
+  /<(ListSearch|ListViews|ListPager)\b/.test(readFileSync(join(APP, folder, "page.tsx"), "utf8")),
+);
+
+describe("lists with controls", () => {
+  it("finds the list pages", () => {
+    expect(listPages.map((page) => page.route).sort()).toEqual([
+      "(app)/catalog/(list)",
+      "(app)/customers/(list)",
+      "(app)/invoices/(list)",
+      "(app)/payments/(list)",
+      "(app)/quotes/(list)",
+      "(app)/reports",
+    ]);
+  });
+
+  it.each(listPages)("$route shows its skeleton while a tab, page or search is on its way", ({ folder }) => {
+    const source = readFileSync(join(APP, folder, "page.tsx"), "utf8");
+
+    expect(source, "wrap the controls and rows in <ListPending>").toMatch(/<ListPending>[\s\S]*<\/ListPending>/);
+    expect(source, "wrap the rows in <ListResults label=… skeleton={…}>").toMatch(/<ListResults\b[^>]*\bskeleton=\{/);
   });
 });

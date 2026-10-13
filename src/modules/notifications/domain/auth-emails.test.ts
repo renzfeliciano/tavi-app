@@ -31,8 +31,8 @@ describe("passwordResetEmail", () => {
     expect(email.text).toMatch(/ignore this email/);
   });
 
-  it("signs off with the stamp and TAVI lockup from the app the link points to", () => {
+  it("signs off with the TAVI wordmark from the app the link points to", () => {
     const email = verifyEmailEmail({ to: "x@example.com", name: "Maria", url });
-    expect(email.html).toContain("/icons/tavi-email-lockup.png");
+    expect(email.html).toContain("/icons/tavi-email-wordmark.png");
   });
 });

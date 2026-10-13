@@ -44,7 +44,7 @@ describe("the pictures in the violet band", () => {
   it("shows the business's own name on its letterhead, typed in, with Tavi only a small line at the foot", () => {
     const { container } = render(<LetterheadPicture />);
 
-    expect(container).toHaveTextContent("Travis Renz Repair Services");
+    expect(container).toHaveTextContent("Renzo Feliciano Payod Repair Services");
     expect(container.querySelector(".home-cover")).not.toBeNull();
   });
 

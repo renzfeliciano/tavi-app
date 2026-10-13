@@ -25,16 +25,21 @@ Literal code in `src/modules/authz/domain/policy.ts`. To add one: add it to `CAP
 
 ## Sessions (Better Auth 1.7, `src/modules/identity/infra/create-auth.ts`)
 
-7-day idle (sliding, renewed ≤ once/day), 30-day absolute (enforced in `getCurrentSession`), fresh-auth 15 min for sensitive changes, cookie cache **off** (instant revocation), cookies prefixed `tavi`. Password change revokes other sessions; reset revokes all.
+30-minute idle (sliding, renewed at most every 5 minutes; the browser's `IdleGuard` warns 60 seconds before and signs out), 30-day absolute (enforced by `requireSession`), fresh-auth 15 min for sensitive changes, cookie cache **off** (instant revocation), cookies prefixed `tavi`. Password change revokes other sessions; reset revokes all.
 
 - Sign-in / sign-up / reset / resend-verification forms use `authClient` (`@/lib/auth-client`) so Better Auth's rate limits apply. Server-side `auth.api.*` calls bypass them.
 - Error copy via `authErrorMessage` (`@/modules/identity/client`). Sign-in and reset stay enumeration-safe; sign-up may say an email exists (deliberate, rate-limited).
 - Breached-password check fails closed (sign-up asks to retry if the API is down).
+- Rate limits are per origin address and path (sign-in and sign-up 10 a minute; reset and resend 5 in 15 minutes), **not per account**; the address comes from `X-Forwarded-For`, which Vercel overwrites. A per-account throttle is a known gap.
+- **The terms record is immutable except through `acceptTerms`.** `termsVersion` is a sign-up input field, so Better Auth's `/update-user` would accept it; the `databaseHooks.user.update.before` hook throws `FIELD_NOT_ALLOWED` for it and for `termsAcceptedAt`. Hooks must **throw** to refuse: what they return is merged into the original data, so omitting a key does not strip it.
+- Anything that sends mail on a person's behalf needs `emailVerified`: `sendQuote`, `issueInvoice` and `inviteMember` all refuse until the address is confirmed.
 - Device lists never select tokens; revocation is by session ID scoped to the user.
 
 ## Headers & browser
 
 Nonce CSP per request (`src/shared/security/headers.ts`, applied in `src/proxy.ts`): strict `script-src` with nonce + `strict-dynamic`, no eval in production, `frame-ancestors 'none'`. Static headers in `next.config.ts`. No `dangerouslySetInnerHTML` (lint), no inline scripts, no third-party scripts — especially never on public portals (the token is in the URL).
+
+Every page folder under `src/app/(app)` must be listed in `PROTECTED_PREFIXES` (`src/shared/security/headers.ts`), so a signed-out visitor is redirected by `proxy.ts` instead of being served a page shell; `headers.test.ts` reads the folder and fails on a missing one. `/dev` answers 404 in production from `proxy.ts` (`isDevOnlyPath`), because a streaming page has already sent "200 OK" before its own `notFound()` runs. Pages still call `requireOrgContext()` themselves; the proxy only improves the answer.
 
 ## Public links (Phase 1.6)
 
@@ -49,7 +54,7 @@ Nonce CSP per request (`src/shared/security/headers.ts`, applied in `src/proxy.t
 - Cron routes: `isAuthorizedCronRequest` (constant-time) with `CRON_SECRET`.
 - Client-supplied IDs that reach logs (`x-request-id`) go through `acceptRequestId`.
 - Request paths in logs go through `loggablePath` (customer-link tokens are in the path, reset tokens in the query).
-- Any new command that emails a customer checks `documentEmailsAllowed` (50/hour per business) **before** it changes anything.
+- Any new command that queues email for a person calls `emailLimitReached(db, actor, now, adding)` **before** it changes anything, passes `actorUserId: actor.userId` to `enqueueEmail`, and shows `documentEmailLimitMessage(alternative, reason)` for the reason it returns. Three hourly caps, in this order: per business 50, per person across businesses 80, everyone 150 (`src/modules/notifications/domain/document-email-limit.ts`; raise the global one when mail leaves the free Gmail tier).
 - Never paste real credentials into chat or commit them; `.env.local` is gitignored.
 
 ## Uploads (logo, Phase 1.1)
@@ -66,3 +71,7 @@ PNG/JPEG/WebP by magic bytes, ≤ 2 MB, re-encode with sharp, no SVG, random sto
 6. Is anything rendered as HTML or loaded from a third party?
 7. What's audited? Would we be able to reconstruct what happened?
 8. Is there a test proving each of the above (unit, integration or E2E)?
+9. Does a regular expression, or any loop, run on text a stranger controls? It must be linear-time (SonarJS `super-linear-regex`); cap the input length first.
+10. Is a password or email typed into a form that is on screen before the page's script loads (the account pages)? The form needs `method="post"`, or a submit before the script loads puts it in the web address (`src/app/(auth)/form-method.test.tsx`).
+
+Last full review: October 2026 (`docs/runbooks/security-checks.md`: how to re-run it, accepted advisories, open gaps).

@@ -12,7 +12,10 @@ export type ActivityEvent = {
   metadata: Record<string, unknown> | null;
 };
 
-export type Activity = { text: string; href: Route | null };
+/** What happened, as a mark the feed draws beside it. */
+export type ActivityKind = "sent" | "viewed" | "approved" | "declined" | "edited" | "paid" | "closed";
+
+export type Activity = { text: string; href: Route | null; kind: ActivityKind };
 
 const str = (value: unknown) => (typeof value === "string" && value.trim() ? value : null);
 
@@ -24,32 +27,32 @@ export function describeActivity(event: ActivityEvent, market: Pick<MarketProfil
 
   switch (event.action) {
     case "quote.sent":
-      return { text: `${quote} sent`, href: at("/quotes") };
+      return { text: `${quote} sent`, href: at("/quotes"), kind: "sent" };
     case "quote.viewed":
-      return { text: `Customer opened ${quote}`, href: at("/quotes") };
+      return { text: `Customer opened ${quote}`, href: at("/quotes"), kind: "viewed" };
     case "quote.approved":
-      return { text: `${str(m.name) ?? "Customer"} approved ${quote}`, href: at("/quotes") };
+      return { text: `${str(m.name) ?? "Customer"} approved ${quote}`, href: at("/quotes"), kind: "approved" };
     case "quote.rejected":
-      return { text: `Customer declined ${quote}`, href: at("/quotes") };
+      return { text: `Customer declined ${quote}`, href: at("/quotes"), kind: "declined" };
     case "quote.expired":
-      return { text: `${quote} expired`, href: at("/quotes") };
+      return { text: `${quote} expired`, href: at("/quotes"), kind: "closed" };
     case "quote.cancelled":
-      return { text: `${quote} cancelled`, href: at("/quotes") };
+      return { text: `${quote} cancelled`, href: at("/quotes"), kind: "closed" };
     case "invoice.sent":
       // Registered invoices (1.12) carry their printed title in the audit.
-      return { text: `${str(m.title) ? `${str(m.title)} ${str(m.number) ?? ""}`.trim() : invoice(m.number)} sent`, href: at("/invoices") };
+      return { text: `${str(m.title) ? `${str(m.title)} ${str(m.number) ?? ""}`.trim() : invoice(m.number)} sent`, href: at("/invoices"), kind: "sent" };
     case "invoice.viewed":
-      return { text: `Customer opened ${invoice(m.number)}`, href: at("/invoices") };
+      return { text: `Customer opened ${invoice(m.number)}`, href: at("/invoices"), kind: "viewed" };
     case "invoice.edited":
-      return { text: `${invoice(m.number)} updated`, href: at("/invoices") };
+      return { text: `${invoice(m.number)} updated`, href: at("/invoices"), kind: "edited" };
     case "invoice.voided":
-      return { text: `${invoice(m.number)} voided`, href: at("/invoices") };
+      return { text: `${invoice(m.number)} voided`, href: at("/invoices"), kind: "closed" };
     case "invoice.cancelled":
-      return { text: `${invoice(m.number)} cancelled`, href: at("/invoices") };
+      return { text: `${invoice(m.number)} cancelled`, href: at("/invoices"), kind: "closed" };
     case "payment.recorded":
-      return { text: `Payment ${str(m.receiptNumber) ?? ""} recorded on ${invoice(m.invoiceNumber)}`, href: at("/payments") };
+      return { text: `Payment ${str(m.receiptNumber) ?? ""} recorded on ${invoice(m.invoiceNumber)}`, href: at("/payments"), kind: "paid" };
     case "payment.voided":
-      return { text: `Payment ${str(m.receiptNumber) ?? ""} voided on ${invoice(m.invoiceNumber)}`, href: at("/payments") };
+      return { text: `Payment ${str(m.receiptNumber) ?? ""} voided on ${invoice(m.invoiceNumber)}`, href: at("/payments"), kind: "closed" };
     default:
       return null;
   }

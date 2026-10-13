@@ -18,6 +18,7 @@ import { getDocumentSettings, type SellerSnapshot } from "@/modules/organization
 import { clearQuoteConversion, type CustomerSnapshot } from "@/modules/quotes";
 import { putInTrash } from "@/modules/trash";
 import { addDays, type CalendarDate, todayIn } from "@/shared/dates/calendar";
+import { type PageMeta, pageMeta, pageWindow } from "@/shared/pagination/page-window";
 import { escapeLikePattern } from "@/shared/text/search";
 import { type InvoiceDraft, parseInvoiceDraft } from "../domain/invoice-draft";
 import { invoiceTrashPayload } from "../domain/trash-payload";
@@ -33,9 +34,6 @@ import type { InvoiceRegistrationSnapshot } from "../domain/registration";
 
 // Invoice drafts (§B.4): created blank or from an approved quote, autosaved
 // like quotes, deleted only while never issued.
-
-/** Invoices per page in the list. */
-export const INVOICE_PAGE_SIZE = 25;
 
 export type InvoiceHeader = {
   id: string;
@@ -110,7 +108,8 @@ export type InvoiceSummary = Pick<
   "id" | "number" | "revision" | "status" | "currency" | "totalMinor" | "amountPaidMinor" | "issueDate" | "dueDate" | "updatedAt"
 > & { customerName: string | null };
 
-export type InvoiceList = { invoices: InvoiceSummary[]; page: number; hasMore: boolean; total: number };
+/** `total` is every invoice the business has (it decides "nothing here yet"); `matching` is what the search and status show. */
+export type InvoiceList = PageMeta & { invoices: InvoiceSummary[]; total: number };
 
 export type NewInvoiceDefaults = {
   currency: string;
@@ -497,6 +496,66 @@ export async function deleteDraftInvoice(
   });
 }
 
+/** What a search for text matches among the business's invoices: number, customer as issued, or customer as they are now. */
+async function searchMatch(actor: OrgActor, search: string, db: Database) {
+  const pattern = `%${escapeLikePattern(search)}%`;
+  const customerIds = await findCustomerIds(actor, search, db);
+  return or(
+    ilike(invoices.number, pattern),
+    sql`${invoices.customerSnapshot}->>'displayName' ilike ${pattern}`,
+    customerIds.length > 0 ? inArray(invoices.customerId, customerIds) : undefined,
+  );
+}
+
+/** Ids of the business's invoices matching a search, for filtering other lists (the Payments list). */
+export async function findInvoiceIds(actor: OrgActor, search: string, db: Database = getDb(), limit = 200): Promise<string[]> {
+  assertCan(actor, "invoices.read");
+  const rows = await db
+    .select({ id: invoices.id })
+    .from(invoices)
+    .where(and(ofOrganization(actor), await searchMatch(actor, search, db)))
+    .orderBy(desc(invoices.updatedAt), desc(invoices.id))
+    .limit(limit);
+  return rows.map((row) => row.id);
+}
+
+export type InvoiceLabel = { number: string | null; customerName: string | null };
+
+/**
+ * The number and customer of each of the business's invoices, by id, for naming them in other lists. A draft has
+ * no number yet; an issued invoice shows its customer as issued, a draft as they are now. Unknown ids are left out.
+ */
+export async function getInvoiceLabels(
+  actor: OrgActor,
+  ids: readonly string[],
+  db: Database = getDb(),
+): Promise<Map<string, InvoiceLabel>> {
+  assertCan(actor, "invoices.read");
+  const labels = new Map<string, InvoiceLabel>();
+  if (ids.length === 0) return labels;
+  const rows = await db
+    .select({
+      id: invoices.id,
+      number: invoices.number,
+      customerId: invoices.customerId,
+      snapshotName: sql<string | null>`${invoices.customerSnapshot}->>'displayName'`,
+    })
+    .from(invoices)
+    .where(and(ofOrganization(actor), inArray(invoices.id, [...ids])));
+  const names = await getCustomerNames(
+    actor,
+    rows.flatMap((row) => (row.snapshotName === null && row.customerId ? [row.customerId] : [])),
+    db,
+  );
+  for (const row of rows) {
+    labels.set(row.id, {
+      number: row.number,
+      customerName: row.snapshotName ?? (row.customerId ? (names.get(row.customerId) ?? null) : null),
+    });
+  }
+  return labels;
+}
+
 /**
  * The business's invoices, most recently changed first, optionally filtered
  * by status or searched by number or customer. Issued invoices show the
@@ -504,61 +563,51 @@ export async function deleteDraftInvoice(
  */
 export async function listInvoices(
   actor: OrgActor,
-  { search = null, status, page = 1 }: { search?: string | null; status?: InvoiceStatus; page?: number },
+  { search = null, status, page = 1, pageSize }: { search?: string | null; status?: InvoiceStatus; page?: number; pageSize?: number },
   db: Database = getDb(),
 ): Promise<InvoiceList> {
   assertCan(actor, "invoices.read");
-  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
 
-  let matches;
-  if (search) {
-    const pattern = `%${escapeLikePattern(search)}%`;
-    const customerIds = await findCustomerIds(actor, search, db);
-    matches = or(
-      ilike(invoices.number, pattern),
-      sql`${invoices.customerSnapshot}->>'displayName' ilike ${pattern}`,
-      customerIds.length > 0 ? inArray(invoices.customerId, customerIds) : undefined,
-    );
-  }
+  const matches = search ? await searchMatch(actor, search, db) : undefined;
   const where = and(ofOrganization(actor), status ? eq(invoices.status, status) : undefined, matches);
 
-  const [rows, [total]] = await Promise.all([
-    db
-      .select({
-        id: invoices.id,
-        number: invoices.number,
-        revision: invoices.revision,
-        status: invoices.status,
-        currency: invoices.currency,
-        totalMinor: invoices.totalMinor,
-        amountPaidMinor: invoices.amountPaidMinor,
-        issueDate: invoices.issueDate,
-        dueDate: invoices.dueDate,
-        updatedAt: invoices.updatedAt,
-        customerId: invoices.customerId,
-        snapshotName: sql<string | null>`${invoices.customerSnapshot}->>'displayName'`,
-      })
-      .from(invoices)
-      .where(where)
-      .orderBy(desc(invoices.updatedAt), desc(invoices.id))
-      .limit(INVOICE_PAGE_SIZE + 1)
-      .offset((safePage - 1) * INVOICE_PAGE_SIZE),
+  const [[matching], [total]] = await Promise.all([
+    db.select({ value: count() }).from(invoices).where(where),
     db.select({ value: count() }).from(invoices).where(ofOrganization(actor)),
   ]);
+  const window = pageWindow({ page, pageSize, matching: matching?.value ?? 0 });
+  const rows = await db
+    .select({
+      id: invoices.id,
+      number: invoices.number,
+      revision: invoices.revision,
+      status: invoices.status,
+      currency: invoices.currency,
+      totalMinor: invoices.totalMinor,
+      amountPaidMinor: invoices.amountPaidMinor,
+      issueDate: invoices.issueDate,
+      dueDate: invoices.dueDate,
+      updatedAt: invoices.updatedAt,
+      customerId: invoices.customerId,
+      snapshotName: sql<string | null>`${invoices.customerSnapshot}->>'displayName'`,
+    })
+    .from(invoices)
+    .where(where)
+    .orderBy(desc(invoices.updatedAt), desc(invoices.id))
+    .limit(window.pageSize)
+    .offset(window.offset);
 
-  const pageRows = rows.slice(0, INVOICE_PAGE_SIZE);
   const names = await getCustomerNames(
     actor,
-    pageRows.flatMap((row) => (row.snapshotName === null && row.customerId ? [row.customerId] : [])),
+    rows.flatMap((row) => (row.snapshotName === null && row.customerId ? [row.customerId] : [])),
     db,
   );
   return {
-    invoices: pageRows.map(({ customerId, snapshotName, ...row }) => ({
+    invoices: rows.map(({ customerId, snapshotName, ...row }) => ({
       ...row,
       customerName: snapshotName ?? (customerId ? (names.get(customerId) ?? null) : null),
     })),
-    page: safePage,
-    hasMore: rows.length > INVOICE_PAGE_SIZE,
+    ...pageMeta(window),
     total: total?.value ?? 0,
   };
 }

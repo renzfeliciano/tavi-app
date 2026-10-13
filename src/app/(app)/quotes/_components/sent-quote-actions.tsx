@@ -148,7 +148,14 @@ export function SentQuoteActions({ id, status, name, shareChannels, convertedInv
                 <label htmlFor={reasonId} className="text-sm font-medium">
                   Reason <span className="font-normal text-muted-foreground">(optional)</span>
                 </label>
-                <Textarea id={reasonId} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} maxLength={500} />
+                <Textarea
+                  id={reasonId}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={2}
+                  maxLength={500}
+                  placeholder="e.g. The customer chose another provider."
+                />
               </div>
             )}
           </DialogBody>

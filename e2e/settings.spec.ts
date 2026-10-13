@@ -18,6 +18,17 @@ const axe = (p: Page) =>
 // Scope by text: Next.js also renders a hidden role="alert" route announcer.
 const toast = (text: string) => page.locator("[data-sonner-toast]").filter({ hasText: text });
 
+// A file chosen before the page has hydrated is never picked up (the change event has no listener yet),
+// so choose it again until its preview shows. A loaded machine hits this; an idle one rarely does.
+async function chooseLogo(file: { name: string; mimeType: string; buffer: Buffer }) {
+  const input = page.locator('input[type="file"][name="logo"]');
+  const preview = page.getByTestId("logo-preview").getByRole("img", { name: "Santos Aircon logo" });
+  await expect(async () => {
+    await input.setInputFiles(file);
+    await expect(preview).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 20_000 });
+}
+
 test.beforeAll(async ({ browser }) => {
   // AxeBuilder needs a page from an explicit context.
   page = await (await browser.newContext()).newPage();
@@ -34,7 +45,8 @@ test("the dashboard and settings lead to the business profile", async () => {
   await expect(page).toHaveURL(/\/settings\/business$/);
   // Settings lives in the account menu at the foot of the sidebar, not in the nav.
   await page.getByRole("button", { name: /Maria Santos/ }).click();
-  await page.getByRole("link", { name: "Settings" }).click();
+  // Exact: the page also has a "Back to Settings" link.
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("link", { name: /Business profile/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Tax rates/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Document numbers/ })).toBeVisible();
@@ -80,9 +92,8 @@ test("logo: uploads, refuses an SVG, and can be removed", async () => {
     .toBuffer();
   const input = page.locator('input[type="file"][name="logo"]');
 
-  await input.setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
   // The chosen file is previewed first; nothing is saved until the person confirms.
-  await expect(page.getByTestId("logo-preview").getByRole("img", { name: "Santos Aircon logo" })).toBeVisible();
+  await chooseLogo({ name: "logo.png", mimeType: "image/png", buffer: png });
   await page.getByRole("button", { name: "Save logo" }).click();
   await expect(toast("Logo updated.")).toBeVisible();
   const logo = page.getByRole("img", { name: "Santos Aircon logo" });
@@ -139,7 +150,7 @@ test("logo: a very wide logo is fitted inside its preview box and can be cancell
   })
     .png()
     .toBuffer();
-  await page.locator('input[type="file"][name="logo"]').setInputFiles({ name: "wide.png", mimeType: "image/png", buffer: wide });
+  await chooseLogo({ name: "wide.png", mimeType: "image/png", buffer: wide });
 
   const box = page.getByTestId("logo-preview");
   const img = box.getByRole("img", { name: "Santos Aircon logo" });

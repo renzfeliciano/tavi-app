@@ -39,6 +39,13 @@ export default function TermsPage() {
             are responsible for what happens in your account.
           </li>
           <li>
+            Confirm your email address before you send a quote or bill or invite a teammate. {name} sends those emails
+            for you, so we check the address first.
+          </li>
+          <li>
+            To keep email reliable for everyone, we limit how many documents a business can email in an hour.
+          </li>
+          <li>
             {name} is in an early, free version. Features may change, and we don&apos;t promise it will always be
             available. We won&apos;t charge you anything without telling you first and asking you to agree.
           </li>

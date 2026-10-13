@@ -50,7 +50,8 @@ export const taxRates = pgTable(
 );
 
 // Products and services share their shape (D8: two lists, two tables). Only
-// products have a SKU. Prices are integer minor units of the item's currency.
+// products have a SKU. Prices are integer minor units of the item's currency;
+// a null price means "not known yet" (a free item is priced 0).
 // The default tax rate is a composite key, so it can only be one of the same
 // business's rates (§C). Items are archived, never deleted: documents keep
 // their own snapshot of each line.
@@ -62,7 +63,7 @@ const catalogItemColumns = () => ({
   name: text("name").notNull(),
   description: text("description"),
   unitLabel: text("unit_label").notNull(),
-  unitPriceMinor: bigint("unit_price_minor", { mode: "number" }).notNull(),
+  unitPriceMinor: bigint("unit_price_minor", { mode: "number" }),
   currency: char("currency", { length: 3 }).notNull(),
   taxRateId: uuid("tax_rate_id"),
   archivedAt: timestamp("archived_at", { withTimezone: true }),

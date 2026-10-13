@@ -5,7 +5,7 @@ import { shareLink } from "@/lib/share-link";
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ban, CopyPlusIcon, DownloadIcon, FileJsonIcon, FileXIcon, LinkIcon, PencilIcon, SendIcon } from "lucide-react";
+import { Ban, CopyPlusIcon, DownloadIcon, FileJsonIcon, FileXIcon, LinkIcon, MoreHorizontalIcon, PencilIcon, SendIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { INVOICE_REASON_MAX, type InvoiceStatus, transitionInvoice } from "@/modules/invoices/client";
 import {
@@ -208,20 +209,28 @@ export function SentInvoiceActions({
         </Link>
       )}
       {canClose && (
-        <>
-          <Button type="button" variant="outline" onClick={() => show("duplicate")}>
-            <CopyPlusIcon aria-hidden="true" />
-            Void and duplicate
-          </Button>
-          <Button type="button" variant="ghost" onClick={() => show("void")}>
-            <FileXIcon aria-hidden="true" />
-            Void
-          </Button>
-          <Button type="button" variant="ghost" onClick={() => show("cancel")}>
-            <Ban aria-hidden="true" />
-            Cancel
-          </Button>
-        </>
+        // The three that end or replace the bill sit behind one button: they are rare, can't be undone,
+        // and next to the everyday buttons they made the header crowded.
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon" aria-label="More actions" />}>
+            <MoreHorizontalIcon aria-hidden="true" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => show("duplicate")}>
+              <CopyPlusIcon aria-hidden="true" />
+              Void and duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={() => show("void")}>
+              <FileXIcon aria-hidden="true" />
+              Void
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={() => show("cancel")}>
+              <Ban aria-hidden="true" />
+              Cancel
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
       <Dialog open={open !== null} onOpenChange={(next) => !next && !pending && setOpen(null)}>
@@ -251,6 +260,7 @@ export function SentInvoiceActions({
                   }}
                   rows={2}
                   maxLength={INVOICE_REASON_MAX}
+                  placeholder="e.g. Wrong amount. A corrected one is on its way."
                   aria-invalid={reasonError ? true : undefined}
                   aria-describedby={reasonError ? `${reasonId}-error` : undefined}
                 />

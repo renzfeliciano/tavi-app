@@ -43,7 +43,8 @@ test.describe("home page", () => {
       await page.setViewportSize({ width, height: 700 });
       await page.goto("/");
 
-      await expect(page.getByRole("link", { name: "Sign in" })).toBeInViewport({ ratio: 1 });
+      // The header's link; the "Get started" list further down has a second one.
+      await expect(page.getByRole("link", { name: "Sign in" }).first()).toBeInViewport({ ratio: 1 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
   }

@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { asVisitor, freshInvitationPath, latestEmailStatus, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, freshInvitationPath, latestEmailDelivery, strongPassword, uniqueEmail } from "./helpers";
 
 // Team invitations (Phase 2.1, D17): the shared owner invites a new person,
 // who signs up from the link and joins; then the owner removes them.
@@ -21,8 +21,14 @@ test("invite someone, they sign up from the link and join, then they're removed"
   await page.getByRole("button", { name: "Send invitation" }).click();
   await expect(page.getByText(`Invitation sent to ${email}.`)).toBeVisible();
   await expect(page.getByRole("region", { name: "Invitations" }).getByText(email)).toBeVisible();
-  // The email goes out right after the response; it is not left for the daily cron.
-  await expect.poll(() => latestEmailStatus(email)).toBe("sent");
+  // The email goes out right after the response; it is not left for the daily cron. A test run has no
+  // mail provider in a production build, so there a send is tried and fails; either way it was tried now.
+  await expect
+    .poll(async () => {
+      const delivery = await latestEmailDelivery(email);
+      return delivery?.status === "sent" || (delivery?.attempts ?? 0) > 0;
+    })
+    .toBe(true);
 
   // The invited person, in their own browser.
   const invitee = await (await browser.newContext({ storageState: { cookies: [], origins: [] } })).newPage();

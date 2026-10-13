@@ -1,6 +1,7 @@
 // @vitest-environment node
 import path from "node:path";
-import { renderToBuffer } from "@react-pdf/renderer";
+import { renderToBuffer, Svg } from "@react-pdf/renderer";
+import { isValidElement, type ReactElement, type ReactNode } from "react";
 import * as fontkit from "fontkit";
 import { describe, expect, it } from "vitest";
 import { MARKETS } from "@/config/markets";
@@ -8,7 +9,7 @@ import { OFFERED_CURRENCIES } from "@/config/currencies";
 import { formatMoney } from "@/shared/money";
 import { buildDocumentView, type DocumentViewLineInput } from "../document-view";
 import { calculateDocument } from "@/modules/documents/client";
-import { AcknowledgementPdf, DocumentPdf, PDF_FONT_DIR, registerPdfFonts } from "./document-pdf";
+import { AcknowledgementPdf, DocumentPdf, PDF_FONT_DIR, PdfSignoff, registerPdfFonts } from "./document-pdf";
 
 const business = {
   name: "Santos Aircon",
@@ -123,5 +124,39 @@ describe("AcknowledgementPdf", () => {
       />,
     );
     expect(pageCount(pdf)).toBe(1);
+  });
+});
+
+/** Every element under `node`, with our own components expanded (they are plain functions, no hooks). */
+function elementsIn(node: ReactNode): ReactElement<{ children?: ReactNode }>[] {
+  if (Array.isArray(node)) return node.flatMap(elementsIn);
+  if (!isValidElement<{ children?: ReactNode }>(node)) return [];
+  const below = typeof node.type === "function" ? (node.type as (props: object) => ReactNode)(node.props) : node.props.children;
+  return [node, ...elementsIn(below)];
+}
+
+describe("the footer's sign-off", () => {
+  it("is the TAVI wordmark alone: no stamp logo before it and no mascot after it", () => {
+    const drawings = elementsIn(<PdfSignoff />).filter((element) => element.type === Svg);
+
+    // The only drawing is the wordmark's own check-mark V.
+    expect(drawings).toHaveLength(1);
+  });
+
+  it("still says what it is, in words", () => {
+    const words = elementsIn(<PdfSignoff />)
+      .map((element) => element.props.children)
+      .filter((child): child is string => typeof child === "string");
+
+    expect(words).toEqual(["Sent with", "TA", "I"]);
+  });
+
+  it("lifts the words to the wordmark's baseline, which sits above the tip of its check-mark", () => {
+    // Measured on a rendered page: the row's boxes end together, but the wordmark's box ends at the
+    // check-mark's tip, below its letters, so unlifted words sat about 2pt under them.
+    const words = elementsIn(<PdfSignoff />).find((element) => element.props.children === "Sent with");
+    const style = (words?.props as { style?: { marginBottom?: number } } | undefined)?.style;
+
+    expect(style?.marginBottom).toBeGreaterThan(0);
   });
 });

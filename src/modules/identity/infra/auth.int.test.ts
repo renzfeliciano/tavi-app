@@ -110,6 +110,47 @@ describe("sign-up", () => {
   });
 });
 
+// Better Auth's own /update-user lets a signed-in person change the fields the
+// sign-up form may set, which includes the terms version. That version is the
+// record of what they agreed to; only agreeing again (acceptTerms) may change it.
+describe("the record of agreeing to the terms", () => {
+  async function signedInHeaders() {
+    const { headers } = await auth.api.signUpEmail({
+      body: { name: "Maria Santos", email: "maria@example.com", password, termsVersion: LEGAL.version },
+      returnHeaders: true,
+    });
+    const cookie = headers
+      .getSetCookie()
+      .map((line) => line.split(";")[0])
+      .join("; ");
+    return new Headers({ cookie });
+  }
+
+  it("cannot be rewritten by the person from their own account settings call", async () => {
+    const requestHeaders = await signedInHeaders();
+    const [before] = await testDb().select().from(users);
+
+    // Variables, not literals: the typed body leaves these fields out on purpose.
+    const body = { name: "Maria S.", termsVersion: "1999-01-01" };
+    await expect(auth.api.updateUser({ headers: requestHeaders, body })).rejects.toMatchObject({
+      body: { code: "FIELD_NOT_ALLOWED" },
+    });
+
+    const [after] = await testDb().select().from(users);
+    expect(after?.termsVersion).toBe(LEGAL.version);
+    expect(after?.termsAcceptedAt).toEqual(before?.termsAcceptedAt);
+    expect(after?.name).toBe("Maria Santos");
+  });
+
+  it("still lets them change their name", async () => {
+    const requestHeaders = await signedInHeaders();
+    await auth.api.updateUser({ headers: requestHeaders, body: { name: "Maria S." } });
+    const [after] = await testDb().select().from(users);
+    expect(after?.name).toBe("Maria S.");
+    expect(after?.termsVersion).toBe(LEGAL.version);
+  });
+});
+
 describe("sign-in", () => {
   it("accepts the right password", async () => {
     await signUp();

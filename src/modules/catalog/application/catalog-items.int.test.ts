@@ -89,6 +89,29 @@ describe("createCatalogItem", () => {
     });
   });
 
+  it("adds an item with no price yet, and audits it without a price", async () => {
+    const actor = await actorFor();
+
+    const service = await add(actor, "service", { name: "Site inspection", unitLabel: "hour", unitPrice: "" });
+    const product = await add(actor, "product", { name: "Custom panel", unitLabel: "pc", unitPrice: "  " });
+
+    expect(service).toMatchObject({ kind: "service", name: "Site inspection", unitPriceMinor: null, currency: "PHP" });
+    expect(product).toMatchObject({ kind: "product", name: "Custom panel", unitPriceMinor: null });
+    expect((await getCatalogItem(actor, "service", service.id, testDb()))?.unitPriceMinor).toBeNull();
+    expect((await listAllAuditEvents(testDb())).find((event) => event.entityId === service.id)).toMatchObject({
+      action: "service.created",
+      metadata: { name: "Site inspection", unitPriceMinor: null, currency: "PHP" },
+    });
+  });
+
+  it("keeps a free item (priced 0) apart from an item with no price", async () => {
+    const actor = await actorFor();
+
+    const free = await add(actor, "service", { name: "Free quote visit", unitPrice: "0" });
+
+    expect(free.unitPriceMinor).toBe(0);
+  });
+
   it("adds a service, which has no SKU", async () => {
     const actor = await actorFor();
 
@@ -163,6 +186,31 @@ describe("listCatalogItems", () => {
   });
 });
 
+describe("listCatalogItems paging", () => {
+  it("says how many items match and cuts them by the size asked for, within the status being viewed", async () => {
+    const actor = await actorFor();
+    for (let i = 0; i < 11; i++) await add(actor, "service", { name: `Cleaning ${String(i).padStart(2, "0")}` });
+    await add(actor, "service", { name: "Repair visit" });
+    const old = await add(actor, "service", { name: "Old service" });
+    await archiveCatalogItem(actor, "service", old.id, testDb());
+    await add(actor, "product", { name: "A product", sku: "P-1" });
+
+    const second = await listCatalogItems(actor, "service", { pageSize: 10, page: 2 }, testDb());
+    const found = await listCatalogItems(actor, "service", { search: "repair" }, testDb());
+    const past = await listCatalogItems(actor, "service", { pageSize: 10, page: 99 }, testDb());
+    const odd = await listCatalogItems(actor, "service", { pageSize: 7 }, testDb());
+    const archived = await listCatalogItems(actor, "service", { status: "archived" }, testDb());
+
+    expect(second).toMatchObject({ matching: 12, total: 12, page: 2, pageSize: 10, pageCount: 2, from: 11, to: 12, hasMore: false, archivedCount: 1 });
+    expect(second.items).toHaveLength(2);
+    // `total` is every item of this kind in this status (it decides "nothing here yet"); `matching` follows the search.
+    expect(found).toMatchObject({ matching: 1, total: 12, from: 1, to: 1 });
+    expect(past).toMatchObject({ page: 2, from: 11, to: 12 });
+    expect(odd.pageSize).toBe(25);
+    expect(archived).toMatchObject({ matching: 1, total: 1, archivedCount: 1 });
+  });
+});
+
 describe("getCatalogItem / updateCatalogItem", () => {
   it("updates an item and audits the changed fields", async () => {
     const actor = await actorFor();
@@ -183,6 +231,23 @@ describe("getCatalogItem / updateCatalogItem", () => {
       entityId: service.id,
       metadata: { changed: ["unitPriceMinor"] },
     });
+  });
+
+  it("lets the price be cleared, and set again once it is known, auditing each change", async () => {
+    const actor = await actorFor();
+    const service = await add(actor, "service", { name: "Aircon cleaning", unitPrice: "1,500" });
+    const save = (unitPrice: string) =>
+      updateCatalogItem(actor, "service", service.id, item({ name: "Aircon cleaning", unitPrice }), OPTIONS, testDb());
+
+    expect(await save("")).toMatchObject({ ok: true, item: { unitPriceMinor: null } });
+    expect((await listAllAuditEvents(testDb())).at(-1)).toMatchObject({
+      action: "service.updated",
+      metadata: { changed: ["unitPriceMinor"] },
+    });
+    expect(await save("")).toMatchObject({ ok: true, item: { unitPriceMinor: null } });
+    expect(await listAllAuditEvents(testDb())).toHaveLength(2); // created, then one update; saving the same blank again changes nothing
+    expect(await save("1,800")).toMatchObject({ ok: true, item: { unitPriceMinor: 180_000 } });
+    expect((await getCatalogItem(actor, "service", service.id, testDb()))?.unitPriceMinor).toBe(180_000);
   });
 
   it("keeps an archived default tax rate the item already had", async () => {
@@ -248,5 +313,14 @@ describe("searchLineSources", () => {
 
     expect(sources.products.map((s) => [s.kind, s.name, s.sku])).toEqual([["product", "Aircon filter", "FLT-9"]]);
     expect(sources.services.map((s) => [s.kind, s.name, s.unitLabel])).toEqual([["service", "Aircon cleaning", "unit"]]);
+  });
+
+  it("offers an item with no price yet, so it can be added to a line and priced there", async () => {
+    const actor = await actorFor();
+    await add(actor, "service", { name: "Site inspection", unitPrice: "" });
+
+    const sources = await searchLineSources(actor, "inspection", testDb());
+
+    expect(sources.services.map((s) => [s.name, s.unitPriceMinor])).toEqual([["Site inspection", null]]);
   });
 });

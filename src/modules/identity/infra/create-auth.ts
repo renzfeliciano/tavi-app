@@ -149,6 +149,23 @@ export function createAuth(db: Database, config: AuthConfig) {
             });
           },
         },
+        update: {
+          // The terms version is a record of what the person agreed to. The
+          // sign-up form may send it (it is an input field), and Better Auth's
+          // /update-user would let a signed-in person send it again; only
+          // agreeing anew (acceptTerms, which writes through our own
+          // repository) may change it. Refused outright, like a browser-sent
+          // acceptance time at sign-up; everything else they may change stays.
+          before: async (changes) => {
+            if (changes.termsVersion !== undefined || changes.termsAcceptedAt !== undefined) {
+              throw new APIError("BAD_REQUEST", {
+                code: "FIELD_NOT_ALLOWED",
+                message: "The terms you agreed to can only be changed by agreeing to them again.",
+              });
+            }
+            return { data: changes };
+          },
+        },
       },
       session: {
         create: {

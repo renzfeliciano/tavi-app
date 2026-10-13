@@ -1,8 +1,10 @@
+import { categoryFor } from "@/config/categories";
 import { currencyOptions } from "@/config/currencies";
 import { type CatalogItem, type CatalogItemKind, examplePrice, formatRate, listTaxRates } from "@/modules/catalog";
 import type { OrgContext } from "@/modules/identity";
 import { getBusinessProfile } from "@/modules/organizations";
 import { formatAmountForInput } from "@/shared/money";
+import { eg } from "@/shared/text/example";
 import type { CatalogFormValues } from "../actions";
 import type { CatalogItemFormCopy } from "./catalog-item-form";
 
@@ -13,10 +15,12 @@ import type { CatalogItemFormCopy } from "./catalog-item-form";
  */
 export async function catalogFormCopy(ctx: OrgContext, current?: CatalogItem): Promise<CatalogItemFormCopy> {
   const [rates, profile] = await Promise.all([listTaxRates(ctx), getBusinessProfile(ctx)]);
+  const category = categoryFor(ctx.organizationCategory);
   const usable = rates.filter((rate) => rate.archivedAt === null || rate.id === current?.taxRateId);
   return {
     units: ctx.market.units.options,
-    pricePlaceholder: `e.g. ${examplePrice(ctx.currency, ctx.locale)}`,
+    pricePlaceholder: eg(examplePrice(ctx.currency, ctx.locale)),
+    nameExamples: { service: category.itemExample, product: category.productExample },
     taxModeHint:
       profile.taxMode === "inclusive"
         ? "Your prices include tax (set in Business profile), so enter them the way you quote them."
@@ -43,14 +47,14 @@ export async function newItemValues(ctx: OrgContext, kind: CatalogItemKind): Pro
   };
 }
 
-/** A saved item as form values, its price written the way the business types it. */
+/** A saved item as form values, its price written the way the business types it (blank if it has none yet). */
 export function itemFormValues(item: CatalogItem, locale: string): CatalogFormValues {
   return {
     name: item.name,
     description: item.description ?? "",
     sku: item.sku ?? "",
     unitLabel: item.unitLabel,
-    unitPrice: formatAmountForInput(item.unitPriceMinor, item.currency, locale),
+    unitPrice: item.unitPriceMinor === null ? "" : formatAmountForInput(item.unitPriceMinor, item.currency, locale),
     currency: item.currency,
     taxRateId: item.taxRateId ?? "",
   };

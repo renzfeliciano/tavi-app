@@ -20,8 +20,12 @@ const PLATFORMS: [RegExp, string][] = [
   [/Linux/, "Linux"],
 ];
 
-export function describeDevice(userAgent: string | null | undefined): string {
-  if (!userAgent) return "Unknown device";
+/** Real user agents run to a few hundred characters; the rest of a longer one is noise (or an attack on the patterns below). */
+const MAX_USER_AGENT_LENGTH = 512;
+
+export function describeDevice(rawUserAgent: string | null | undefined): string {
+  if (!rawUserAgent) return "Unknown device";
+  const userAgent = rawUserAgent.slice(0, MAX_USER_AGENT_LENGTH);
   const browser = BROWSERS.find(([pattern]) => pattern.test(userAgent))?.[1];
   const platform = PLATFORMS.find(([pattern]) => pattern.test(userAgent))?.[1];
   if (!browser) return "Unknown browser";

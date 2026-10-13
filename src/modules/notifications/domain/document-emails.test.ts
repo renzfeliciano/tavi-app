@@ -74,9 +74,9 @@ describe("documentLinkEmail", () => {
     });
   });
 
-  it("signs off with the stamp and TAVI lockup, loaded from the app the link points to", () => {
+  it("signs off with the TAVI wordmark, loaded from the app the link points to", () => {
     const { html } = documentLinkEmail(base);
-    expect(html).toContain('src="https://tavi.example/icons/tavi-email-lockup.png"');
+    expect(html).toContain('src="https://tavi.example/icons/tavi-email-wordmark.png"');
     expect(html).toContain('alt="Tavi"');
   });
 });

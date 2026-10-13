@@ -24,6 +24,21 @@ describe("redact", () => {
     });
   });
 
+  // Error messages can carry text a visitor chose (a path, a header), so scrubbing
+  // them has to take time in proportion to their length, never to its square.
+  it("scrubs a long run of text with no credentials in it at once", () => {
+    const started = performance.now();
+    expect(redact({ message: "a".repeat(64_000) })).toEqual({ message: "a".repeat(64_000) });
+    expect(redact({ message: `a://b:${"c".repeat(64_000)}` })).toEqual({ message: `a://b:${"c".repeat(64_000)}` });
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
+  it("scrubs a connection string that follows a long run of letters", () => {
+    expect(redact({ message: `${"a".repeat(10)} postgres://u:p@h/db` })).toEqual({
+      message: `${"a".repeat(10)} postgres://[redacted]@h/db`,
+    });
+  });
+
   it("scrubs credentials out of connection strings inside any string", () => {
     const out = redact({ message: "connect failed: postgresql://tavi_owner:npg_secret@ep-x.neon.tech/tavi" });
     expect(out).toEqual({ message: "connect failed: postgresql://[redacted]@ep-x.neon.tech/tavi" });

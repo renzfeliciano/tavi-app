@@ -22,3 +22,14 @@ export function kindFromSegment(segment: string): CatalogItemKind | null {
 
 export const itemHref = (kind: CatalogItemKind, id: string) => `/catalog/${KIND_SEGMENT[kind]}/${id}` as Route;
 export const newItemHref = (kind: CatalogItemKind) => `/catalog/${KIND_SEGMENT[kind]}/new` as Route;
+
+/** The tabs on the catalog page, in the order of its title, Products & Services. */
+export const KIND_TABS: readonly CatalogItemKind[] = ["product", "service"];
+
+/**
+ * The tab the page opens on when the link doesn't name one: the first tab, unless the business has no products
+ * and does have services, so a business that sells only its time never lands on an empty tab.
+ */
+export function startingKind(counts: Record<CatalogItemKind, number>): CatalogItemKind {
+  return counts.product === 0 && counts.service > 0 ? "service" : KIND_TABS[0] ?? "product";
+}

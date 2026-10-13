@@ -3,26 +3,26 @@ import Link from "next/link";
 import { FilePlus2Icon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { SectionEmpty } from "@/components/app-shell/section-empty";
-import { DocumentNumber } from "@/components/document-number";
+import { DataTable } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
-import { ListPager, ListSearch, ListViews, listHref, pageParam } from "@/components/list-controls";
-import { DocumentRow } from "../../_documents/document-row";
-import { MissingCustomer } from "@/components/missing-customer";
-import { MoneyAmount } from "@/components/money-amount";
+import { keptSize, ListSearch, ListViews, listHref, pageParam, pagedHref, sizeParam } from "@/components/list-controls";
+import { ListPending, ListResults } from "@/components/list-pending";
+import { SummaryStrip } from "@/components/summary-strip";
 import { quoteStatusPresentation } from "@/components/status/presentation";
-import { StatusBadge } from "@/components/status/status-badge";
 import { buttonVariants } from "@/components/ui/button";
 import { requireOrgContext } from "@/modules/identity";
-import { listQuotes, QUOTE_STATUSES, type QuoteStatus } from "@/modules/quotes";
-import { formatCalendarDate } from "@/shared/dates/calendar";
+import { listQuotes, QUOTE_STATUSES, type QuoteStatus, quotePipeline } from "@/modules/quotes";
+import { parsePageSize } from "@/shared/pagination/page-window";
 import { normalizeSearch } from "@/shared/text/search";
+import { QuoteListSkeleton, quoteColumns, quoteSummary } from "../../_documents/document-list";
+import { quoteStrip } from "../../_documents/summary";
 
 export const metadata: Metadata = { title: "Quotes" };
 
 const isStatus = (value: unknown): value is QuoteStatus => QUOTE_STATUSES.includes(value as QuoteStatus);
 
-const quotesHref = (q: string | null, status: QuoteStatus | null, page?: number) =>
-  listHref("/quotes", { q, status: status?.toLowerCase(), page: page && page > 1 ? page : null });
+const quotesHref = (q: string | null, status: QuoteStatus | null, size: number) =>
+  listHref("/quotes", { q, status: status?.toLowerCase(), size: sizeParam(size) });
 
 export default async function QuotesPage({ searchParams }: PageProps<"/quotes">) {
   const ctx = await requireOrgContext();
@@ -31,8 +31,12 @@ export default async function QuotesPage({ searchParams }: PageProps<"/quotes">)
   const requested = String(params.status ?? "").toUpperCase();
   const status = isStatus(requested) ? requested : null;
   const page = pageParam(params.page);
-  const list = await listQuotes(ctx, { search, status: status ?? undefined, page });
+  const [list, pipeline] = await Promise.all([
+    listQuotes(ctx, { search, status: status ?? undefined, page, pageSize: parsePageSize(params.size) }),
+    quotePipeline(ctx),
+  ]);
   const { singular, plural } = ctx.market.documents.quote;
+  const strip = quoteStrip(pipeline, ctx.market.documents.quote, { locale: ctx.locale, currency: ctx.currency });
   const description = `Price out work, send it as a link, and get it approved.`;
   const newLabel = `New ${singular.toLowerCase()}`;
   const newQuote = (
@@ -63,64 +67,62 @@ export default async function QuotesPage({ searchParams }: PageProps<"/quotes">)
         actions={newQuote}
       />
 
-      <div className="mt-8 grid gap-3">
-        <ListSearch
-          action="/quotes"
-          label={`Search ${ctx.market.documents.quote.plural.toLowerCase()}`}
-          placeholder="Number or customer"
-          value={search}
-          keep={{ status: status?.toLowerCase() }}
-        />
-        <div className="-mx-4 overflow-x-auto px-4 pb-1">
-          <ListViews
-            label={`${ctx.market.documents.quote.plural} by status`}
-            views={[
-              { href: quotesHref(search, null), label: "All", current: status === null },
-              ...QUOTE_STATUSES.map((s) => ({
-                href: quotesHref(search, s),
-                label: quoteStatusPresentation[s].label,
-                current: status === s,
-              })),
-            ]}
+      <SummaryStrip label={`${singular} summary`} rows={strip} />
+
+      <ListPending>
+        <div className="mt-5 grid gap-3">
+          <ListSearch
+            action="/quotes"
+            label={`Search ${plural.toLowerCase()}`}
+            placeholder="Number or customer"
+            value={search}
+            keep={{ status: status?.toLowerCase(), size: keptSize(list.pageSize) }}
           />
+          <div className="-mx-4 overflow-x-auto px-4 pb-1">
+            <ListViews
+              label={`${plural} by status`}
+              views={[
+                { href: quotesHref(search, null, list.pageSize), label: "All", current: status === null },
+                ...QUOTE_STATUSES.map((s) => ({
+                  href: quotesHref(search, s, list.pageSize),
+                  label: quoteStatusPresentation[s].label,
+                  current: status === s,
+                })),
+              ]}
+            />
+          </div>
         </div>
-      </div>
 
-      <section aria-label={`${ctx.market.documents.quote.singular} list`} className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-        {list.quotes.length === 0 ? (
-          <EmptyState
-            title={search ? `No ${ctx.market.documents.quote.plural.toLowerCase()} match “${search}”` : `No ${ctx.market.documents.quote.plural.toLowerCase()} here`}
-            description={search ? "Try the number or the customer's name." : "Nothing has this status yet."}
-            action={
-              <Link href={quotesHref(null, null)} className={buttonVariants({ variant: "outline" })}>
-                Show all {ctx.market.documents.quote.plural.toLowerCase()}
-              </Link>
-            }
-          />
-        ) : (
-          <ul className="divide-y divide-border">
-            {list.quotes.map((quote) => (
-              <li key={quote.id}>
-                <DocumentRow
-                  href={`/quotes/${quote.id}` as Route}
-                  customer={quote.customerName ?? <MissingCustomer />}
-                  meta={
-                    <>
-                      {quote.number !== null && <DocumentNumber number={quote.number} />}
-                      {quote.revision > 1 && <span>Rev {quote.revision}</span>}
-                      <span>{formatCalendarDate(quote.issueDate, ctx.locale)}</span>
-                    </>
-                  }
-                  status={<StatusBadge kind="quote" status={quote.status} />}
-                  amount={<MoneyAmount amountMinor={quote.totalMinor} currency={quote.currency} locale={ctx.locale} />}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <ListPager page={list.page} hasMore={list.hasMore} hrefFor={(p) => quotesHref(search, status, p)} />
+        <ListResults label={`Loading ${plural.toLowerCase()}`} skeleton={<QuoteListSkeleton label={`${singular} list`} />}>
+          {list.quotes.length === 0 ? (
+            <section aria-label={`${singular} list`} className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+              <EmptyState
+                title={search ? `No ${plural.toLowerCase()} match “${search}”` : `No ${plural.toLowerCase()} here`}
+                description={search ? "Try the number or the customer's name." : "Nothing has this status yet."}
+                action={
+                  <Link href={quotesHref(null, null, list.pageSize)} className={buttonVariants({ variant: "outline" })}>
+                    Show all {plural.toLowerCase()}
+                  </Link>
+                }
+              />
+            </section>
+          ) : (
+            <DataTable
+              label={`${singular} list`}
+              columns={quoteColumns(ctx.locale)}
+              rows={list.quotes}
+              rowKey={(quote) => quote.id}
+              rowHref={(quote) => `/quotes/${quote.id}` as Route}
+              phoneSummary={quoteSummary(ctx.locale)}
+              controls={2}
+              strip
+              meta={list}
+              noun={{ singular: singular.toLowerCase(), plural: plural.toLowerCase() }}
+              hrefFor={pagedHref("/quotes", { q: search, status: status?.toLowerCase() }, list.pageSize)}
+            />
+          )}
+        </ListResults>
+      </ListPending>
     </>
   );
 }

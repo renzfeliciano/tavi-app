@@ -13,7 +13,7 @@ type AsyncComboboxProps<T> = {
   /** The chosen item, or null. Keep it controlled. */
   value: T | null;
   onValueChange: (value: T | null) => void;
-  /** Runs as the person types (and once when opened empty). */
+  /** Runs as the person types, and when the list opens showing results for something else. */
   search: (query: string) => Promise<T[]>;
   itemKey: (item: T) => string;
   itemLabel: (item: T) => string;
@@ -56,6 +56,12 @@ export function AsyncCombobox<T>({
   const [error, setError] = useState(false);
   const [pending, startTransition] = useTransition();
   const latest = useRef(0);
+  // What is typed right now, and what the current results were asked for. Typing
+  // changes the text and then opens the list in the same event, so the open
+  // handler can't read `query` (state is a render behind): it would search for the
+  // old text and replace the right results with the wrong ones.
+  const typed = useRef("");
+  const requested = useRef<string | null>(null);
 
   const items = useMemo(() => {
     if (!value || results.some((item) => itemKey(item) === itemKey(value))) return results;
@@ -63,17 +69,22 @@ export function AsyncCombobox<T>({
   }, [results, value, itemKey]);
 
   function runSearch(text: string) {
+    const asked = text.trim();
+    requested.current = asked;
     const request = ++latest.current;
     startTransition(async () => {
       try {
-        const found = await search(text.trim());
+        const found = await search(asked);
         if (request !== latest.current) return;
         startTransition(() => {
           setResults(found);
           setError(false);
         });
       } catch {
-        if (request === latest.current) setError(true);
+        if (request === latest.current) {
+          requested.current = null;
+          setError(true);
+        }
       }
     });
   }
@@ -95,13 +106,15 @@ export function AsyncCombobox<T>({
       filter={null}
       disabled={disabled}
       onOpenChange={(open) => {
-        if (open && results.length === 0) runSearch(query);
+        // Make sure the list shows what is in the box: everything when it is empty, the matches when not.
+        if (open && requested.current !== typed.current.trim()) runSearch(typed.current);
       }}
       onValueChange={(next) => {
         onValueChange(next);
         setQuery("");
       }}
       onInputValueChange={(next, { reason }) => {
+        typed.current = next;
         setQuery(next);
         // Search only when the person types or clears, not when a pick fills the input.
         if (reason !== "input-change" && reason !== "input-clear") return;

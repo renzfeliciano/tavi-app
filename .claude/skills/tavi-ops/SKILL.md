@@ -64,6 +64,8 @@ Never paste values into chat or commit them. `.env.local` is gitignored; `.env.e
 
 Run `npm audit --omit=dev` before each release. **Accepted (2026-09-30):** GHSA-67mh-4wv8-2f99 (moderate), an old `esbuild` under `drizzle-kit` (which `better-auth` also declares for its CLI). It affects esbuild's development server only, which TAVI never runs; `npm audit fix --force` would downgrade drizzle-kit and break migrations. Re-check when drizzle-kit or better-auth release updates.
 
+`next` is pinned to an exact version (currently 16.4.0, October 2026, which cleared six advisories including a high SSRF in image optimisation); upgrade it deliberately with `eslint-config-next`, then rerun the full suites. The other accepted advisories (all build-time tools) are recorded with dates in `docs/runbooks/security-checks.md`, which also holds the SonarQube, OWASP ZAP and Dependency-Check routine. CI runs `npm audit --omit=dev --audit-level=critical` (the `audit` job) and fails on a critical advisory; the high ones are reviewed by hand before each release.
+
 ## Deploy checklist
 
 First deploy, step by step: `docs/runbooks/production-deploy.md`.

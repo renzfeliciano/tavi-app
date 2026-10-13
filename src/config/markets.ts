@@ -35,6 +35,18 @@ export type MarketProfile = {
     /** Under the field, when the plain "Printed on your documents, e.g. {example}." isn't enough. */
     hint?: string;
   };
+  /**
+   * What an empty field shows ("e.g. 0917 123 4567"): believable values in this market's own formats, never a real
+   * person or number. Written without the "e.g.", which the form adds.
+   */
+  examples: {
+    person: string;
+    company: string;
+    business: string;
+    email: string;
+    phone: string;
+    address: { line1: string; line2: string; city: string; region: string; postalCode: string };
+  };
   /** Under "Business name": the name customers know the business by (PH: the trade name). */
   businessNameHint: string;
   registeredNameHint: string;
@@ -52,6 +64,8 @@ export type MarketProfile = {
   paymentMethodLabels: Record<PaymentMethod, string>;
   /** What each proof-of-payment field is called for each method (null: the method has no such field). */
   paymentDetailLabels: Record<PaymentMethod, PaymentDetailLabels>;
+  /** What each of those fields shows while empty (`institution` is null where the method has no such field). */
+  paymentDetailExamples: Record<PaymentMethod, { reference: string; institution: string | null; payer: string }>;
   /** The date printed on a cheque (it can be post-dated). */
   chequeDateLabel: string;
   /**
@@ -138,7 +152,7 @@ export type MarketProfile = {
    * price before tax; `taxExempt` sales also drop the tax.
    */
   qualifiedDiscounts: {
-    kinds: readonly { code: string; label: string; idLabel: string; rateBps: number; taxExempt: boolean }[];
+    kinds: readonly { code: string; label: string; idLabel: string; idExample: string; rateBps: number; taxExempt: boolean }[];
     /** Shown under the choice in the editor. */
     hint: string;
     /** Marks the kinds that also drop the tax, in the editor's list (PH: "VAT-exempt"). */
@@ -171,6 +185,8 @@ export type MarketProfile = {
     headOfficeSuffixes: readonly string[];
     taxRegisteredOnLabel: string;
     lineOfBusinessHint: string;
+    /** An example line of business for the empty field, without the "e.g." (PH: "Auto repair shop"). */
+    lineOfBusinessExample: string;
     industryCode: { label: string; hint: string; pattern: RegExp; example: string };
     /** Who registers the business name (PH: DTI for sole proprietors, SEC for corporations and partnerships, CDA for cooperatives). */
     nameRegistration: {
@@ -211,6 +227,11 @@ export type MarketProfile = {
   paymentTermsDays: number;
 };
 
+/** What an empty field shows in this market (see `MarketProfile.examples`). */
+export type MarketExamples = MarketProfile["examples"];
+/** What each payment-proof field shows while empty, per method (see `MarketProfile.paymentDetailExamples`). */
+export type PaymentDetailExamples = MarketProfile["paymentDetailExamples"];
+
 export const MARKETS = {
   PH: {
     country: "PH",
@@ -225,6 +246,14 @@ export const MARKETS = {
       pattern: /^\d{3}-?\d{3}-?\d{3}(-?\d{3,5})?$/,
       example: "123-456-789-00000",
       hint: "Printed on your documents, e.g. 123-456-789-00000. End it with your branch code: 00000 for the head office.",
+    },
+    examples: {
+      person: "Juan Dela Cruz",
+      company: "Reyes Hardware Trading",
+      business: "Dela Cruz Aircon Services",
+      email: "juan@example.com",
+      phone: "0917 123 4567",
+      address: { line1: "123 Rizal Street", line2: "Unit 4B, Barangay San Roque", city: "Quezon City", region: "Metro Manila", postalCode: "1100" },
     },
     businessNameHint: "Your trade name, as customers know you and as on your DTI certificate.",
     registeredNameHint: "The taxpayer name on your BIR Certificate of Registration. For a sole proprietor, that's your own name.",
@@ -253,6 +282,15 @@ export const MARKETS = {
       card: { reference: "Approval or reference no.", institution: "Card issuer or bank", payer: "Cardholder" },
       cheque: { reference: "Cheque no.", institution: "Bank on the cheque", payer: "Name on the cheque" },
       other: { reference: "Reference no.", institution: "Bank or wallet", payer: "Paid by" },
+    },
+    paymentDetailExamples: {
+      bank_transfer: { reference: "4012 8830 1127", institution: "BDO", payer: "Juan Dela Cruz" },
+      ewallet: { reference: "1234 567 890123", institution: "GCash", payer: "0917 123 4567" },
+      bank_deposit: { reference: "0045812", institution: "BPI", payer: "Juan Dela Cruz" },
+      cash: { reference: "1042", institution: null, payer: "Juan Dela Cruz" },
+      card: { reference: "A12345", institution: "BDO Visa", payer: "Juan Dela Cruz" },
+      cheque: { reference: "0012345", institution: "Metrobank", payer: "Juan Dela Cruz" },
+      other: { reference: "12345", institution: "Maya", payer: "Juan Dela Cruz" },
     },
     chequeDateLabel: "Date on the cheque",
     taxWithheld: {
@@ -320,15 +358,15 @@ export const MARKETS = {
       // as read by the founder (D19). Not legal advice.
       kinds: [
         // RA 9994 (Expanded Senior Citizens Act), RR 7-2010: 20% and VAT-exempt.
-        { code: "senior_citizen", label: "Senior citizen", idLabel: "OSCA / SC ID No.", rateBps: 2000, taxExempt: true },
+        { code: "senior_citizen", label: "Senior citizen", idLabel: "OSCA / SC ID No.", idExample: "123456", rateBps: 2000, taxExempt: true },
         // RA 10754 (PWD benefits), RR 5-2017: 20% and VAT-exempt.
-        { code: "pwd", label: "Person with disability", idLabel: "PWD ID No.", rateBps: 2000, taxExempt: true },
+        { code: "pwd", label: "Person with disability", idLabel: "PWD ID No.", idExample: "123456", rateBps: 2000, taxExempt: true },
         // RA 11861 (Expanded Solo Parents Welfare Act), RR 1-2023: 10% and VAT-exempt.
-        { code: "solo_parent", label: "Solo parent", idLabel: "Solo Parent ID No.", rateBps: 1000, taxExempt: true },
+        { code: "solo_parent", label: "Solo parent", idLabel: "Solo Parent ID No.", idExample: "123456", rateBps: 1000, taxExempt: true },
         // RA 10699 (National Athletes and Coaches), RR 13-2020: 20%; VAT stays on the full price.
-        { code: "naac", label: "National athlete or coach", idLabel: "PNSTM ID No.", rateBps: 2000, taxExempt: false },
+        { code: "naac", label: "National athlete or coach", idLabel: "PNSTM ID No.", idExample: "123456", rateBps: 2000, taxExempt: false },
         // RA 9049 (Medal of Valor awardees and dependents): 20%; no VAT exemption in the law.
-        { code: "mov", label: "Medal of Valor awardee", idLabel: "MOV ID No.", rateBps: 2000, taxExempt: false },
+        { code: "mov", label: "Medal of Valor awardee", idLabel: "MOV ID No.", idExample: "123456", rateBps: 2000, taxExempt: false },
       ],
       hint: "For a buyer the law entitles to a discount. It applies to every item, on the price before VAT; senior citizens, PWDs and solo parents also don't pay VAT. Only for goods and services the law covers.",
       taxExemptLabel: "VAT-exempt",
@@ -368,6 +406,7 @@ export const MARKETS = {
       headOfficeSuffixes: ["00000", "000"],
       taxRegisteredOnLabel: "Registered with the BIR on",
       lineOfBusinessHint: "As on your COR, e.g. Auto repair shop.",
+      lineOfBusinessExample: "Auto repair shop",
       industryCode: {
         label: "PSIC code",
         hint: "The industry code on your COR, e.g. 45209.",

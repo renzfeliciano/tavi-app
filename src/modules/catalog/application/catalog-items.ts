@@ -3,8 +3,9 @@ import { z } from "zod";
 import { type Database, type Executor, getDb, isUniqueViolation } from "@/db";
 import { type AuditAction, recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
+import { type PageMeta, pageMeta, pageWindow } from "@/shared/pagination/page-window";
 import { escapeLikePattern } from "@/shared/text/search";
-import { CATALOG_PAGE_SIZE, type CatalogItemKind, catalogItemSchemaFor } from "../domain/catalog-item";
+import { type CatalogItemKind, catalogItemSchemaFor } from "../domain/catalog-item";
 import { products, services, taxRates } from "../schema";
 
 // Products and services share one set of use cases (D8: two tables, one
@@ -18,7 +19,8 @@ export type CatalogItem = {
   description: string | null;
   sku: string | null;
   unitLabel: string;
-  unitPriceMinor: number;
+  /** Null when the price isn't known yet. */
+  unitPriceMinor: number | null;
   currency: string;
   taxRateId: string | null;
   archivedAt: Date | null;
@@ -28,8 +30,9 @@ export type CatalogItem = {
 export type LineSource = Omit<CatalogItem, "archivedAt">;
 
 export type CatalogStatus = "active" | "archived";
-export type ListCatalogItemsOptions = { search?: string | null; status?: CatalogStatus; page?: number };
-export type CatalogItemList = { items: CatalogItem[]; page: number; hasMore: boolean; archivedCount: number };
+export type ListCatalogItemsOptions = { search?: string | null; status?: CatalogStatus; page?: number; pageSize?: number };
+/** `total` is every item of the kind in the status being viewed; `matching` (in the page meta) follows the search. */
+export type CatalogItemList = PageMeta & { items: CatalogItem[]; total: number; archivedCount: number };
 
 /** How typed input is read: the business's locale and its market's default units. */
 /** The business's locale, and the market's units (`market.units`): with `options`, items must use one. */
@@ -87,32 +90,36 @@ function searchCondition(kind: CatalogItemKind, search: string | null | undefine
 export async function listCatalogItems(
   actor: OrgActor,
   kind: CatalogItemKind,
-  { search = null, status = "active", page = 1 }: ListCatalogItemsOptions,
+  { search = null, status = "active", page = 1, pageSize }: ListCatalogItemsOptions,
   db: Database = getDb(),
 ): Promise<CatalogItemList> {
   assertCan(actor, "catalog.read");
   const t = TABLES[kind];
-  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
   const statusFilter = status === "archived" ? isNotNull(t.archivedAt) : isNull(t.archivedAt);
+  const inStatus = and(ofOrganization(kind, actor), statusFilter);
+  const where = and(inStatus, searchCondition(kind, search));
 
-  const [rows, [archived]] = await Promise.all([
-    db
-      .select(columnsOf(kind))
-      .from(t)
-      .where(and(ofOrganization(kind, actor), statusFilter, searchCondition(kind, search)))
-      .orderBy(asc(sql`lower(${t.name})`), asc(t.id))
-      .limit(CATALOG_PAGE_SIZE + 1)
-      .offset((safePage - 1) * CATALOG_PAGE_SIZE),
+  const [[matching], [total], [archived]] = await Promise.all([
+    db.select({ value: count() }).from(t).where(where),
+    db.select({ value: count() }).from(t).where(inStatus),
     db
       .select({ value: count() })
       .from(t)
       .where(and(ofOrganization(kind, actor), isNotNull(t.archivedAt))),
   ]);
+  const window = pageWindow({ page, pageSize, matching: matching?.value ?? 0 });
+  const rows = await db
+    .select(columnsOf(kind))
+    .from(t)
+    .where(where)
+    .orderBy(asc(sql`lower(${t.name})`), asc(t.id))
+    .limit(window.pageSize)
+    .offset(window.offset);
 
   return {
-    items: rows.slice(0, CATALOG_PAGE_SIZE).map((row) => withKind(kind, row)),
-    page: safePage,
-    hasMore: rows.length > CATALOG_PAGE_SIZE,
+    items: rows.map((row) => withKind(kind, row)),
+    ...pageMeta(window),
+    total: total?.value ?? 0,
     archivedCount: archived?.value ?? 0,
   };
 }

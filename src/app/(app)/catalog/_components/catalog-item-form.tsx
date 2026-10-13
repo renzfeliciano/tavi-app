@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { UnitOptions } from "@/components/unit-options";
 import type { CurrencyOption } from "@/config/currencies";
 import { CATALOG_ITEM_LIMITS as LIMITS, type CatalogItemKind } from "@/modules/catalog/client";
+import { eg } from "@/shared/text/example";
 import { type CatalogFormState, type CatalogFormValues, saveCatalogItem } from "../actions";
 import { itemHref, KIND_LABEL } from "../_lib/kinds";
 
@@ -22,6 +23,8 @@ export type CatalogItemFormCopy = {
   units: readonly string[];
   /** An example price in the business's format, e.g. "1,250.50". */
   pricePlaceholder: string;
+  /** An example name for each kind, from the business's category (e.g. "Aircon deep cleaning"). */
+  nameExamples: Record<CatalogItemKind, string>;
   /** Whether prices are entered with tax included (from Settings). */
   taxModeHint: string;
   currencies: CurrencyOption[];
@@ -69,7 +72,15 @@ export function CatalogItemForm({ kind, itemId, initialValues, copy }: CatalogIt
       <div key={state.submission} className="grid gap-8">
         <FormSection title={label.title} description="How it appears on your documents.">
           <FormField name="name" label="Name" error={error("name")} className="sm:col-span-2">
-            {(p) => <Input {...p} defaultValue={v.name} maxLength={LIMITS.name} autoFocus={!itemId} />}
+            {(p) => (
+              <Input
+                {...p}
+                defaultValue={v.name}
+                maxLength={LIMITS.name}
+                placeholder={eg(copy.nameExamples[kind])}
+                autoFocus={!itemId}
+              />
+            )}
           </FormField>
           <FormField
             name="description"
@@ -79,19 +90,40 @@ export function CatalogItemForm({ kind, itemId, initialValues, copy }: CatalogIt
             error={error("description")}
             className="sm:col-span-2"
           >
-            {(p) => <Textarea {...p} defaultValue={v.description} maxLength={LIMITS.description} rows={2} />}
+            {(p) => (
+              <Textarea
+                {...p}
+                defaultValue={v.description}
+                maxLength={LIMITS.description}
+                rows={2}
+                placeholder="e.g. Includes parts and a 30-day warranty."
+              />
+            )}
           </FormField>
           {kind === "product" && (
             <FormField name="sku" label="SKU" optional hint="Your own code for it, if you use one." error={error("sku")}>
               {(p) => (
-                <Input {...p} defaultValue={v.sku} maxLength={LIMITS.sku} spellCheck={false} className="font-mono" />
+                <Input
+                  {...p}
+                  defaultValue={v.sku}
+                  maxLength={LIMITS.sku}
+                  placeholder={eg("FLT-001")}
+                  spellCheck={false}
+                  className="font-mono"
+                />
               )}
             </FormField>
           )}
         </FormSection>
 
         <FormSection title="Price" description={copy.taxModeHint}>
-          <FormField name="unitPrice" label="Price per unit" error={error("unitPrice")}>
+          <FormField
+            name="unitPrice"
+            label="Price per unit"
+            optional
+            hint="Leave it blank if you don't know it yet. You can type the price on the line when you add it."
+            error={error("unitPrice")}
+          >
             {(p) => (
               <Input
                 {...p}

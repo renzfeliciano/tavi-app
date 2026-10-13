@@ -13,7 +13,8 @@ export type LineSourceChoice = {
   description: string | null;
   sku: string | null;
   unitLabel: string;
-  unitPriceMinor: number;
+  /** Null when the item has no price yet; the line is then priced by hand. */
+  unitPriceMinor: number | null;
   currency: string;
   taxRateId: string | null;
 };

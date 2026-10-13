@@ -33,6 +33,8 @@ export default async function BusinessProfilePage() {
   // Everything country-specific comes from the business's market profile.
   const copy: BusinessProfileCopy = {
     taxIdLabel: market.taxId.label,
+    taxIdExample: market.taxId.example,
+    examples: market.examples,
     taxIdHint: market.taxId.hint ?? `Printed on your documents, e.g. ${market.taxId.example}.`,
     taxRegistrations: market.taxRegistrations.map(({ code, label }) => ({ code, label })),
     taxRegistrationHint: market.taxRegistrationHint,

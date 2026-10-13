@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { asVisitor, createBusiness, signUp, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, createBusiness, signUp, strongPassword, tableRows, uniqueEmail } from "./helpers";
 
 // One fresh business adding and managing customers. Desktop only (see
 // ACCOUNT_CREATING_SPECS in playwright.config.ts): sign-up is rate limited per IP.
@@ -12,7 +12,7 @@ let page: Page;
 const axe = (p: Page) =>
   new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
 const toast = (text: string) => page.locator("[data-sonner-toast]").filter({ hasText: text });
-const list = () => page.getByRole("region", { name: "Customer list" });
+const list = () => tableRows(page, "Customer list");
 
 test.beforeAll(async ({ browser }) => {
   page = await (await browser.newContext()).newPage();
@@ -71,20 +71,20 @@ test("the list shows customers and finds them by company, email or phone", async
   await expect(toast("Ana Reyes added.")).toBeVisible();
 
   await page.goto("/customers");
-  await expect(list().getByRole("link")).toHaveText([/Ana Reyes/, /Juan Dela Cruz.*Dela Cruz Bakery/]);
+  await expect(list()).toHaveText([/Ana Reyes/, /Juan Dela Cruz.*Dela Cruz Bakery/]);
   expect((await axe(page)).violations).toEqual([]);
 
   const search = page.getByRole("searchbox", { name: "Search customers" });
   await search.fill("bakery");
   await search.press("Enter");
   await expect(page).toHaveURL(/\?q=bakery$/);
-  await expect(list().getByRole("link")).toHaveText([/Juan Dela Cruz/]);
+  await expect(list()).toHaveText([/Juan Dela Cruz/]);
 
   await search.fill("nobody here");
   await search.press("Enter");
   await expect(page.getByRole("heading", { name: "No customers match “nobody here”" })).toBeVisible();
   await page.getByRole("link", { name: "Clear search" }).click();
-  await expect(list().getByRole("link")).toHaveCount(2);
+  await expect(list()).toHaveCount(2);
 });
 
 test("archiving hides a customer, can be undone, and archived customers can be restored", async () => {
@@ -99,9 +99,9 @@ test("archiving hides a customer, can be undone, and archived customers can be r
   await expect(page.getByText("Archived. Restore to quote or bill them again.")).toBeVisible();
 
   await page.goto("/customers");
-  await expect(list().getByRole("link")).toHaveText([/Juan Dela Cruz/]);
+  await expect(list()).toHaveText([/Juan Dela Cruz/]);
   await page.getByRole("link", { name: "Archived (1)" }).click();
-  await expect(list().getByRole("link")).toHaveText([/Ana Reyes/]);
+  await expect(list()).toHaveText([/Ana Reyes/]);
 
   await list().getByRole("link", { name: /Ana Reyes/ }).click();
   await page.getByRole("button", { name: "Restore" }).click();

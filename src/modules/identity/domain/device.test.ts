@@ -24,6 +24,16 @@ describe("describeDevice", () => {
     expect(describeDevice(userAgent)).toBe(label);
   });
 
+  // The user agent is whatever the browser (or a script) sent, up to the header limit,
+  // and it is stored with the session. Labelling it must take the same time however
+  // long it is, or a crafted header could stall the devices page.
+  it("labels a huge, hostile user agent at once", () => {
+    const hostile = `Version/${"1".repeat(64_000)}`;
+    const started = performance.now();
+    expect(describeDevice(hostile)).toBe("Unknown browser");
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
   it("falls back gracefully for unknown or missing agents", () => {
     expect(describeDevice(null)).toBe("Unknown device");
     expect(describeDevice("curl/8.9.1")).toBe("Unknown browser");

@@ -7,6 +7,8 @@ import type { CustomerFormCopy } from "./customer-form";
 export function customerFormCopy(ctx: OrgContext): CustomerFormCopy {
   return {
     taxIdLabel: ctx.market.taxId.label,
+    taxIdExample: ctx.market.taxId.example,
+    examples: ctx.market.examples,
     documents: documentWording(ctx.market).quotesAndInvoices,
     address: ctx.market.address,
     businessCurrency: ctx.currency,

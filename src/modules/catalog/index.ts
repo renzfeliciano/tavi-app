@@ -38,7 +38,6 @@ export {
   CATALOG_ITEM_FIELDS,
   CATALOG_ITEM_KINDS,
   CATALOG_ITEM_LIMITS,
-  CATALOG_PAGE_SIZE,
   type CatalogItemKind,
   examplePrice,
 } from "./domain/catalog-item";

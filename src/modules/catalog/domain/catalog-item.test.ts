@@ -39,6 +39,25 @@ describe("catalogItemSchemaFor", () => {
     expect(product.safeParse({ ...valid, unitPrice: "10.5", currency: "JPY" }).success).toBe(false);
   });
 
+  it("accepts an item with no price yet, for when the owner doesn't know it", () => {
+    for (const blank of ["", "   "]) {
+      expect(product.parse({ ...valid, unitPrice: blank }).unitPriceMinor).toBeNull();
+      expect(service.parse({ ...valid, unitPrice: blank }).unitPriceMinor).toBeNull();
+    }
+  });
+
+  it("still needs the rest of an item when the price is left out", () => {
+    const result = product.safeParse({ ...valid, name: "", unitPrice: "", currency: "XYZ" });
+    expect(result.error?.flatten().fieldErrors).toEqual({
+      name: ["Enter a name."],
+      currency: ["Choose a currency."],
+    });
+  });
+
+  it("treats a free item as priced at zero, not as unpriced", () => {
+    expect(product.parse({ ...valid, unitPrice: "0" }).unitPriceMinor).toBe(0);
+  });
+
   it("keeps a chosen default tax rate", () => {
     const id = "01890000-0000-7000-8000-000000000000";
     expect(product.parse({ ...valid, taxRateId: id }).taxRateId).toBe(id);

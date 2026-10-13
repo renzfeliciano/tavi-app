@@ -149,6 +149,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
           customerEmail={invoice.customerSnapshot?.email ?? null}
           methodLabels={ctx.market.paymentMethodLabels}
           detailLabels={ctx.market.paymentDetailLabels}
+          detailExamples={ctx.market.paymentDetailExamples}
           chequeDateLabel={ctx.market.chequeDateLabel}
           taxWithheld={ctx.market.taxWithheld}
           receiptTitle={ctx.market.documents.receipt.singular}

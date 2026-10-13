@@ -157,8 +157,8 @@ describe("sidebar", () => {
       expect.stringContaining("New quotation"),
       expect.stringContaining("New billing statement"),
       expect.stringContaining("Add customer"),
-      expect.stringContaining("Service"),
       expect.stringContaining("Product"),
+      expect.stringContaining("Service"),
     ]);
   });
 

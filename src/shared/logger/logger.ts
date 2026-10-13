@@ -9,7 +9,9 @@ export type LogFields = Record<string, unknown>;
 const LEVEL_ORDER: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };
 
 const SENSITIVE_KEY = /pass(word)?|secret|token|authorization|cookie|api[-_]?key|credential|signature/i;
-const URL_CREDENTIALS = /([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi;
+// The look-behind makes a scheme start only where a run of letters begins, so a long run
+// of text is read once, not once from every letter in it (quadratic time on hostile input).
+const URL_CREDENTIALS = /(?<![a-z0-9+.-])([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi;
 const REDACTED = "[redacted]";
 
 function scrub(value: string): string {

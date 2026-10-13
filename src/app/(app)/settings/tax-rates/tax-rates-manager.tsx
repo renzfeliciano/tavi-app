@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { TAX_RATE_LIMITS } from "@/modules/catalog/client";
+import { eg } from "@/shared/text/example";
 import {
   archiveTaxRateAction,
   makeDefaultTaxRate,
@@ -285,7 +286,15 @@ function TaxRateForm({
         {editing.mode === "edit" && <input type="hidden" name="id" value={editing.row.id} />}
         <div key={state.submission} className="grid gap-4">
           <FormField name="name" label="Name" hint={example ? `Shown on documents, e.g. ${example.name}.` : "Shown on documents."} error={state.fieldErrors?.name?.[0]}>
-            {(p) => <Input {...p} defaultValue={values.name} maxLength={TAX_RATE_LIMITS.name} autoFocus />}
+            {(p) => (
+              <Input
+                {...p}
+                defaultValue={values.name}
+                maxLength={TAX_RATE_LIMITS.name}
+                placeholder={eg(example?.name ?? "Sales tax")}
+                autoFocus
+              />
+            )}
           </FormField>
           <FormField name="rate" label="Rate" error={state.fieldErrors?.rate?.[0]}>
             {(p) => (
@@ -295,6 +304,7 @@ function TaxRateForm({
                   defaultValue={values.rate}
                   inputMode="decimal"
                   maxLength={TAX_RATE_LIMITS.rateInput}
+                  placeholder={eg(example?.rateInput ?? "5")}
                   className="w-28 font-mono tabular-nums"
                 />
                 <span className="text-sm text-muted-foreground">%</span>

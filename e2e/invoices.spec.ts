@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { asVisitor, createBusiness, markEmailVerified, signUp, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, createBusiness, markEmailVerified, signUp, strongPassword, tableRows, uniqueEmail } from "./helpers";
 
 // One fresh business billing its work: an approved quote becomes a billing
 // statement, which is sent as a link and opened by the customer; and a
@@ -140,7 +140,7 @@ test("a billing statement written from scratch can be emailed, and a draft delet
   await page.getByRole("dialog").getByRole("button", { name: "Delete draft" }).click();
   await expect(toast("Draft deleted.")).toBeVisible();
   await expect(page).toHaveURL(/\/invoices$/);
-  await expect(page.getByRole("region", { name: "Billing statement list" }).getByRole("listitem")).toHaveCount(2);
+  await expect(tableRows(page, "Billing statement list")).toHaveCount(2);
 });
 
 test("a sent statement can be edited before payment; the customer's link shows the update", async ({ browser }) => {
@@ -162,9 +162,35 @@ test("a sent statement can be edited before payment; the customer's link shows t
   await customer.context().close();
 });
 
+test("a sent statement's header isn't crowded at a zoomed laptop width: one-line title, one row of matching buttons", async () => {
+  await page.setViewportSize({ width: 1152, height: 720 });
+  try {
+    await page.goto(invoiceUrl);
+    const title = page.getByRole("heading", { level: 1, name: "Billing statement INV-000001" });
+    await expect(title).toBeVisible();
+    // text-3xl is 36px a line: a title squeezed by its buttons wraps to two.
+    expect((await title.boundingBox())?.height).toBeLessThan(48);
+
+    const row = ["Download PDF", "Copy link", "Remind", "Edit", "More actions"];
+    const tops = [];
+    for (const name of row) {
+      const control = page.getByRole(name === "Download PDF" || name === "Edit" ? "link" : "button", { name });
+      tops.push(Math.round((await control.boundingBox())?.y ?? -1));
+      // Links styled as buttons keep their border like the buttons beside them.
+      await expect(control).not.toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
+    }
+    expect(new Set(tops).size).toBe(1);
+  } finally {
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
+});
+
 test("void and duplicate asks for a reason, voids it, and opens a corrected draft", async () => {
   await page.goto(invoiceUrl);
-  await page.getByRole("button", { name: "Void and duplicate" }).click();
+  // Void, cancel and void-and-duplicate sit behind one More actions button; the everyday ones stay in the row.
+  await expect(page.getByRole("button", { name: "Void and duplicate" })).toHaveCount(0);
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Void and duplicate" }).click();
   const dialog = page.getByRole("dialog", { name: /^Void and duplicate Billing statement INV-000001\?/ });
   await dialog.getByRole("button", { name: "Void and duplicate" }).click();
   await expect(dialog.getByText("Give a reason. It's kept with the record.")).toBeVisible();
@@ -177,7 +203,7 @@ test("void and duplicate asks for a reason, voids it, and opens a corrected draf
   await page.goto(invoiceUrl);
   await expect(page.getByText("Void", { exact: true }).first()).toBeVisible();
   await expect(page.getByText(/^Voided .*: Wrong unit price$/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Void and duplicate" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "More actions" })).toHaveCount(0);
 });
 
 test("recording payments part-pays, then pays in full with tax withheld, and the customer sees them", async ({ browser }) => {
@@ -188,6 +214,15 @@ test("recording payments part-pays, then pays in full with tax withheld, and the
   await page.getByRole("button", { name: "Record payment" }).click();
   let dialog = page.getByRole("dialog", { name: "Record a payment" });
   await expect(dialog.getByLabel("Amount received (PHP)")).toHaveValue("2,000.00");
+  // Wide enough for two columns whose long labels ("Sender (name or account)") stay on one line,
+  // so the boxes beside each other line up. On a phone it is one column and a bottom sheet.
+  if ((page.viewportSize()?.width ?? 0) >= 640) {
+    await expect.poll(async () => (await dialog.boundingBox())?.width ?? 0).toBeGreaterThan(600);
+    // (The card is still zooming in at first, so wait until the two boxes sit at the same height.)
+    await expect
+      .poll(async () => Math.abs(((await dialog.getByLabel(/^Bank/).boundingBox())?.y ?? 0) - ((await dialog.getByLabel(/^Sender/).boundingBox())?.y ?? 99)))
+      .toBeLessThan(1);
+  }
   await dialog.getByLabel("Amount received (PHP)").fill("500");
   await dialog.getByLabel("Method").selectOption({ label: "GCash or Maya" });
   await dialog.getByLabel(/^Reference/).fill("GC-123");
@@ -219,7 +254,9 @@ test("recording payments part-pays, then pays in full with tax withheld, and the
   await dialog.getByLabel("Amount received (PHP)").fill("1,470");
   await dialog.getByLabel("Tax withheld (BIR Form 2307)").fill("30");
   await dialog.getByRole("button", { name: "Record payment" }).click();
-  await expect(toast("Payment recorded on Billing statement INV-000002.")).toBeVisible();
+  // The first payment's toast can still be on screen (a fast build records the second within its
+  // five seconds), so the newest one, which sits in front, is the one to look for.
+  await expect(toast("Payment recorded on Billing statement INV-000002.").first()).toBeVisible();
   await expect(page.getByText("Paid", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("region", { name: "Payments" }).or(page.getByText("Paid in full.")).first()).toBeVisible();
 
@@ -255,7 +292,7 @@ test("a payment acknowledgement carries the notice, and voiding a payment reopen
   await expect(page.getByText("Voided: Transfer bounced")).toBeVisible();
 
   await page.goto("/payments");
-  await expect(page.getByRole("region", { name: "Payment list" }).getByRole("listitem")).toHaveCount(2);
+  await expect(tableRows(page, "Payment list")).toHaveCount(2);
 });
 
 test("PDFs download for the business and, through the link, for the customer", async ({ browser }) => {
@@ -298,10 +335,63 @@ test("the dashboard shows money, what needs attention, and recent activity", asy
   await expect(money.getByText("Outstanding")).toBeVisible();
   await expect(money).toContainText("₱1,500.00");
   await expect(money.getByText("Paid in the last 30 days")).toBeVisible();
+  // Each tile opens the list behind its number.
+  await expect(money.getByRole("link", { name: /^Outstanding/ })).toHaveAttribute("href", "/invoices");
+  await expect(money.getByRole("link", { name: /^Overdue/ })).toHaveAttribute("href", "/invoices?status=overdue");
+  await expect(money.getByRole("link", { name: /^Paid in the last 30 days/ })).toHaveAttribute("href", "/payments");
   await expect(page.getByRole("heading", { name: "Needs your attention" })).toBeVisible();
+  // Where the work stands: a row per document, each stage a link to its list.
+  const pipeline = page.getByRole("region", { name: "Pipeline" });
+  await expect(pipeline.getByRole("group", { name: "Quotations" }).getByRole("link", { name: /^Approved/ })).toHaveAttribute("href", "/quotes?status=approved");
+  await expect(pipeline.getByRole("group", { name: "Billing statements" }).getByRole("link", { name: /^Overdue/ })).toHaveAttribute("href", "/invoices?status=overdue");
   const activity = page.getByRole("heading", { name: "Recent activity" }).locator("..");
+  await expect(activity.getByRole("heading", { level: 3, name: "Today" })).toBeVisible();
   await expect(activity.getByRole("link", { name: "Payment REC-000002 voided on Billing statement INV-000002" })).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("the lists open with a strip of figures, each opening the tab it counts", async () => {
+  await page.goto("/invoices");
+  const statements = page.getByRole("region", { name: "Billing statement summary" });
+  await expect(statements).toContainText("₱1,500.00");
+  await expect(statements.getByRole("link", { name: /^Outstanding/ })).toHaveAttribute("href", "/invoices");
+  await expect(statements.getByRole("link", { name: /^Overdue/ })).toHaveAttribute("href", "/invoices?status=overdue");
+  await expect(statements.getByRole("link", { name: /^Drafts/ })).toHaveAttribute("href", "/invoices?status=draft");
+
+  await page.goto("/quotes");
+  const quotes = page.getByRole("region", { name: "Quotation summary" });
+  await expect(quotes.getByRole("link", { name: /^Approved/ })).toHaveAttribute("href", "/quotes?status=approved");
+  await expect(quotes.getByRole("link", { name: /^Viewed/ })).toHaveAttribute("href", "/quotes?status=viewed");
+
+  await page.goto("/payments");
+  const payments = page.getByRole("region", { name: "Payment summary" });
+  for (const window of ["Today", "Last 7 days", "Last 30 days"]) await expect(payments.getByText(window, { exact: true })).toBeVisible();
+  await expect(payments).toContainText("₱");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a strip pushes the table down but the skeleton already holds its place: nothing moves when the rows arrive", async () => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/invoices");
+  const list = page.getByRole("region", { name: "Billing statement list" });
+  await expect(list).toBeVisible();
+  const settled = await list.boundingBox();
+  let slow = true;
+  await page.route("**/invoices**", async (route) => {
+    if (slow && route.request().headers().rsc === "1") await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+  await page.getByRole("searchbox", { name: /^Search/ }).fill("Juan");
+  await page.keyboard.press("Enter");
+  const skeleton = page.getByRole("status").filter({ hasText: "Loading billing statements" });
+  await expect(skeleton).toBeVisible();
+  const waiting = await skeleton.boundingBox();
+  await expect(skeleton).toBeHidden();
+  slow = false;
+  const arrived = await page.getByRole("region", { name: "Billing statement list" }).boundingBox();
+  if (!settled || !waiting || !arrived) throw new Error("not on screen");
+  expect(Math.abs(waiting.y - settled.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(waiting.y - arrived.y)).toBeLessThanOrEqual(8);
 });
 
 test("reports total the period's sales and payments, age what's unpaid, and download as CSV", async () => {
@@ -397,7 +487,11 @@ test("the next bill is a Service Invoice numbered inside the series, with the re
   await expect(paper).toContainText("VAT-exempt sale");
   // Registered invoices are locked once issued (RMC 98-2026 Sec. IV.8, D14).
   await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Void and duplicate" })).toBeVisible();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await expect(page.getByRole("menuitem", { name: "Void and duplicate" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  // Axe runs once the menu has left the page: while it is closing, its focus guards are still there.
+  await expect(page.getByRole("menuitem", { name: "Void and duplicate" })).toBeHidden();
   expect((await registeredAxe(page)).violations).toEqual([]);
 
   await page.goto(`${registeredUrl}/edit`);

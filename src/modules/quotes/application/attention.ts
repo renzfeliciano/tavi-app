@@ -1,8 +1,9 @@
-import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { type Database, getDb } from "@/db";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import { getCustomerNames } from "@/modules/customers";
 import type { CalendarDate } from "@/shared/dates/calendar";
+import { type PipelineStage, stageFrom } from "@/shared/pipeline/stage";
 import type { QuoteStatus } from "../domain/status";
 import { quotes } from "../schema";
 
@@ -120,4 +121,35 @@ export async function countDraftQuotes(actor: OrgActor, db: Database = getDb()):
     .from(quotes)
     .where(and(eq(quotes.organizationId, actor.organizationId), eq(quotes.status, "DRAFT")));
   return row?.total ?? 0;
+}
+
+export type QuotePipeline = { drafts: PipelineStage; sent: PipelineStage; viewed: PipelineStage; approved: PipelineStage };
+
+/**
+ * Where the business's quotations stand: drafts, sent (not opened yet), viewed (opened, no answer) and approved
+ * and waiting to be billed, each with what it is worth per currency. An approval that was already billed is past
+ * this pipeline, so it isn't counted.
+ */
+export async function quotePipeline(actor: OrgActor, db: Database = getDb()): Promise<QuotePipeline> {
+  assertCan(actor, "quotes.read");
+  const rows = await db
+    .select({
+      status: quotes.status,
+      currency: quotes.currency,
+      count: sql<number>`count(*)::int`.mapWith(Number),
+      totalMinor: sql<number>`coalesce(sum(${quotes.totalMinor}), 0)::bigint`.mapWith(Number),
+    })
+    .from(quotes)
+    .where(
+      and(
+        eq(quotes.organizationId, actor.organizationId),
+        or(
+          inArray(quotes.status, ["DRAFT", "SENT", "VIEWED"]),
+          and(eq(quotes.status, "APPROVED"), isNull(quotes.convertedInvoiceId)),
+        ),
+      ),
+    )
+    .groupBy(quotes.status, quotes.currency);
+  const stage = (status: QuoteStatus) => stageFrom(rows.filter((row) => row.status === status));
+  return { drafts: stage("DRAFT"), sent: stage("SENT"), viewed: stage("VIEWED"), approved: stage("APPROVED") };
 }

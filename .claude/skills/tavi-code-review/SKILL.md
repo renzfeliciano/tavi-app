@@ -20,8 +20,9 @@ A change is done when all of these hold (or are explicitly not applicable):
 - [ ] **Accessibility:** axe clean in E2E; labels, focus, icon + text for status.
 - [ ] **Money:** minor units, one calculation function, `MoneyAmount`; no floats.
 - [ ] **Audit:** important actions recorded in the same transaction; emails via the outbox.
-- [ ] **Security:** threat-model checklist (`tavi-auth-security`) run for sensitive changes; no secrets in code, logs or chat.
+- [ ] **Security:** threat-model checklist (`tavi-auth-security`) run for sensitive changes; no secrets in code, logs or chat. New page folders are in `PROTECTED_PREFIXES`; mail sent for a person needs `emailVerified`; regular expressions on stranger-controlled text run in linear time.
 - [ ] **Performance:** no N+1; paginated lists; indexes for new filters.
+- [ ] **Data tables** (`CLAUDE.md` standing rule): fixed-height panel with inner vertical scroll and sticky header; `?page=` pagination, `?size=` page size, item count, debounced search, throttled requests.
 - [ ] **Tests:** written first; unit/integration/E2E as `tavi-testing` requires; all green.
 - [ ] **Design system:** tokens only; `DESIGN.md` + `/dev/design` updated for new patterns.
 - [ ] **Docs:** decision log / "As built" notes in the proposal, `CLAUDE.md` rules, `.env.example` for new variables.

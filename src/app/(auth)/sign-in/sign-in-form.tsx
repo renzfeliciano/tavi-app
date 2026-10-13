@@ -46,7 +46,7 @@ export function SignInForm({ next }: { next?: Route } = {}) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-5">
+    <form method="post" onSubmit={onSubmit} className="grid gap-5">
       <FormAlert message={error} />
       <Field>
         <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -57,7 +57,7 @@ export function SignInForm({ next }: { next?: Route } = {}) {
           autoComplete="email"
           inputMode="email"
           required
-          placeholder="e.g. travisrenz.repairservices@gmail.com"
+          placeholder="e.g. renzofelicianopayod.repairservices@gmail.com"
         />
       </Field>
       <Field>

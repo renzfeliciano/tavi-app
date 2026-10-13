@@ -1,20 +1,7 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
-import {
-  ArrowRightIcon,
-  CircleAlertIcon,
-  CircleCheckIcon,
-  ClockIcon,
-  FilePlus2Icon,
-  PencilLineIcon,
-  ReceiptTextIcon,
-  ThumbsUpIcon,
-  UserPlusIcon,
-} from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowRightIcon, CircleCheckIcon, FilePlus2Icon, ReceiptTextIcon, UserPlusIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
-import { DocumentNumber } from "@/components/document-number";
-import { MoneyAmount } from "@/components/money-amount";
 import { buttonVariants } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import type { MarketProfile } from "@/config/markets";
@@ -23,13 +10,19 @@ import { listAuditEvents } from "@/modules/audit";
 import { can } from "@/modules/authz";
 import { listCustomers } from "@/modules/customers";
 import { requireOrgContext } from "@/modules/identity";
-import { invoiceMoneySummary, overdueInvoices } from "@/modules/invoices";
+import { invoiceMoneySummary, invoicePipeline, overdueInvoices } from "@/modules/invoices";
 import { paymentsReceivedSince } from "@/modules/payments";
-import { quoteProgress, quotesNeedingAttention } from "@/modules/quotes";
+import { quotePipeline, quoteProgress, quotesNeedingAttention } from "@/modules/quotes";
 import { addDays, formatCalendarDate, todayIn } from "@/shared/dates/calendar";
+import { ActivityFeed, type FeedEntry } from "./_components/activity-feed";
+import { AttentionList } from "./_components/attention-list";
+import { MoneyStrip } from "./_components/money-strip";
+import { Pipeline } from "./_components/pipeline";
 import { describeActivity } from "./_lib/activity";
+import { attentionItems } from "./_lib/attention-items";
+import { groupByDay } from "./_lib/group-by-day";
+import { moneyRows } from "./_lib/money-rows";
 import { DASHBOARD_RULES } from "./_lib/rules";
-import { timeAgo } from "./_lib/time-ago";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -161,8 +154,6 @@ function Checklist({ steps, quoteName }: { steps: Step[]; quoteName: string }) {
   );
 }
 
-type AttentionItem = { key: string; icon: ReactNode; label: string; href: Route; title: ReactNode; detail: string; amount?: ReactNode };
-
 export default async function DashboardPage() {
   const ctx = await requireOrgContext();
   const { market, locale } = ctx;
@@ -181,7 +172,7 @@ export default async function DashboardPage() {
   }
 
   const rules = DASHBOARD_RULES;
-  const [attention, overdue, owed, received, events] = await Promise.all([
+  const [attention, overdue, owed, received, quotePipelines, invoicePipelines, events] = await Promise.all([
     quotesNeedingAttention(ctx, {
       today,
       followUpBefore: new Date(now.getTime() - rules.quoteFollowUpDays * DAY_MS),
@@ -191,56 +182,17 @@ export default async function DashboardPage() {
     overdueInvoices(ctx, { today, limit: rules.attentionLimit }),
     invoiceMoneySummary(ctx, { today }),
     can(ctx, "payments.read") ? paymentsReceivedSince(ctx, addDays(today, -rules.paidWindowDays)) : Promise.resolve([]),
+    quotePipeline(ctx),
+    invoicePipeline(ctx, { today }),
     can(ctx, "audit.read") ? listAuditEvents(ctx.organizationId, undefined, 50) : Promise.resolve(null),
   ]);
 
-  const money = (minor: number, currency: string) => <MoneyAmount amountMinor={minor} currency={currency} locale={locale} />;
-  const ago = (date: Date | null) => (date ? timeAgo(date, now, locale) : "");
-
-  // Most urgent first: money already late, then money ready to bill, then nudges.
-  const items: AttentionItem[] = [
-    ...overdue.map((i) => ({
-      key: `overdue-${i.id}`,
-      icon: <CircleAlertIcon aria-hidden="true" className="size-4 text-danger-strong" />,
-      label: "Overdue",
-      href: `/invoices/${i.id}` as Route,
-      title: <DocumentNumber number={i.number} />,
-      detail: `${i.customerName ?? ""} · due ${formatCalendarDate(i.dueDate, locale)}`,
-      amount: money(i.balanceMinor, i.currency),
-    })),
-    ...attention.approvedNotInvoiced.map((q) => ({
-      key: `approved-${q.id}`,
-      icon: <ThumbsUpIcon aria-hidden="true" className="size-4 text-success-strong" />,
-      label: `Approved, ready to bill`,
-      href: `/quotes/${q.id}` as Route,
-      title: <DocumentNumber number={q.number} />,
-      detail: `${q.customerName ?? ""} · approved ${ago(q.since)}`,
-      amount: money(q.totalMinor, q.currency),
-    })),
-    ...attention.awaitingReply.map((q) => ({
-      key: `waiting-${q.id}`,
-      icon: <ClockIcon aria-hidden="true" className="size-4 text-info-strong" />,
-      label: "No answer yet",
-      href: `/quotes/${q.id}` as Route,
-      title: <DocumentNumber number={q.number} />,
-      detail: `${q.customerName ?? ""} · sent ${ago(q.since)}`,
-      amount: money(q.totalMinor, q.currency),
-    })),
-    ...attention.staleDrafts.map((q) => ({
-      key: `draft-${q.id}`,
-      icon: <PencilLineIcon aria-hidden="true" className="size-4 text-muted-foreground" />,
-      label: "Unfinished draft",
-      href: `/quotes/${q.id}` as Route,
-      title: <span>{q.customerName ?? `Draft ${market.documents.quote.singular.toLowerCase()}`}</span>,
-      detail: `last edited ${ago(q.since)}`,
-    })),
-  ];
-
-  const currencies = [...new Set([...owed.map((o) => o.currency), ...received.map((r) => r.currency)])].sort();
-  const activity = (events ?? [])
-    .map((event) => ({ event, described: describeActivity(event, market) }))
-    .filter((row): row is { event: (typeof row)["event"]; described: NonNullable<(typeof row)["described"]> } => row.described !== null)
-    .slice(0, rules.activityLimit);
+  const items = attentionItems({ overdue, quotes: attention, today, now, locale, quoteName: market.documents.quote.singular });
+  const entries = (events ?? []).flatMap((event): FeedEntry[] => {
+    const described = describeActivity(event, market);
+    return described ? [{ id: event.id, createdAt: event.createdAt, ...described }] : [];
+  });
+  const days = groupByDay(entries.slice(0, rules.activityLimit), { today, timezone: ctx.timezone, locale });
 
   return (
     <>
@@ -265,100 +217,22 @@ export default async function DashboardPage() {
         }
       />
 
-      {currencies.length > 0 && (
-        <section aria-label="Money" className="mt-8 grid gap-3">
-          {currencies.map((currency) => {
-            const o = owed.find((row) => row.currency === currency);
-            const r = received.find((row) => row.currency === currency);
-            const tiles = [
-              { label: "Outstanding", value: o?.outstandingMinor ?? 0 },
-              { label: "Overdue", value: o?.overdueMinor ?? 0, danger: (o?.overdueMinor ?? 0) > 0 },
-              { label: `Paid in the last ${rules.paidWindowDays} days`, value: r?.receivedMinor ?? 0 },
-            ];
-            return (
-              <dl key={currency} className="grid gap-px overflow-hidden rounded-xl border border-border bg-border shadow-xs sm:grid-cols-3">
-                {tiles.map((tile) => (
-                  <div key={tile.label} className="bg-card px-5 py-4">
-                    <dt className="text-sm text-muted-foreground">
-                      {tile.label}
-                      {currencies.length > 1 ? ` (${currency})` : ""}
-                    </dt>
-                    <dd className={cn("mt-1 text-2xl font-semibold", tile.danger && "text-danger-strong")}>
-                      {money(tile.value, currency)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            );
-          })}
-        </section>
-      )}
+      <MoneyStrip
+        rows={moneyRows(owed, received)}
+        locale={locale}
+        today={today}
+        windowDays={rules.paidWindowDays}
+        invoiceNames={market.documents.invoice}
+      />
 
-      <section aria-labelledby="attention-heading" className="mt-10">
-        <h2 id="attention-heading" className="text-base font-semibold">
-          Needs your attention
-        </h2>
-        {items.length === 0 ? (
-          <div className="mt-3 flex items-center gap-3 rounded-xl border border-dashed border-border-strong px-5 py-4 text-sm text-muted-foreground">
-            <CircleCheckIcon aria-hidden="true" className="size-4 shrink-0 text-success-strong" />
-            <p>You&apos;re all caught up.</p>
-          </div>
-        ) : (
-          <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-            {items.map((item) => (
-              <li key={item.key}>
-                <Link
-                  href={item.href}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-5 py-3.5 transition-colors duration-(--duration-fast) hover:bg-accent sm:px-6"
-                >
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      {item.icon}
-                      {item.label}
-                    </span>
-                    <span className="mt-0.5 block truncate text-sm">
-                      <span className="font-medium">{item.title}</span>
-                      <span className="text-muted-foreground"> · {item.detail}</span>
-                    </span>
-                  </span>
-                  {item.amount && <span className="text-sm font-medium">{item.amount}</span>}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {events !== null && (
-        <section aria-labelledby="activity-heading" className="mt-10">
-          <h2 id="activity-heading" className="text-base font-semibold">
-            Recent activity
-          </h2>
-          {activity.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">Nothing yet.</p>
-          ) : (
-            <ul className="mt-3 grid gap-2 text-sm">
-              {activity.map(({ event, described }) => (
-                <li key={event.id} className="flex flex-wrap items-center justify-between gap-x-4">
-                  {described.href ? (
-                    <Link
-                      href={described.href}
-                      className="underline-offset-4 hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
-                    >
-                      {described.text}
-                    </Link>
-                  ) : (
-                    <span>{described.text}</span>
-                  )}
-                  <time dateTime={event.createdAt.toISOString()} className="text-muted-foreground">
-                    {ago(event.createdAt)}
-                  </time>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+      {/* What to do and where the work stands, beside what just happened (only for people who can read the audit log). */}
+      <div className={cn("mt-10 grid gap-10", events !== null && "xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start xl:gap-8")}>
+        <div className="grid gap-10">
+          <AttentionList items={items} locale={locale} />
+          <Pipeline quotes={quotePipelines} invoices={invoicePipelines} names={market.documents} locale={locale} />
+        </div>
+        {events !== null && <ActivityFeed groups={days} locale={locale} timeZone={ctx.timezone} />}
+      </div>
     </>
   );
 }

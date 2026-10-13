@@ -10,13 +10,19 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { CurrencyOption } from "@/config/currencies";
+import type { MarketExamples } from "@/config/markets";
 import { BUSINESS_PROFILE_LIMITS as LIMITS } from "@/modules/organizations/client";
+import { eg } from "@/shared/text/example";
 import { type BusinessProfileState, type ProfileFormValues, saveBusinessProfile } from "./actions";
 
 /** Country-specific wording, from the business's market profile. */
 export type BusinessProfileCopy = {
   taxIdLabel: string;
   taxIdHint: string;
+  /** A tax number as the market writes it, for the empty field. */
+  taxIdExample: string;
+  /** What the empty fields show. */
+  examples: MarketExamples;
   /** The market's tax registration statuses (PH: VAT-registered, Non-VAT…). */
   taxRegistrations: { code: string; label: string }[];
   taxRegistrationHint: string;
@@ -79,7 +85,7 @@ export function BusinessProfileForm({
             hint={copy.businessNameHint}
             error={error("name")}
           >
-            {(p) => <Input {...p} defaultValue={v.name} maxLength={LIMITS.name} autoComplete="organization" />}
+            {(p) => <Input {...p} defaultValue={v.name} maxLength={LIMITS.name} placeholder={eg(copy.examples.business)} autoComplete="organization" />}
           </FormField>
           <FormField
             name="legalName"
@@ -88,7 +94,7 @@ export function BusinessProfileForm({
             hint={copy.registeredNameHint}
             error={error("legalName")}
           >
-            {(p) => <Input {...p} defaultValue={v.legalName} maxLength={LIMITS.legalName} />}
+            {(p) => <Input {...p} defaultValue={v.legalName} maxLength={LIMITS.legalName} placeholder={eg(copy.examples.person)} />}
           </FormField>
           <FormField
             name="taxId"
@@ -98,7 +104,7 @@ export function BusinessProfileForm({
             error={error("taxId")}
           >
             {(p) => (
-              <Input {...p} defaultValue={v.taxId} maxLength={LIMITS.taxId} className="font-mono" />
+              <Input {...p} defaultValue={v.taxId} maxLength={LIMITS.taxId} placeholder={eg(copy.taxIdExample)} className="font-mono" />
             )}
           </FormField>
           <FormField
@@ -123,14 +129,14 @@ export function BusinessProfileForm({
 
         <FormSection title="Contact and address" description="Shown on documents so customers can reach you.">
           <FormField name="email" label="Email" optional error={error("email")}>
-            {(p) => <Input {...p} type="email" defaultValue={v.email} autoComplete="email" maxLength={LIMITS.email} />}
+            {(p) => <Input {...p} type="email" defaultValue={v.email} autoComplete="email" maxLength={LIMITS.email} placeholder={eg(copy.examples.email)} />}
           </FormField>
           <FormField name="phone" label="Phone" optional error={error("phone")}>
-            {(p) => <Input {...p} type="tel" defaultValue={v.phone} autoComplete="tel" maxLength={LIMITS.phone} />}
+            {(p) => <Input {...p} type="tel" defaultValue={v.phone} autoComplete="tel" maxLength={LIMITS.phone} placeholder={eg(copy.examples.phone)} />}
           </FormField>
           <FormField name="addressLine1" label="Street address" optional error={error("addressLine1")}>
             {(p) => (
-              <Input {...p} defaultValue={v.addressLine1} autoComplete="address-line1" maxLength={LIMITS.addressLine} />
+              <Input {...p} defaultValue={v.addressLine1} autoComplete="address-line1" maxLength={LIMITS.addressLine} placeholder={eg(copy.examples.address.line1)} />
             )}
           </FormField>
           <FormField
@@ -140,14 +146,14 @@ export function BusinessProfileForm({
             error={error("addressLine2")}
           >
             {(p) => (
-              <Input {...p} defaultValue={v.addressLine2} autoComplete="address-line2" maxLength={LIMITS.addressLine} />
+              <Input {...p} defaultValue={v.addressLine2} autoComplete="address-line2" maxLength={LIMITS.addressLine} placeholder={eg(copy.examples.address.line2)} />
             )}
           </FormField>
           <FormField name="city" label={copy.address.cityLabel} optional error={error("city")}>
-            {(p) => <Input {...p} defaultValue={v.city} autoComplete="address-level2" maxLength={LIMITS.city} />}
+            {(p) => <Input {...p} defaultValue={v.city} autoComplete="address-level2" maxLength={LIMITS.city} placeholder={eg(copy.examples.address.city)} />}
           </FormField>
           <FormField name="region" label={copy.address.regionLabel} optional error={error("region")}>
-            {(p) => <Input {...p} defaultValue={v.region} autoComplete="address-level1" maxLength={LIMITS.region} />}
+            {(p) => <Input {...p} defaultValue={v.region} autoComplete="address-level1" maxLength={LIMITS.region} placeholder={eg(copy.examples.address.region)} />}
           </FormField>
           <FormField name="postalCode" label={copy.address.postalCodeLabel} optional error={error("postalCode")}>
             {(p) => (
@@ -155,6 +161,7 @@ export function BusinessProfileForm({
                 {...p}
                 defaultValue={v.postalCode}
                 autoComplete="postal-code"
+                placeholder={eg(copy.examples.address.postalCode)}
                 inputMode="numeric"
                 maxLength={LIMITS.postalCode}
                 className="sm:max-w-40"
@@ -220,7 +227,7 @@ export function BusinessProfileForm({
             hint="Days a customer has to approve."
             error={error("quoteValidityDays")}
           >
-            {(p) => <DaysInput {...p} defaultValue={v.quoteValidityDays} />}
+            {(p) => <DaysInput {...p} defaultValue={v.quoteValidityDays} placeholder={eg("30")} />}
           </FormField>
           <FormField
             name="paymentTermsDays"
@@ -228,7 +235,7 @@ export function BusinessProfileForm({
             hint="Days after you send. 0 means due on receipt."
             error={error("paymentTermsDays")}
           >
-            {(p) => <DaysInput {...p} defaultValue={v.paymentTermsDays} />}
+            {(p) => <DaysInput {...p} defaultValue={v.paymentTermsDays} placeholder={eg("7")} />}
           </FormField>
         </FormSection>
 
@@ -262,7 +269,7 @@ export function BusinessProfileForm({
             error={error("defaultNotes")}
             className="sm:col-span-2"
           >
-            {(p) => <Textarea {...p} defaultValue={v.defaultNotes} maxLength={LIMITS.longText} rows={2} />}
+            {(p) => <Textarea {...p} defaultValue={v.defaultNotes} maxLength={LIMITS.longText} rows={2} placeholder="e.g. Thank you for your business. Parts and labour are included." />}
           </FormField>
           <FormField
             name="defaultTerms"
@@ -272,7 +279,7 @@ export function BusinessProfileForm({
             error={error("defaultTerms")}
             className="sm:col-span-2"
           >
-            {(p) => <Textarea {...p} defaultValue={v.defaultTerms} maxLength={LIMITS.longText} rows={3} />}
+            {(p) => <Textarea {...p} defaultValue={v.defaultTerms} maxLength={LIMITS.longText} rows={3} placeholder="e.g. 50% down payment before work starts. 30-day warranty on labour." />}
           </FormField>
         </FormSection>
       </fieldset>
@@ -288,10 +295,10 @@ export function BusinessProfileForm({
   );
 }
 
-function DaysInput(props: ComponentProps<typeof Input>) {
+function DaysInput({ placeholder, ...props }: ComponentProps<typeof Input> & { placeholder: string }) {
   return (
     <div className="flex items-center gap-2">
-      <Input {...props} inputMode="numeric" maxLength={DAYS_MAX_LENGTH} className="w-24 font-mono tabular-nums" />
+      <Input {...props} inputMode="numeric" maxLength={DAYS_MAX_LENGTH} placeholder={placeholder} className="w-24 font-mono tabular-nums" />
       <span className="text-sm text-muted-foreground">days</span>
     </div>
   );

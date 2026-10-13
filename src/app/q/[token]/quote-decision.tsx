@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { QUOTE_DECISION_LIMITS } from "@/modules/quotes/client";
+import { eg } from "@/shared/text/example";
 import { decideQuoteAction } from "./actions";
 
 type QuoteDecisionProps = {
@@ -28,13 +29,15 @@ type QuoteDecisionProps = {
   /** e.g. "Quotation QUO-000012". */
   name: string;
   businessName: string;
+  /** What the empty name field shows, in the business's market (e.g. "Juan Dela Cruz"). */
+  nameExample: string;
 };
 
 /**
  * Approve (primary, sticky at the bottom on phones) or decline (secondary),
  * each confirmed in a small dialog (§G.4).
  */
-export function QuoteDecision({ token, contentHash, name, businessName }: QuoteDecisionProps) {
+export function QuoteDecision({ token, contentHash, name, businessName, nameExample }: QuoteDecisionProps) {
   const router = useRouter();
   const [open, setOpen] = useState<"approve" | "reject" | null>(null);
   const [pending, setPending] = useState(false);
@@ -125,6 +128,7 @@ export function QuoteDecision({ token, contentHash, name, businessName }: QuoteD
                       value={approver}
                       onChange={(e) => setApprover(e.target.value)}
                       autoComplete="name"
+                      placeholder={eg(nameExample)}
                       maxLength={QUOTE_DECISION_LIMITS.name}
                       aria-invalid={errors.name ? true : undefined}
                       aria-describedby={errors.name ? `${nameId}-error` : undefined}
@@ -165,6 +169,7 @@ export function QuoteDecision({ token, contentHash, name, businessName }: QuoteD
                     onChange={(e) => setReason(e.target.value)}
                     rows={3}
                     maxLength={QUOTE_DECISION_LIMITS.reason}
+                    placeholder="e.g. The price is higher than I planned."
                     aria-invalid={errors.reason ? true : undefined}
                   />
                   {errors.reason && <p className="text-sm text-destructive">{errors.reason}</p>}

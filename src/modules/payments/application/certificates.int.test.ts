@@ -191,8 +191,9 @@ describe("recordCertificate", () => {
 
     it("takes a payment dated on the quarter's first day and on its last", async () => {
       const s = await scene();
-      const first = await withheldPayment(s.actor, s.invoiceId, { paidOn: "2026-07-01" });
-      const last = await withheldPayment(s.actor, s.invoiceId, { paidOn: "2026-09-30" });
+      // scene() has already used 1,920.00 of the 3,000.00 statement; these two take 420.00 each, which fits the balance.
+      const first = await withheldPayment(s.actor, s.invoiceId, { amount: "400", withheld: "20", paidOn: "2026-07-01" });
+      const last = await withheldPayment(s.actor, s.invoiceId, { amount: "400", withheld: "20", paidOn: "2026-09-30" });
       const id = ok(await recordCertificate(s.actor, rawCertificate(s.customerId, [first, last]), options, db()));
       expect(await linksOf(id)).toHaveLength(2);
     });

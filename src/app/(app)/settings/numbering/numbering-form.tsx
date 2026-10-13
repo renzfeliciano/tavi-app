@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { formatDocumentNumber, NUMBERING_LIMITS } from "@/modules/documents/client";
+import { eg } from "@/shared/text/example";
 import { type NumberingFormState, saveNumbering } from "./actions";
 
 const { prefixMaxLength, padding: PADDING } = NUMBERING_LIMITS;
+/** What a prefix looks like for each kind of document, while the field is empty. */
+const PREFIX_EXAMPLES: Record<string, string> = { quote: "QUO", invoice: "INV", receipt: "REC" };
 const PADDINGS = Array.from({ length: PADDING.max - PADDING.min + 1 }, (_, i) => PADDING.min + i);
 
 type NumberingFormProps = {
@@ -71,6 +74,7 @@ export function NumberingForm({ kind, title, description, prefix, padding, nextV
                   value={draft.prefix}
                   onChange={(e) => setDraft((d) => ({ ...d, prefix: e.target.value }))}
                   maxLength={prefixMaxLength}
+                  placeholder={eg(PREFIX_EXAMPLES[kind] ?? "DOC")}
                   autoCapitalize="characters"
                   spellCheck={false}
                   className="font-mono uppercase"

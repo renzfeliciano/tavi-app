@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { INVOICE_REGISTRATION_LIMITS } from "@/modules/invoices/client";
+import { eg } from "@/shared/text/example";
 import { type RegistrationFormState, type RegistrationValues, saveRegistrationAction, turnOffRegistrationAction } from "./actions";
 
 type RegistrationFormProps = {
@@ -69,7 +70,14 @@ export function RegistrationForm({ editable, active, labels, titles, statementNa
           </div>
           <FormField name="number" label={labels.number} hint={labels.numberHint} error={error("number")} className="sm:col-span-2">
             {(p) => (
-              <Input {...p} defaultValue={values.number} maxLength={INVOICE_REGISTRATION_LIMITS.number} spellCheck={false} className="font-mono" />
+              <Input
+                {...p}
+                defaultValue={values.number}
+                maxLength={INVOICE_REGISTRATION_LIMITS.number}
+                placeholder={eg("123456789")}
+                spellCheck={false}
+                className="font-mono"
+              />
             )}
           </FormField>
           <FormField name="issuedOn" label={labels.date} error={error("issuedOn")}>
@@ -88,12 +96,26 @@ export function RegistrationForm({ editable, active, labels, titles, statementNa
           </FormField>
           <FormField name="seriesStart" label="First serial number" hint={labels.seriesHint} error={error("seriesStart")}>
             {(p) => (
-              <Input {...p} defaultValue={values.seriesStart} inputMode="numeric" maxLength={INVOICE_REGISTRATION_LIMITS.serialDigits} className="font-mono" />
+              <Input
+                {...p}
+                defaultValue={values.seriesStart}
+                inputMode="numeric"
+                maxLength={INVOICE_REGISTRATION_LIMITS.serialDigits}
+                placeholder={eg("1")}
+                className="font-mono"
+              />
             )}
           </FormField>
           <FormField name="seriesEnd" label="Last serial number" error={error("seriesEnd")}>
             {(p) => (
-              <Input {...p} defaultValue={values.seriesEnd} inputMode="numeric" maxLength={INVOICE_REGISTRATION_LIMITS.serialDigits} className="font-mono" />
+              <Input
+                {...p}
+                defaultValue={values.seriesEnd}
+                inputMode="numeric"
+                maxLength={INVOICE_REGISTRATION_LIMITS.serialDigits}
+                placeholder={eg("5000")}
+                className="font-mono"
+              />
             )}
           </FormField>
           {editable && (

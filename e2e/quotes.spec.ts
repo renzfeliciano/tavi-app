@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { asVisitor, createBusiness, signUp, strongPassword, uniqueEmail } from "./helpers";
+import { asVisitor, createBusiness, signUp, strongPassword, tableRows, uniqueEmail } from "./helpers";
 
 // One fresh business writing its first quote. Desktop only (see
 // ACCOUNT_CREATING_SPECS in playwright.config.ts): sign-up is rate limited per IP.
@@ -100,7 +100,7 @@ test("the draft comes back exactly as left, and shows in the list", async () => 
   await expect(preview()).toContainText("₱3,450.00");
 
   await page.goto("/quotes");
-  const row = page.getByRole("region", { name: "Quotation list" }).getByRole("link", { name: /Juan Dela Cruz/ });
+  const row = tableRows(page, "Quotation list").filter({ hasText: "Juan Dela Cruz" });
   await expect(row).toContainText("₱3,450.00");
   await expect(row).toContainText("Draft");
 });

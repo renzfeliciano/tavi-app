@@ -36,7 +36,7 @@ function TodayBody({ facts, documents, showNote }: { facts: Promise<ShellFacts>;
         </Link>
       )}
       {lines.length > 0 && (
-        <dl className="grid gap-1 border-t border-border pt-2 text-sm">
+        <dl className="grid gap-1 border-t border-border pt-2 text-sm short:hidden">
           {lines.map((line) => (
             <div key={line.key} className="flex items-baseline justify-between gap-3">
               <dt className="text-muted-foreground">{line.label}</dt>
@@ -84,7 +84,7 @@ export function TodayCard({
   return (
     <section
       aria-labelledby={headingId}
-      className="mx-3 mt-4 mb-3 grid gap-2 rounded-lg border border-border bg-card p-3 shadow-xs group-data-[sidebar=collapsed]/shell:hidden"
+      className="mx-3 mt-4 mb-3 short:mt-3 short:mb-2 grid gap-2 rounded-lg border border-border bg-card p-3 shadow-xs group-data-[sidebar=collapsed]/shell:hidden"
     >
       <h2 id={headingId} className="text-eyebrow font-semibold tracking-wider text-muted-foreground uppercase">
         Today

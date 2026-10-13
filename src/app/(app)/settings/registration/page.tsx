@@ -63,6 +63,7 @@ export default async function RegistrationPage() {
     office: { label: config.office.label, hint: config.office.hint, example: config.office.example },
     taxRegisteredOnLabel: config.taxRegisteredOnLabel,
     lineOfBusinessHint: config.lineOfBusinessHint,
+    lineOfBusinessExample: config.lineOfBusinessExample,
     industryCode: { label: config.industryCode.label, hint: config.industryCode.hint, example: config.industryCode.example },
     authorities: config.nameRegistration.authorities.map((a) => ({ ...a })),
     scopes: config.nameRegistration.scopes.map((s) => ({ ...s })),

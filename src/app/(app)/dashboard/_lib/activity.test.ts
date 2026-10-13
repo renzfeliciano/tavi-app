@@ -18,10 +18,11 @@ describe("describeActivity", () => {
     expect(describeActivity(event("quote.sent", { number: "QUO-000012" }), market)).toEqual({
       text: "Quotation QUO-000012 sent",
       href: "/quotes/e1",
+      kind: "sent",
     });
     expect(
       describeActivity(event("quote.approved", { number: "QUO-000012", name: "Juan Dela Cruz" }, { actorType: "customer" }), market),
-    ).toEqual({ text: "Juan Dela Cruz approved Quotation QUO-000012", href: "/quotes/e1" });
+    ).toEqual({ text: "Juan Dela Cruz approved Quotation QUO-000012", href: "/quotes/e1", kind: "approved" });
     expect(describeActivity(event("quote.rejected", { number: "QUO-000012" }, { actorType: "customer" }), market)?.text).toBe(
       "Customer declined Quotation QUO-000012",
     );
@@ -40,7 +41,21 @@ describe("describeActivity", () => {
     );
     expect(
       describeActivity(event("payment.recorded", { receiptNumber: "REC-000001", invoiceNumber: "INV-000003" }), market),
-    ).toEqual({ text: "Payment REC-000001 recorded on Billing statement INV-000003", href: "/payments/e1" });
+    ).toEqual({ text: "Payment REC-000001 recorded on Billing statement INV-000003", href: "/payments/e1", kind: "paid" });
+  });
+
+  it("says what kind of thing happened, so the feed can draw the right mark beside it", () => {
+    const kind = (action: string) => describeActivity(event(action, { number: "X-1" }), market)?.kind;
+    expect(["quote.sent", "invoice.sent"].map(kind)).toEqual(["sent", "sent"]);
+    expect(["quote.viewed", "invoice.viewed"].map(kind)).toEqual(["viewed", "viewed"]);
+    expect(kind("quote.approved")).toBe("approved");
+    expect(kind("quote.rejected")).toBe("declined");
+    expect(kind("invoice.edited")).toBe("edited");
+    expect(kind("payment.recorded")).toBe("paid");
+    // Things that were closed off, undone or ran out.
+    expect(["quote.expired", "quote.cancelled", "invoice.voided", "invoice.cancelled", "payment.voided"].map(kind)).toEqual(
+      ["closed", "closed", "closed", "closed", "closed"],
+    );
   });
 
   it("skips housekeeping that isn't news (sign-ins, settings, links)", () => {

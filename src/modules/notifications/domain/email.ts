@@ -29,15 +29,25 @@ export function originOf(url: string): string | null {
 }
 
 /**
- * The foot of an email: TAVI's stamp and wordmark, served from the app itself
- * (mail clients can't draw SVG or CSS, so it's a PNG in `public/icons`). With
- * no address to load it from, it falls back to the name in text.
+ * The wordmark's picture and the size it is shown at: a third of its pixel size,
+ * for sharp 3x screens (`npm run brand:build` makes it, sides in multiples of 3;
+ * a test keeps the two in step). `drop` is how far the letters' baseline sits above
+ * the picture's bottom edge, so the picture can hang that far below the words'
+ * baseline and the letters line up with them.
+ */
+const WORDMARK = { path: "/icons/tavi-email-wordmark.png", width: 41, height: 18, drop: 3 } as const;
+
+/**
+ * The foot of an email, on one line: "Sent with" and the TAVI wordmark alone (mail
+ * clients can't draw SVG or CSS, so it is a PNG in `public/icons`, served from the
+ * app). With no address to load it from, it falls back to the name in text.
  */
 export function brandSignoffHtml(origin: string | null, lead: string): string {
-  const style = `margin:24px 0 0;color:${brand.emailColors.muted};font-size:12px`;
+  const style = `margin:24px 0 0;color:${brand.emailColors.muted};font-size:12px;line-height:20px`;
   if (!origin) return `<p style="${style}">${escapeHtml(`${lead} ${brand.name}`)}</p>`;
-  const src = escapeHtml(`${origin}/icons/tavi-email-lockup.png`);
-  return `<p style="${style}">${escapeHtml(lead)}<br><img src="${src}" alt="${escapeHtml(brand.name)}" width="137" height="66" style="display:block;border:0;margin-top:6px"></p>`;
+  const src = escapeHtml(`${origin}${WORDMARK.path}`);
+  const picture = `<img src="${src}" alt="${escapeHtml(brand.name)}" width="${WORDMARK.width}" height="${WORDMARK.height}" style="border:0;vertical-align:-${WORDMARK.drop}px">`;
+  return `<p style="${style}">${escapeHtml(lead)} ${picture}</p>`;
 }
 
 export function escapeHtml(value: string): string {

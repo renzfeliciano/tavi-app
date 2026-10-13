@@ -13,7 +13,8 @@ export function PageHeader({ title, description, actions, className }: PageHeade
   return (
     <header
       className={cn(
-        "flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between",
+        // From sm up the actions sit beside the title; when they don't fit there they wrap onto their own row, at the right, rather than squeezing the title.
+        "flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-6",
         className,
       )}
     >
@@ -25,7 +26,7 @@ export function PageHeader({ title, description, actions, className }: PageHeade
           </p>
         )}
       </div>
-      {actions && <div className="flex max-w-full flex-wrap gap-2 sm:justify-end">{actions}</div>}
+      {actions && <div className="flex max-w-full flex-wrap gap-2 sm:ml-auto sm:justify-end">{actions}</div>}
     </header>
   );
 }

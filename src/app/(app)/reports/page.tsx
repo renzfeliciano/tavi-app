@@ -5,6 +5,7 @@ import { DownloadIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { FormAlert } from "@/components/form-alert";
 import { ListViews } from "@/components/list-controls";
+import { ListForm, ListPending, ListResults } from "@/components/list-pending";
 import { MoneyAmount } from "@/components/money-amount";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,8 @@ import {
   unpaidReport,
 } from "@/modules/reports";
 import { formatCalendarDate, todayIn } from "@/shared/dates/calendar";
+import { Compared, Figures } from "./_components/report-figures";
+import { ReportSectionsSkeleton } from "./_components/report-sections-skeleton";
 
 export const metadata: Metadata = { title: "Reports" };
 
@@ -82,208 +85,212 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
     <>
       <PageHeader title="Reports" description={`Sales, payments and unpaid ${statements}, ready to send to your accountant.`} />
 
-      <div className="mt-8 grid gap-4">
-        <div className="-mx-4 overflow-x-auto px-4 pb-1">
-          <ListViews
-            label="Report period"
-            views={REPORT_PERIODS.map((preset) => ({
-              href: `/reports?period=${preset}` as Route,
-              label: PRESET_LABELS[preset],
-              current: period.preset === preset,
-            }))}
-          />
-        </div>
-        <form action="/reports" className="flex flex-wrap items-end gap-3">
-          <div className="grid gap-2">
-            <Label htmlFor="report-from">From</Label>
-            <Input id="report-from" name="from" type="date" defaultValue={period.from} required className="w-44" />
+      <ListPending>
+        <div className="mt-8 grid gap-4">
+          <div className="-mx-4 overflow-x-auto px-4 pb-1">
+            <ListViews
+              label="Report period"
+              views={REPORT_PERIODS.map((preset) => ({
+                href: `/reports?period=${preset}` as Route,
+                label: PRESET_LABELS[preset],
+                current: period.preset === preset,
+              }))}
+            />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="report-to">To</Label>
-            <Input id="report-to" name="to" type="date" defaultValue={period.to} required className="w-44" />
-          </div>
-          <button type="submit" className={buttonVariants({ variant: "outline" })}>
-            Show
-          </button>
-        </form>
-        <FormAlert message={error} />
-        <p className="text-sm text-muted-foreground">
-          {date(period.from)} to {date(period.to)}
-        </p>
-      </div>
-
-      <ReportSection
-        id="sales"
-        title="Sales"
-        description={`${capital(statements)} issued in this period. Void ones are left out; cancelled ones are shown apart.`}
-        csv={csvHref("sales", period)}
-      >
-        {sales.rows.some((r) => r.registered) && (
-          // D19: registered invoices as structured data for the BIR's e-invoicing system.
-          <p className="text-sm text-pretty text-muted-foreground">
-            <a
-              href={`/reports/e-invoices?from=${period.from}&to=${period.to}`}
-              download
-              className="font-medium text-foreground underline underline-offset-4"
-            >
-              Download e-invoices (JSON)
-            </a>{" "}
-            for this period&apos;s registered invoices, ready for e-invoicing. {brand.name} isn&apos;t BIR-certified for e-invoicing yet,
-            so the file is for your records and your accountant.
-          </p>
-        )}
-        {sales.summaries.length === 0 ? (
-          <Quiet>No {statements} issued in this period.</Quiet>
-        ) : (
-          sales.summaries.map((s) => (
-            <div key={s.currency} className="grid gap-3">
-              <Figures
-                items={[
-                  { label: `Sales (${countOf(s.issued.count, statement)})`, value: amount(s.issued.totalMinor, s.currency) },
-                  { label: "Before tax", value: amount(s.issued.netMinor, s.currency) },
-                  { label: "Tax", value: amount(s.issued.taxMinor, s.currency) },
-                ]}
-                currency={sales.summaries.length > 1 ? s.currency : null}
-              />
-              <Compared
-                now={s.issued.totalMinor}
-                before={salesBefore.summaries.find((x) => x.currency === s.currency)?.issued.totalMinor ?? 0}
-                format={(minor) => amount(minor, s.currency)}
-                label={periodWord(period)}
-              />
-              {seller === "vat" && salesLabels && (
-                <Rows
-                  label={`Sales by tax treatment (${s.currency})`}
-                  rows={[
-                    [salesLabels.vatable, amount(s.breakdown.vatableMinor, s.currency)],
-                    [salesLabels.vat, amount(s.breakdown.vatMinor, s.currency)],
-                    [salesLabels.zeroRated, amount(s.breakdown.zeroRatedMinor, s.currency)],
-                    [salesLabels.exempt, amount(s.breakdown.exemptMinor, s.currency)],
-                    // Sales are shown before qualified buyers' discounts (D19), so those come off here.
-                    ...(s.breakdown.qualifiedDiscountMinor > 0
-                      ? [["Less: special discounts", amount(s.breakdown.qualifiedDiscountMinor, s.currency)] as [ReactNode, ReactNode]]
-                      : []),
-                  ]}
-                />
-              )}
-              {seller === "percentage_tax" && salesLabels && (
-                <Rows
-                  label={`Sales by tax treatment (${s.currency})`}
-                  rows={[[salesLabels.percentageTax, amount(s.issued.totalMinor, s.currency)]]}
-                />
-              )}
-              {(s.registered.count > 0 || s.cancelled.count > 0) && (
-                <p className="text-sm text-muted-foreground">
-                  {s.registered.count > 0 && (
-                    <>
-                      Registered invoices: {countOf(s.registered.count, statement)},{" "}
-                      {amount(s.registered.totalMinor, s.currency, "text-foreground")}.{" "}
-                    </>
-                  )}
-                  {s.cancelled.count > 0 && (
-                    <>
-                      Cancelled: {countOf(s.cancelled.count, statement)},{" "}
-                      {amount(s.cancelled.totalMinor, s.currency, "text-foreground")}.
-                    </>
-                  )}
-                </p>
-              )}
+          <ListForm action="/reports" className="flex flex-wrap items-end gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="report-from">From</Label>
+              <Input id="report-from" name="from" type="date" defaultValue={period.from} required className="w-44" />
             </div>
-          ))
-        )}
-      </ReportSection>
+            <div className="grid gap-2">
+              <Label htmlFor="report-to">To</Label>
+              <Input id="report-to" name="to" type="date" defaultValue={period.to} required className="w-44" />
+            </div>
+            <button type="submit" className={buttonVariants({ variant: "outline" })}>
+              Show
+            </button>
+          </ListForm>
+          <FormAlert message={error} />
+          <p className="text-sm text-muted-foreground">
+            {date(period.from)} to {date(period.to)}
+          </p>
+        </div>
 
-      <ReportSection
-        id="payments"
-        title="Payments received"
-        description="Money that came in during this period. Voided payments are left out."
-        csv={csvHref("payments", period)}
-      >
-        {payments.summaries.length === 0 ? (
-          <Quiet>No payments received in this period.</Quiet>
-        ) : (
-          payments.summaries.map((s) => (
-            <div key={s.currency} className="grid gap-3">
-              <Figures
-                items={[
-                  { label: `Received (${countOf(s.count, "payment")})`, value: amount(s.receivedMinor, s.currency) },
-                  ...(market.taxWithheld
-                    ? [{ label: market.taxWithheld.label, value: amount(s.withheldMinor, s.currency) }]
-                    : []),
-                ]}
-                currency={payments.summaries.length > 1 ? s.currency : null}
-              />
-              <Compared
-                now={s.receivedMinor}
-                before={paymentsBefore.summaries.find((x) => x.currency === s.currency)?.receivedMinor ?? 0}
-                format={(minor) => amount(minor, s.currency)}
-                label={periodWord(period)}
-              />
-              <Rows
-                label={`By method (${s.currency})`}
-                rows={s.byMethod.map((m) => [
-                  `${market.paymentMethodLabels[m.method as keyof typeof market.paymentMethodLabels] ?? m.method} (${m.count})`,
-                  amount(m.receivedMinor, s.currency),
-                ])}
-              />
-              {market.taxWithheld && s.withheldByCustomer.length > 0 && (
-                <Rows
-                  label={`Tax withheld by customer (${s.currency})`}
-                  rows={s.withheldByCustomer.slice(0, TOP).map((c) => [
-                    <span key="name">
-                      {c.customerName ?? "No customer"}
-                      {c.customerTaxId && (
+        <ListResults label="Loading reports" skeleton={<ReportSectionsSkeleton />}>
+          <ReportSection
+            id="sales"
+            title="Sales"
+            description={`${capital(statements)} issued in this period. Void ones are left out; cancelled ones are shown apart.`}
+            csv={csvHref("sales", period)}
+          >
+            {sales.rows.some((r) => r.registered) && (
+              // D19: registered invoices as structured data for the BIR's e-invoicing system.
+              <p className="text-sm text-pretty text-muted-foreground">
+                <a
+                  href={`/reports/e-invoices?from=${period.from}&to=${period.to}`}
+                  download
+                  className="font-medium text-foreground underline underline-offset-4"
+                >
+                  Download e-invoices (JSON)
+                </a>{" "}
+                for this period&apos;s registered invoices, ready for e-invoicing. {brand.name} isn&apos;t BIR-certified for e-invoicing yet,
+                so the file is for your records and your accountant.
+              </p>
+            )}
+            {sales.summaries.length === 0 ? (
+              <Quiet>No {statements} issued in this period.</Quiet>
+            ) : (
+              sales.summaries.map((s) => (
+                <div key={s.currency} className="grid gap-3">
+                  <Figures
+                    items={[
+                      { label: `Sales (${countOf(s.issued.count, statement)})`, value: amount(s.issued.totalMinor, s.currency) },
+                      { label: "Before tax", value: amount(s.issued.netMinor, s.currency) },
+                      { label: "Tax", value: amount(s.issued.taxMinor, s.currency) },
+                    ]}
+                    currency={sales.summaries.length > 1 ? s.currency : null}
+                  />
+                  <Compared
+                    now={s.issued.totalMinor}
+                    before={salesBefore.summaries.find((x) => x.currency === s.currency)?.issued.totalMinor ?? 0}
+                    format={(minor) => amount(minor, s.currency)}
+                    label={periodWord(period)}
+                  />
+                  {seller === "vat" && salesLabels && (
+                    <Rows
+                      label={`Sales by tax treatment (${s.currency})`}
+                      rows={[
+                        [salesLabels.vatable, amount(s.breakdown.vatableMinor, s.currency)],
+                        [salesLabels.vat, amount(s.breakdown.vatMinor, s.currency)],
+                        [salesLabels.zeroRated, amount(s.breakdown.zeroRatedMinor, s.currency)],
+                        [salesLabels.exempt, amount(s.breakdown.exemptMinor, s.currency)],
+                        // Sales are shown before qualified buyers' discounts (D19), so those come off here.
+                        ...(s.breakdown.qualifiedDiscountMinor > 0
+                          ? [["Less: special discounts", amount(s.breakdown.qualifiedDiscountMinor, s.currency)] as [ReactNode, ReactNode]]
+                          : []),
+                      ]}
+                    />
+                  )}
+                  {seller === "percentage_tax" && salesLabels && (
+                    <Rows
+                      label={`Sales by tax treatment (${s.currency})`}
+                      rows={[[salesLabels.percentageTax, amount(s.issued.totalMinor, s.currency)]]}
+                    />
+                  )}
+                  {(s.registered.count > 0 || s.cancelled.count > 0) && (
+                    <p className="text-sm text-muted-foreground">
+                      {s.registered.count > 0 && (
+                        <>
+                          Registered invoices: {countOf(s.registered.count, statement)},{" "}
+                          {amount(s.registered.totalMinor, s.currency, "text-foreground")}.{" "}
+                        </>
+                      )}
+                      {s.cancelled.count > 0 && (
+                        <>
+                          Cancelled: {countOf(s.cancelled.count, statement)},{" "}
+                          {amount(s.cancelled.totalMinor, s.currency, "text-foreground")}.
+                        </>
+                      )}
+                    </p>
+                  )}
+                </div>
+              ))
+            )}
+          </ReportSection>
+
+          <ReportSection
+            id="payments"
+            title="Payments received"
+            description="Money that came in during this period. Voided payments are left out."
+            csv={csvHref("payments", period)}
+          >
+            {payments.summaries.length === 0 ? (
+              <Quiet>No payments received in this period.</Quiet>
+            ) : (
+              payments.summaries.map((s) => (
+                <div key={s.currency} className="grid gap-3">
+                  <Figures
+                    items={[
+                      { label: `Received (${countOf(s.count, "payment")})`, value: amount(s.receivedMinor, s.currency) },
+                      ...(market.taxWithheld
+                        ? [{ label: market.taxWithheld.label, value: amount(s.withheldMinor, s.currency) }]
+                        : []),
+                    ]}
+                    currency={payments.summaries.length > 1 ? s.currency : null}
+                  />
+                  <Compared
+                    now={s.receivedMinor}
+                    before={paymentsBefore.summaries.find((x) => x.currency === s.currency)?.receivedMinor ?? 0}
+                    format={(minor) => amount(minor, s.currency)}
+                    label={periodWord(period)}
+                  />
+                  <Rows
+                    label={`By method (${s.currency})`}
+                    rows={s.byMethod.map((m) => [
+                      `${market.paymentMethodLabels[m.method as keyof typeof market.paymentMethodLabels] ?? m.method} (${m.count})`,
+                      amount(m.receivedMinor, s.currency),
+                    ])}
+                  />
+                  {market.taxWithheld && s.withheldByCustomer.length > 0 && (
+                    <Rows
+                      label={`Tax withheld by customer (${s.currency})`}
+                      rows={s.withheldByCustomer.slice(0, TOP).map((c) => [
+                        <span key="name">
+                          {c.customerName ?? "No customer"}
+                          {c.customerTaxId && (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {market.taxId.label} {c.customerTaxId}
+                            </span>
+                          )}
+                        </span>,
+                        amount(c.withheldMinor, s.currency),
+                      ])}
+                    />
+                  )}
+                </div>
+              ))
+            )}
+          </ReportSection>
+
+          <ReportSection
+            id="unpaid"
+            title={`Unpaid ${statements}`}
+            description={`What customers still owe today, ${date(today)}, by how long it's been overdue.`}
+            csv={csvHref("unpaid", period)}
+          >
+            {unpaid.summaries.length === 0 ? (
+              <Quiet>Nothing unpaid. Every sent {statement} is settled.</Quiet>
+            ) : (
+              unpaid.summaries.map((s) => (
+                <div key={s.currency} className="grid gap-3">
+                  <Figures
+                    items={[
+                      { label: `Outstanding (${countOf(s.count, statement)})`, value: amount(s.outstandingMinor, s.currency) },
+                      ...AGING_BUCKETS.map((b) => ({ label: BUCKET_LABELS[b.key], value: amount(s.buckets[b.key], s.currency) })),
+                    ]}
+                    currency={unpaid.summaries.length > 1 ? s.currency : null}
+                  />
+                  <Rows
+                    label={`Who owes the most (${s.currency})`}
+                    rows={s.byCustomer.slice(0, TOP).map((c) => [
+                      <span key="name">
+                        {c.customerName ?? "No customer"}
                         <span className="text-muted-foreground">
                           {" "}
-                          · {market.taxId.label} {c.customerTaxId}
+                          · {countOf(c.count, statement)} ·{" "}
+                          {c.daysOverdue > 0 ? `${countOf(c.daysOverdue, "day")} overdue` : "not yet due"}
                         </span>
-                      )}
-                    </span>,
-                    amount(c.withheldMinor, s.currency),
-                  ])}
-                />
-              )}
-            </div>
-          ))
-        )}
-      </ReportSection>
-
-      <ReportSection
-        id="unpaid"
-        title={`Unpaid ${statements}`}
-        description={`What customers still owe today, ${date(today)}, by how long it's been overdue.`}
-        csv={csvHref("unpaid", period)}
-      >
-        {unpaid.summaries.length === 0 ? (
-          <Quiet>Nothing unpaid. Every sent {statement} is settled.</Quiet>
-        ) : (
-          unpaid.summaries.map((s) => (
-            <div key={s.currency} className="grid gap-3">
-              <Figures
-                items={[
-                  { label: `Outstanding (${countOf(s.count, statement)})`, value: amount(s.outstandingMinor, s.currency) },
-                  ...AGING_BUCKETS.map((b) => ({ label: BUCKET_LABELS[b.key], value: amount(s.buckets[b.key], s.currency) })),
-                ]}
-                currency={unpaid.summaries.length > 1 ? s.currency : null}
-              />
-              <Rows
-                label={`Who owes the most (${s.currency})`}
-                rows={s.byCustomer.slice(0, TOP).map((c) => [
-                  <span key="name">
-                    {c.customerName ?? "No customer"}
-                    <span className="text-muted-foreground">
-                      {" "}
-                      · {countOf(c.count, statement)} ·{" "}
-                      {c.daysOverdue > 0 ? `${countOf(c.daysOverdue, "day")} overdue` : "not yet due"}
-                    </span>
-                  </span>,
-                  amount(c.outstandingMinor, s.currency),
-                ])}
-              />
-            </div>
-          ))
-        )}
-      </ReportSection>
+                      </span>,
+                      amount(c.outstandingMinor, s.currency),
+                    ])}
+                  />
+                </div>
+              ))
+            )}
+          </ReportSection>
+        </ListResults>
+      </ListPending>
     </>
   );
 }
@@ -297,35 +304,6 @@ const periodWord = (period: ReportPeriod) =>
       : period.preset === "this-year" || period.preset === "last-year"
         ? "the year before"
         : "the previous period";
-
-/** How this period's total compares with the one before, in words. Quiet when there's nothing to compare. */
-function Compared({
-  now,
-  before,
-  format,
-  label,
-}: {
-  now: number;
-  before: number;
-  format: (minor: number) => ReactNode;
-  label: string;
-}) {
-  if (before === 0 && now === 0) return null;
-  if (before === 0) return <p className="text-sm text-muted-foreground">Nothing in {label} to compare with.</p>;
-  const change = now - before;
-  const percent = Math.round((Math.abs(change) / before) * 100);
-  return (
-    <p className="text-sm text-muted-foreground">
-      {change === 0 ? (
-        <>Same as {label}: {format(before)}.</>
-      ) : (
-        <>
-          {change > 0 ? "Up" : "Down"} {percent}% from {label}: {format(before)} then.
-        </>
-      )}
-    </p>
-  );
-}
 
 const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 const countOf = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
@@ -359,22 +337,6 @@ function ReportSection({
       </div>
       {children}
     </section>
-  );
-}
-
-function Figures({ items, currency }: { items: { label: string; value: ReactNode }[]; currency: string | null }) {
-  return (
-    <dl className="grid gap-px overflow-hidden rounded-xl border border-border bg-border shadow-xs sm:grid-cols-3">
-      {items.map((item) => (
-        <div key={item.label} className="bg-card px-5 py-4">
-          <dt className="text-sm text-muted-foreground">
-            {item.label}
-            {currency ? ` (${currency})` : ""}
-          </dt>
-          <dd className="mt-1 text-2xl font-semibold">{item.value}</dd>
-        </div>
-      ))}
-    </dl>
   );
 }
 

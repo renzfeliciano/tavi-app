@@ -6,7 +6,7 @@ import { assertCan, type OrgActor, type Role } from "@/modules/authz";
 import { users } from "@/db/schema";
 import {
   documentEmailLimitMessage,
-  documentEmailsAllowed,
+  emailLimitReached,
   enqueueEmail,
   teamInvitationEmail,
 } from "@/modules/notifications";
@@ -99,20 +99,24 @@ export type InviteResult =
  * pass the team limit.
  */
 export async function inviteMember(
-  actor: OrgActor & { userName: string; organizationName: string },
+  actor: OrgActor & { userName: string; organizationName: string; emailVerified: boolean },
   input: unknown,
   options: { appUrl: string },
   db: Database = getDb(),
   now: Date = new Date(),
 ): Promise<InviteResult> {
   assertCan(actor, "users.manage");
+  // An invitation is an email from Tavi to someone else, so it waits for the
+  // sender's own address to be confirmed, as sending a quotation does (§D).
+  if (!actor.emailVerified) {
+    return { ok: false, error: "Confirm your email address before inviting people. We sent you a link when you signed up." };
+  }
   const parsed = invitationInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors };
   const { email, role } = parsed.data;
   // Checked before anything changes, like every command that sends email (§I).
-  if (!(await documentEmailsAllowed(db, actor.organizationId, now))) {
-    return { ok: false, error: documentEmailLimitMessage() };
-  }
+  const limited = await emailLimitReached(db, actor, now);
+  if (limited) return { ok: false, error: documentEmailLimitMessage(undefined, limited) };
 
   try {
     return await db.transaction(async (tx) => {
@@ -191,7 +195,7 @@ export async function inviteMember(
           url: `${options.appUrl.replace(/\/$/, "")}/invite/${token}`,
           expiresIn: invitationLifetime(),
         }),
-        { organizationId: actor.organizationId },
+        { organizationId: actor.organizationId, actorUserId: actor.userId },
       );
       return { ok: true, email, resent: replaced.length > 0 } as const;
     });

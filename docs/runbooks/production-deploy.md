@@ -59,9 +59,10 @@ Migrations are additive (`tavi-ops` → Migrations in production). Never edit on
 ## 6. Before inviting beta businesses
 
 - Run the [restore drill](restore-drill.md) once on the live data.
+- Run the [security checks](security-checks.md): `npm audit --omit=dev` and the ZAP baseline against the live URL.
 - Do the device check from `tavi-ui-ux` on a real low-end Android phone (the E2E matrix uses emulated sizes).
 - Ask the RDO/CPA questions in `docs/compliance/ph-e-invoicing.md` (they gate 1.12 invoice mode, not the beta).
-- Fill in `LEGAL.operator` in `src/config/legal.ts` (who runs Tavi, registered address, privacy email, data protection officer) and have a lawyer review `/terms`, `/privacy` and `docs/compliance/processing-register.md`. Until the details are in, both pages say "Draft".
+- `LEGAL.operator` in `src/config/legal.ts` (who runs Tavi, address, privacy email, data protection officer) was filled in on 14 October 2026, so the legal pages no longer say "Draft". Keep it current if any of those change, and have a lawyer review `/terms`, `/privacy` and `docs/compliance/processing-register.md` before launch.
 
 ## Rolling back
 

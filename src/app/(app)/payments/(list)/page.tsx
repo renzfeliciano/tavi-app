@@ -1,14 +1,21 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { ReceiptTextIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { SectionEmpty } from "@/components/app-shell/section-empty";
-import { DocumentNumber } from "@/components/document-number";
-import { ListPager, listHref, pageParam } from "@/components/list-controls";
-import { MoneyAmount } from "@/components/money-amount";
+import { DataTable } from "@/components/data-table";
+import { EmptyState } from "@/components/empty-state";
+import { keptSize, ListSearch, listHref, pageParam, pagedHref, sizeParam } from "@/components/list-controls";
+import { ListPending, ListResults } from "@/components/list-pending";
+import { SummaryStrip } from "@/components/summary-strip";
+import { buttonVariants } from "@/components/ui/button";
 import { requireOrgContext } from "@/modules/identity";
-import { listPayments } from "@/modules/payments";
-import { formatCalendarDate } from "@/shared/dates/calendar";
+import { listPayments, paymentsReceivedSince } from "@/modules/payments";
+import { addDays, todayIn } from "@/shared/dates/calendar";
+import { parsePageSize } from "@/shared/pagination/page-window";
+import { normalizeSearch } from "@/shared/text/search";
+import { PaymentListSkeleton, paymentColumns, paymentSummary } from "../_components/payment-list";
+import { PAYMENT_WINDOWS, paymentStrip } from "../_lib/summary";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -17,8 +24,17 @@ export const metadata: Metadata = { title: "Payments" };
 export default async function PaymentsPage({ searchParams }: PageProps<"/payments">) {
   const ctx = await requireOrgContext();
   const { market } = ctx;
-  const page = pageParam((await searchParams).page);
-  const list = await listPayments(ctx, { page });
+  const params = await searchParams;
+  const search = normalizeSearch(params.q);
+  const today = todayIn(ctx.timezone);
+  const since = (days: number) => paymentsReceivedSince(ctx, addDays(today, -days));
+  const [list, received, week, month] = await Promise.all([
+    listPayments(ctx, { search, page: pageParam(params.page), pageSize: parsePageSize(params.size) }),
+    since(PAYMENT_WINDOWS[0].days),
+    since(PAYMENT_WINDOWS[1].days),
+    since(PAYMENT_WINDOWS[2].days),
+  ]);
+  const strip = paymentStrip({ windows: { today: received, week, month }, locale: ctx.locale, currency: ctx.currency });
   const invoices = market.documents.invoice.plural.toLowerCase();
   const description = `Money you've received, across all ${invoices}.`;
 
@@ -38,35 +54,50 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
   return (
     <>
       <PageHeader title="Payments" description={description} />
-      <section aria-label="Payment list" className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-        <ul className="divide-y divide-border">
-          {list.payments.map((payment) => (
-            <li key={payment.id}>
-              <Link
-                href={`/payments/${payment.id}`}
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-5 py-3.5 transition-colors duration-(--duration-fast) hover:bg-accent sm:px-6"
-              >
-                <span className="min-w-0">
-                  <span className="block text-sm">
-                    <DocumentNumber number={payment.receiptNumber} />
-                    {payment.voidedAt && <span className="text-muted-foreground"> · Voided</span>}
-                  </span>
-                  <span className="block text-sm text-muted-foreground">
-                    {formatCalendarDate(payment.paidOn, ctx.locale)} · {market.paymentMethodLabels[payment.method]}
-                  </span>
-                </span>
-                <MoneyAmount
-                  amountMinor={payment.amountMinor}
-                  currency={payment.currency}
-                  locale={ctx.locale}
-                  className={payment.voidedAt ? "text-muted-foreground line-through" : "font-medium"}
-                />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <ListPager page={list.page} hasMore={list.hasMore} hrefFor={(p) => listHref("/payments", { page: p > 1 ? p : null })} />
+      <SummaryStrip label="Payment summary" rows={strip} />
+      <ListPending>
+        <div className="mt-5">
+          <ListSearch
+            action="/payments"
+            label="Search payments"
+            placeholder="Customer, receipt, reference or number"
+            value={search}
+            keep={{ size: keptSize(list.pageSize) }}
+          />
+        </div>
+
+        <ListResults label="Loading payments" skeleton={<PaymentListSkeleton />}>
+          {list.payments.length === 0 ? (
+            <section aria-label="Payment list" className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+              <EmptyState
+                title={`No payments match “${search}”`}
+                description="Try the customer's name, the receipt number or the reference you wrote down."
+                action={
+                  <Link
+                    href={listHref("/payments", { size: sizeParam(list.pageSize) })}
+                    className={buttonVariants({ variant: "outline" })}
+                  >
+                    Clear search
+                  </Link>
+                }
+              />
+            </section>
+          ) : (
+            <DataTable
+              label="Payment list"
+              columns={paymentColumns(ctx.locale, market)}
+              rows={list.payments}
+              rowKey={(payment) => payment.id}
+              rowHref={(payment) => `/payments/${payment.id}` as Route}
+              phoneSummary={paymentSummary(ctx.locale, market)}
+              strip
+              meta={list}
+              noun={{ singular: "payment", plural: "payments" }}
+              hrefFor={pagedHref("/payments", { q: search }, list.pageSize)}
+            />
+          )}
+        </ListResults>
+      </ListPending>
     </>
   );
 }

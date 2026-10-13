@@ -20,6 +20,13 @@
  * mascot) stays light inside a dark page because it re-declares every token.
  */
 
+/*
+ * A short window: a laptop-height screen used with a mouse (never a phone, which
+ * keeps its larger touch targets). The sidebar tightens here so the links, Today
+ * and the account row all fit without scrolling.
+ */
+@custom-variant short (@media (max-height: 800px) and (pointer: fine));
+
 @custom-variant dark {
   &:where([data-theme="dark"] *):not(:where([data-theme="light"] *)) {
     @slot;

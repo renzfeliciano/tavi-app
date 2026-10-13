@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { UnitOptions } from "@/components/unit-options";
 import { cn } from "@/lib/utils";
 import { DOCUMENT_LIMITS, type RawLine } from "@/modules/documents/client";
+import { eg } from "@/shared/text/example";
 import type { TaxRateChoice } from "./editor-types";
 
 export type EditorLine = RawLine & { key: string };
@@ -134,6 +135,7 @@ export function LineItemsEditor({
                   value={line.quantity}
                   onChange={(e) => onChange(line.key, { quantity: e.target.value })}
                   inputMode="decimal"
+                  placeholder={eg("1")}
                   className="font-mono tabular-nums"
                 />
                 <FieldError id={`${id("quantity")}-error`} message={error("quantity")} />
@@ -160,6 +162,7 @@ export function LineItemsEditor({
                   value={line.unitPrice}
                   onChange={(e) => onChange(line.key, { unitPrice: e.target.value })}
                   inputMode="decimal"
+                  placeholder="0.00"
                   className="font-mono tabular-nums"
                 />
                 <FieldError id={`${id("unitPrice")}-error`} message={error("unitPrice")} />
@@ -216,6 +219,7 @@ export function LineItemsEditor({
                         value={line.discountValue}
                         onChange={(e) => onChange(line.key, { discountValue: e.target.value })}
                         inputMode="decimal"
+                        placeholder={line.discountKind === "percent" ? eg("10") : "0.00"}
                         className={cn("w-28 font-mono tabular-nums", line.discountKind === "percent" && "pr-8")}
                       />
                       {line.discountKind === "percent" && (

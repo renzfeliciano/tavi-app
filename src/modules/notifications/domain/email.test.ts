@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { fromHeader, brandSignoffHtml, originOf } from "./email";
 
@@ -32,15 +33,39 @@ describe("originOf", () => {
 });
 
 describe("brandSignoffHtml", () => {
-  it("shows the stamp and TAVI lockup from the app, with alt text and its size", () => {
-    const html = brandSignoffHtml("https://tavi.example", "Sent with");
-    expect(html).toContain('<img src="https://tavi.example/icons/tavi-email-lockup.png" alt="Tavi"');
-    expect(html).toContain('width="137" height="66"');
-    expect(html).toContain("Sent with");
+  const html = () => brandSignoffHtml("https://tavi.example", "Sent with");
+
+  it("shows the TAVI wordmark alone from the app, with alt text", () => {
+    expect(html()).toContain('<img src="https://tavi.example/icons/tavi-email-wordmark.png" alt="Tavi"');
+    expect(html()).toContain("Sent with");
+  });
+  it("reads as one line, 'Sent with' and the wordmark side by side, not the wordmark under the words", () => {
+    const line = html();
+
+    expect(line).not.toContain("<br");
+    expect(line).not.toContain("display:block");
+    expect(line).toMatch(/Sent with <img /);
+    expect(line.match(/<p /g)).toHaveLength(1);
+  });
+  it("sits on the words' baseline, so the letters line up with them", () => {
+    expect(html()).toMatch(/style="[^"]*vertical-align:-\d+px/);
+  });
+  it("points at a picture that exists, drawn at a third of its pixel size so it stays sharp on 3x screens", () => {
+    const png = readFileSync("public/icons/tavi-email-wordmark.png");
+    const [width, height] = [png.readUInt32BE(16), png.readUInt32BE(20)];
+
+    expect(width % 3).toBe(0);
+    expect(height % 3).toBe(0);
+    expect(html()).toContain(`width="${width / 3}" height="${height / 3}"`);
+  });
+  it("is small enough to sit in a line of 12px text", () => {
+    const png = readFileSync("public/icons/tavi-email-wordmark.png");
+
+    expect(png.readUInt32BE(20) / 3).toBeLessThanOrEqual(24);
   });
   it("falls back to the name in text when there is no address to load it from", () => {
-    const html = brandSignoffHtml(null, "Sent with");
-    expect(html).not.toContain("<img");
-    expect(html).toContain("Sent with Tavi");
+    const text = brandSignoffHtml(null, "Sent with");
+    expect(text).not.toContain("<img");
+    expect(text).toContain("Sent with Tavi");
   });
 });

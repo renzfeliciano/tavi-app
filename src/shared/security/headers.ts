@@ -66,6 +66,7 @@ const PROTECTED_PREFIXES = [
   "/customers",
   "/catalog",
   "/recycle-bin",
+  "/reports",
   "/settings",
   "/onboarding",
 ];
@@ -75,6 +76,15 @@ export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+/**
+ * The developer's own pages (design system, modal samples): never part of the
+ * product. Each page also refuses to render in production; proxy.ts answers
+ * them with a plain 404 first, since a streamed page has sent "200" by then.
+ */
+export function isDevOnlyPath(pathname: string): boolean {
+  return pathname === "/dev" || pathname.startsWith("/dev/");
 }
 
 /** Longest incoming `x-request-id` we keep (UUIDs and Vercel IDs are far shorter). */

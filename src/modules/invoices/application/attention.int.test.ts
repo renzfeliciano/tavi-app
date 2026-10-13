@@ -9,14 +9,16 @@ import {
   countDraftQuotes,
   decideSharedQuote,
   getSharedQuote,
+  quotePipeline,
   quoteProgress,
   quotesNeedingAttention,
+  recordSharedQuoteOpen,
   saveQuoteDraft,
   sendQuote,
   sharedQuoteContentHash,
 } from "@/modules/quotes";
 import { convertQuoteToInvoice } from "./conversion";
-import { countOverdueInvoices, invoiceMoneySummary, overdueInvoices } from "./attention";
+import { countOverdueInvoices, invoiceMoneySummary, invoicePipeline, overdueInvoices } from "./attention";
 import { saveInvoiceDraft } from "./invoices";
 import { issueInvoice } from "./issuing";
 
@@ -81,15 +83,15 @@ describe("invoice money and overdue", () => {
     await recordPayment(actor, due, { amount: "400", withheld: "", paidOn: TODAY, method: "cash", reference: "", institution: "", payer: "", paidTime: "", chequeDate: "", notes: "" }, { recipients: [], market: MARKETS.PH, now: NOW }, testDb());
 
     expect(await invoiceMoneySummary(actor, { today: TODAY }, testDb())).toEqual([
-      { currency: "PHP", outstandingMinor: 260000, overdueMinor: 200000 },
-      { currency: "USD", outstandingMinor: 5000, overdueMinor: 5000 },
+      { currency: "PHP", outstandingMinor: 260000, overdueMinor: 200000, outstandingCount: 2, overdueCount: 1, oldestOverdueDue: "2026-09-15" },
+      { currency: "USD", outstandingMinor: 5000, overdueMinor: 5000, outstandingCount: 1, overdueCount: 1, oldestOverdueDue: "2026-09-20" },
     ]);
     const overdue = await overdueInvoices(actor, { today: TODAY, limit: 5 }, testDb());
     expect(overdue.map((i) => [i.number, i.balanceMinor, i.customerName])).toEqual([
       ["INV-000002", 200000, "Juan Dela Cruz"],
       ["INV-000003", 5000, "Juan Dela Cruz"],
     ]);
-    expect(await paymentsReceivedSince(actor, "2026-09-01", testDb())).toEqual([{ currency: "PHP", receivedMinor: 40000 }]);
+    expect(await paymentsReceivedSince(actor, "2026-09-01", testDb())).toEqual([{ currency: "PHP", receivedMinor: 40000, paymentCount: 1 }]);
 
     const other = await business();
     expect(await invoiceMoneySummary(other.actor, { today: TODAY }, testDb())).toEqual([]);
@@ -151,5 +153,64 @@ describe("quotes needing attention", () => {
     const later = await quotesNeedingAttention(actor, { ...window, followUpBefore: new Date("2020-01-01") }, testDb());
     expect(later.approvedNotInvoiced).toEqual([]);
     expect(later.awaitingReply).toEqual([]);
+  });
+});
+
+async function approved(actor: OrgActor, customerId: string) {
+  const made = await quote(actor, customerId);
+  const shared = await getSharedQuote(made.token, testDb());
+  if (!shared) throw new Error("shared");
+  await decideSharedQuote(
+    made.token,
+    { kind: "approve", name: "Juan", accepted: true },
+    { contentHash: sharedQuoteContentHash(shared.quote), ipAddress: null, userAgent: null, appUrl: "https://tavi.example", now: NOW },
+    testDb(),
+  );
+  return made;
+}
+
+describe("pipelines", () => {
+  it("counts quotations by stage with what each is worth, leaving out an approval that is already billed", async () => {
+    const { actor, customerId } = await business();
+    await quote(actor, customerId, { send: false });
+    await quote(actor, customerId, { send: false });
+    await quote(actor, customerId);
+    const viewed = await quote(actor, customerId);
+    await recordSharedQuoteOpen(viewed.token, testDb());
+    await approved(actor, customerId);
+    const billed = await approved(actor, customerId);
+    await convertQuoteToInvoice(actor, billed.id, testDb(), NOW);
+
+    const worth = (count: number) => ({ count, totals: count ? [{ currency: "PHP", count, totalMinor: count * 50_000 }] : [] });
+    expect(await quotePipeline(actor, testDb())).toEqual({ drafts: worth(2), sent: worth(1), viewed: worth(1), approved: worth(1) });
+
+    const other = await business();
+    expect(await quotePipeline(other.actor, testDb())).toEqual({ drafts: worth(0), sent: worth(0), viewed: worth(0), approved: worth(0) });
+  });
+
+  it("counts billing statements as drafts, unpaid (part-paid too) and overdue, by their due dates, and leaves out the paid", async () => {
+    const { actor, customerId } = await business();
+    const draft = await saveInvoiceDraft(
+      actor,
+      null,
+      { customerId, currency: "PHP", issueDate: "2026-09-01", dueDate: "2026-10-30", notes: "", terms: "", lines: [line("750")] },
+      { locale: "en-PH" },
+      testDb(),
+    );
+    if (!draft.ok) throw new Error("draft");
+    await invoice(actor, customerId, { dueDate: "2026-10-16", price: "1,000" });
+    await invoice(actor, customerId, { dueDate: TODAY, price: "500" }); // due today is not late yet
+    const partly = await invoice(actor, customerId, { dueDate: "2026-10-20", price: "2,000" });
+    await invoice(actor, customerId, { dueDate: "2026-09-15", price: "3,000" });
+    const settled = await invoice(actor, customerId, { dueDate: "2026-09-10", price: "400" });
+    const pay = (amount: string) => ({ amount, withheld: "", paidOn: TODAY, method: "cash", reference: "", institution: "", payer: "", paidTime: "", chequeDate: "", notes: "" });
+    await recordPayment(actor, partly, pay("500"), { recipients: [], market: MARKETS.PH, now: NOW }, testDb());
+    await recordPayment(actor, settled, pay("400"), { recipients: [], market: MARKETS.PH, now: NOW }, testDb());
+
+    expect(await invoicePipeline(actor, { today: TODAY }, testDb())).toEqual({
+      drafts: { count: 1, totals: [{ currency: "PHP", count: 1, totalMinor: 75_000 }] },
+      unpaid: { count: 3, totals: [{ currency: "PHP", count: 3, totalMinor: 100_000 + 50_000 + 150_000 }] },
+      overdue: { count: 1, totals: [{ currency: "PHP", count: 1, totalMinor: 300_000 }] },
+    });
   });
 });

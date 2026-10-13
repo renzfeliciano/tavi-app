@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronsUpDownIcon, LogOutIcon, SettingsIcon } from "lucide-react";
 import { useState } from "react";
+import { initials } from "@/components/monogram";
 import { useThemeChoice } from "@/components/theme/theme-toggle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -11,12 +12,6 @@ import type { ShellAccount } from "./account";
 import { CollapsedTip } from "./collapsed-tip";
 import { isActive } from "./nav";
 import { useSignOut } from "./sign-out-button";
-
-export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const letters = (parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts.at(-1)?.[0] ?? "") : "");
-  return letters.toUpperCase() || "?";
-}
 
 function Avatar({ name, className }: { name: string; className?: string }) {
   return (

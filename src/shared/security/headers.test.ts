@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   acceptRequestId,
@@ -94,6 +96,20 @@ describe("isProtectedPath", () => {
     "%s is public",
     (path) => expect(isProtectedPath(path)).toBe(false),
   );
+
+  // The proxy is the first check a signed-out visitor meets. A page added to the
+  // signed-in app without being listed here would still protect its data (every
+  // page checks the session itself), but would answer 200 with its shell instead
+  // of sending the visitor to sign in. So the list is held to the folders.
+  it("covers every page folder of the signed-in app", () => {
+    const appDir = join(process.cwd(), "src", "app", "(app)");
+    const routes = readdirSync(appDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && !entry.name.startsWith("_"))
+      .map((entry) => `/${entry.name}`);
+    expect(routes.length).toBeGreaterThan(5);
+    const unprotected = routes.filter((route) => !isProtectedPath(route));
+    expect(unprotected).toEqual([]);
+  });
 });
 
 // x-request-id comes from whoever sent the request; it ends up in logs and

@@ -16,9 +16,6 @@ export const CATALOG_ITEM_LIMITS = {
   unitLabel: 20,
 } as const;
 
-/** Items per page in the catalog lists. */
-export const CATALOG_PAGE_SIZE = 25;
-
 const asText = (value: unknown) => (typeof value === "string" ? value : "");
 
 type SchemaOptions = {
@@ -58,8 +55,11 @@ export function catalogItemSchemaFor({ kind, locale, units }: SchemaOptions) {
     ),
   });
 
-  // The price can only be read once the currency is known to be valid.
+  // The price can only be read once the currency is known to be valid. It may be
+  // left blank, for an item whose price the owner doesn't know yet: `null` means
+  // "no price yet", which is not the same as a free item priced at 0.
   return base.transform(({ unitPrice, ...item }, ctx) => {
+    if (unitPrice.trim() === "") return { ...item, unitPriceMinor: null };
     const unitPriceMinor = isCurrencyCode(item.currency)
       ? parseMoneyInput(unitPrice, item.currency, locale)
       : null;

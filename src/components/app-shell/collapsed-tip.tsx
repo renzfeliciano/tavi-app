@@ -6,7 +6,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 /**
  * Names an icon-only control on hover and on keyboard focus. Applies only while
  * the sidebar is collapsed: expanded, the label is already on screen, so the
- * child is returned untouched.
+ * tooltip is switched off.
+ *
+ * The wrapper is always rendered, only disabled, so the child stays the same
+ * element whether or not the tip is active. A child that opens a menu or popup
+ * positions it against that element: swapping the wrapper in and out would
+ * rebuild the child, and the popup would be left anchored to a detached node.
  */
 export function CollapsedTip({
   label,
@@ -17,9 +22,8 @@ export function CollapsedTip({
   active: boolean;
   children: ReactElement;
 }) {
-  if (!active) return children;
   return (
-    <Tooltip>
+    <Tooltip disabled={!active}>
       <TooltipTrigger render={children} />
       <TooltipContent side="right" sideOffset={10}>
         {label}

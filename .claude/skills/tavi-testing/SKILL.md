@@ -32,6 +32,8 @@ description: How TAVI is tested — the test pyramid and commands, the test-firs
 | Capability | Update `policy.test.ts` snapshot deliberately |
 | Screen / flow | E2E happy path + key failure; a `loading.tsx` in the page's shape; add the route to the axe/overflow list |
 | Env var | `parse-env.test.ts` (valid, invalid-without-echo, production requirement) |
+| New page folder under `src/app/(app)` | List it in `PROTECTED_PREFIXES` (`src/shared/security/headers.ts`); `headers.test.ts` fails until you do |
+| New text field | A placeholder example via `eg()` (`src/app/field-placeholders.test.ts` fails without one) |
 
 ## Fixtures and helpers
 

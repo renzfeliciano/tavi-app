@@ -1,6 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import { expect, type Page } from "@playwright/test";
 
+/** The data rows of a list's table (not its header), in the order they are shown. */
+export const tableRows = (page: Page, name: string) =>
+  page.getByRole("table", { name }).getByRole("row").filter({ has: page.getByRole("link") });
+
 /** A unique address per test run; example.com never receives mail. */
 export function uniqueEmail(label: string): string {
   return `${label}-${Date.now()}-${randomBytes(3).toString("hex")}@example.com`;
@@ -60,6 +64,34 @@ export async function markEmailVerified(email: string) {
   }
 }
 
+/**
+ * Test-only: `count` customers ("Customer 001" … ) in the business `ownerEmail` owns, for lists that need
+ * more rows than fit on a page. Every third has a company and every second lives in Cebu (the rest Davao).
+ */
+export async function seedCustomers(ownerEmail: string, count: number) {
+  const { Client } = await import("pg");
+  const { testDatabaseUrl } = await import("../src/db/testing/env");
+  const client = new Client({ connectionString: testDatabaseUrl() });
+  await client.connect();
+  try {
+    const { rowCount } = await client.query(
+      `insert into customers (id, organization_id, display_name, company, email, city)
+       select gen_random_uuid(), m.organization_id, 'Customer ' || lpad(n::text, 3, '0'),
+              case when n % 3 = 0 then 'Company ' || n end,
+              'customer' || n || '@example.com',
+              case when n % 2 = 0 then 'Cebu' else 'Davao' end
+       from memberships m
+       join users u on u.id = m.user_id
+       cross join generate_series(1, $2::int) as n
+       where u.email = $1 and m.role = 'owner'`,
+      [ownerEmail, count],
+    );
+    if (rowCount !== count) throw new Error(`Seeded ${rowCount} customers for ${ownerEmail}, expected ${count}`);
+  } finally {
+    await client.end();
+  }
+}
+
 /** Test-only: pretend this account agreed to an older version of the Terms (D15). */
 export async function setTermsVersion(email: string, version: string) {
   const { Client } = await import("pg");
@@ -103,18 +135,22 @@ export async function freshInvitationPath(to: string): Promise<string> {
   }
 }
 
-/** Test-only: whether the latest email queued for `to` is still "pending", or already "sent" (or "failed"). */
-export async function latestEmailStatus(to: string): Promise<string | undefined> {
+/**
+ * Test-only: the latest email queued for `to`, as `status` ("pending", "sent" or "failed") and how many
+ * times a send was tried. A production build in a test run has no mail provider, so a send is tried and
+ * fails (it stays "pending" with an attempt on record); a development server prints it and marks it "sent".
+ */
+export async function latestEmailDelivery(to: string): Promise<{ status: string; attempts: number } | undefined> {
   const { Client } = await import("pg");
   const { testDatabaseUrl } = await import("../src/db/testing/env");
   const client = new Client({ connectionString: testDatabaseUrl() });
   await client.connect();
   try {
-    const { rows } = await client.query<{ status: string }>(
-      "select status from outbox_messages where payload->>'to' = $1 order by created_at desc limit 1",
+    const { rows } = await client.query<{ status: string; attempts: number }>(
+      "select status, attempts from outbox_messages where payload->>'to' = $1 order by created_at desc limit 1",
       [to],
     );
-    return rows[0]?.status;
+    return rows[0];
   } finally {
     await client.end();
   }

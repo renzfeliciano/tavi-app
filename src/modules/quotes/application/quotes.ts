@@ -17,15 +17,13 @@ import {
 import { getDocumentSettings, type SellerSnapshot } from "@/modules/organizations";
 import { putInTrash } from "@/modules/trash";
 import { addDays, type CalendarDate, todayIn } from "@/shared/dates/calendar";
+import { type PageMeta, pageMeta, pageWindow } from "@/shared/pagination/page-window";
 import { escapeLikePattern } from "@/shared/text/search";
 import { type QuoteDraft, parseQuoteDraft } from "../domain/quote-draft";
 import { quoteTrashPayload } from "../domain/trash-payload";
 import type { QuoteStatus } from "../domain/status";
 import { transitionQuote } from "../domain/transitions";
 import { type CustomerSnapshot, quoteLines, quotes } from "../schema";
-
-/** Quotes per page in the list. */
-export const QUOTE_PAGE_SIZE = 25;
 
 export type QuoteHeader = {
   id: string;
@@ -89,7 +87,8 @@ export type QuoteSummary = Pick<
   "id" | "number" | "revision" | "status" | "currency" | "totalMinor" | "issueDate" | "validUntil" | "updatedAt"
 > & { customerName: string | null };
 
-export type QuoteList = { quotes: QuoteSummary[]; page: number; hasMore: boolean; total: number };
+/** `total` is every quote the business has (it decides "nothing here yet"); `matching` is what the search and status show. */
+export type QuoteList = PageMeta & { quotes: QuoteSummary[]; total: number };
 
 export type NewQuoteDefaults = {
   currency: string;
@@ -431,11 +430,10 @@ export async function deleteDraftQuote(
  */
 export async function listQuotes(
   actor: OrgActor,
-  { search = null, status, page = 1 }: { search?: string | null; status?: QuoteStatus; page?: number },
+  { search = null, status, page = 1, pageSize }: { search?: string | null; status?: QuoteStatus; page?: number; pageSize?: number },
   db: Database = getDb(),
 ): Promise<QuoteList> {
   assertCan(actor, "quotes.read");
-  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
 
   let matches;
   if (search) {
@@ -449,30 +447,32 @@ export async function listQuotes(
   }
   const where = and(ofOrganization(actor), status ? eq(quotes.status, status) : undefined, matches);
 
-  const [rows, [total]] = await Promise.all([
-    db
-      .select({
-        id: quotes.id,
-        number: quotes.number,
-        revision: quotes.revision,
-        status: quotes.status,
-        currency: quotes.currency,
-        totalMinor: quotes.totalMinor,
-        issueDate: quotes.issueDate,
-        validUntil: quotes.validUntil,
-        updatedAt: quotes.updatedAt,
-        customerId: quotes.customerId,
-        snapshotName: sql<string | null>`${quotes.customerSnapshot}->>'displayName'`,
-      })
-      .from(quotes)
-      .where(where)
-      .orderBy(desc(quotes.updatedAt), desc(quotes.id))
-      .limit(QUOTE_PAGE_SIZE + 1)
-      .offset((safePage - 1) * QUOTE_PAGE_SIZE),
+  const [[matching], [total]] = await Promise.all([
+    db.select({ value: count() }).from(quotes).where(where),
     db.select({ value: count() }).from(quotes).where(ofOrganization(actor)),
   ]);
+  const window = pageWindow({ page, pageSize, matching: matching?.value ?? 0 });
+  const rows = await db
+    .select({
+      id: quotes.id,
+      number: quotes.number,
+      revision: quotes.revision,
+      status: quotes.status,
+      currency: quotes.currency,
+      totalMinor: quotes.totalMinor,
+      issueDate: quotes.issueDate,
+      validUntil: quotes.validUntil,
+      updatedAt: quotes.updatedAt,
+      customerId: quotes.customerId,
+      snapshotName: sql<string | null>`${quotes.customerSnapshot}->>'displayName'`,
+    })
+    .from(quotes)
+    .where(where)
+    .orderBy(desc(quotes.updatedAt), desc(quotes.id))
+    .limit(window.pageSize)
+    .offset(window.offset);
 
-  const pageRows = rows.slice(0, QUOTE_PAGE_SIZE);
+  const pageRows = rows;
   const names = await getCustomerNames(
     actor,
     pageRows.flatMap((row) => (row.snapshotName === null && row.customerId ? [row.customerId] : [])),
@@ -483,8 +483,7 @@ export async function listQuotes(
       ...row,
       customerName: snapshotName ?? (customerId ? (names.get(customerId) ?? null) : null),
     })),
-    page: safePage,
-    hasMore: rows.length > QUOTE_PAGE_SIZE,
+    ...pageMeta(window),
     total: total?.value ?? 0,
   };
 }

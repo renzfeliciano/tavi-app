@@ -15,7 +15,7 @@ import { badgeFor, isActive, type NavGroup, type NavItem } from "./nav";
  * state, set on the shell by CSS alone, so the first paint is already right.
  */
 const ROW =
-  "group/row relative flex h-9 items-center gap-3 rounded-md px-3 text-nav font-medium outline-none transition-[background-color,color] duration-(--duration-fast) ease-out focus-visible:ring-3 focus-visible:ring-ring/35 active:bg-sidebar-accent pointer-coarse:h-11 group-data-[sidebar=collapsed]/shell:justify-center group-data-[sidebar=collapsed]/shell:px-0";
+  "group/row relative flex h-9 short:h-8 items-center gap-3 rounded-md px-3 text-nav font-medium outline-none transition-[background-color,color] duration-(--duration-fast) ease-out focus-visible:ring-3 focus-visible:ring-ring/35 active:bg-sidebar-accent pointer-coarse:h-11 group-data-[sidebar=collapsed]/shell:justify-center group-data-[sidebar=collapsed]/shell:px-0";
 
 const BADGE =
   "ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-eyebrow leading-none font-semibold tabular-nums group-data-[sidebar=collapsed]/shell:absolute group-data-[sidebar=collapsed]/shell:top-0.5 group-data-[sidebar=collapsed]/shell:right-2.5 group-data-[sidebar=collapsed]/shell:ml-0 group-data-[sidebar=collapsed]/shell:h-4 group-data-[sidebar=collapsed]/shell:min-w-4 group-data-[sidebar=collapsed]/shell:px-1 group-data-[sidebar=collapsed]/shell:text-[0.625rem]";
@@ -95,7 +95,7 @@ export function SidebarNav({
 }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Main" className="grid content-start gap-4 px-3 py-1">
+    <nav aria-label="Main" className="grid content-start gap-4 px-3 py-1 short:gap-3">
       {groups.map((group) => (
         <div key={group.id} className="grid gap-0.5">
           {group.label && (

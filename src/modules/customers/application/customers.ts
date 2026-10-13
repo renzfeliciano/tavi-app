@@ -3,9 +3,9 @@ import { z } from "zod";
 import { type Database, type Executor, getDb } from "@/db";
 import { type AuditAction, recordAuditEvent } from "@/modules/audit";
 import { assertCan, type OrgActor } from "@/modules/authz";
+import { type PageMeta, pageMeta, pageWindow } from "@/shared/pagination/page-window";
 import { escapeLikePattern } from "@/shared/text/search";
 import { type CustomerInput, customerInputSchema } from "../domain/customer-input";
-import { CUSTOMER_PAGE_SIZE } from "../domain/limits";
 import { customers } from "../schema";
 
 export type Customer = Omit<typeof customers.$inferSelect, "organizationId" | "createdAt">;
@@ -15,11 +15,9 @@ export type CustomerSummary = Pick<
 >;
 
 export type CustomerStatus = "active" | "archived";
-export type ListCustomersOptions = { search?: string | null; status?: CustomerStatus; page?: number };
-export type CustomerList = {
+export type ListCustomersOptions = { search?: string | null; status?: CustomerStatus; page?: number; pageSize?: number };
+export type CustomerList = PageMeta & {
   customers: CustomerSummary[];
-  page: number;
-  hasMore: boolean;
   /** For the "Archived" tab: shown only when there are some. */
   archivedCount: number;
 };
@@ -54,11 +52,10 @@ const ofOrganization = (actor: OrgActor) => eq(customers.organizationId, actor.o
 /** One page of the business's customers, by name, optionally filtered by a search. */
 export async function listCustomers(
   actor: OrgActor,
-  { search = null, status = "active", page = 1 }: ListCustomersOptions,
+  { search = null, status = "active", page = 1, pageSize }: ListCustomersOptions,
   db: Database = getDb(),
 ): Promise<CustomerList> {
   assertCan(actor, "customers.read");
-  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
   const pattern = search ? `%${escapeLikePattern(search)}%` : null;
   const matches = pattern
     ? or(
@@ -69,27 +66,25 @@ export async function listCustomers(
       )
     : undefined;
   const statusFilter = status === "archived" ? isNotNull(customers.archivedAt) : isNull(customers.archivedAt);
+  const where = and(ofOrganization(actor), statusFilter, matches);
 
-  const [rows, [archived]] = await Promise.all([
-    db
-      .select(summaryColumns)
-      .from(customers)
-      .where(and(ofOrganization(actor), statusFilter, matches))
-      .orderBy(asc(sql`lower(${customers.displayName})`), asc(customers.id))
-      .limit(CUSTOMER_PAGE_SIZE + 1)
-      .offset((safePage - 1) * CUSTOMER_PAGE_SIZE),
+  const [[matching], [archived]] = await Promise.all([
+    db.select({ value: count() }).from(customers).where(where),
     db
       .select({ value: count() })
       .from(customers)
       .where(and(ofOrganization(actor), isNotNull(customers.archivedAt))),
   ]);
+  const window = pageWindow({ page, pageSize, matching: matching?.value ?? 0 });
+  const rows = await db
+    .select(summaryColumns)
+    .from(customers)
+    .where(where)
+    .orderBy(asc(sql`lower(${customers.displayName})`), asc(customers.id))
+    .limit(window.pageSize)
+    .offset(window.offset);
 
-  return {
-    customers: rows.slice(0, CUSTOMER_PAGE_SIZE),
-    page: safePage,
-    hasMore: rows.length > CUSTOMER_PAGE_SIZE,
-    archivedCount: archived?.value ?? 0,
-  };
+  return { customers: rows, ...pageMeta(window), archivedCount: archived?.value ?? 0 };
 }
 
 /** The business's customer, or null (another business's id or a malformed id finds nothing). */

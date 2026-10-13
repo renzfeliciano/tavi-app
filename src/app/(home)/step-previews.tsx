@@ -17,7 +17,8 @@ import { SAMPLE_NUMBER } from "./sample-quotation";
 
 const SHEET = "relative grid gap-2.5 rounded-lg border border-border bg-card p-3 text-xs text-foreground shadow-sm";
 const money = (minor: number) => formatMoney(minor, "PHP");
-const PLACEHOLDER = "text-muted-foreground/60";
+// The same grey as a real field's placeholder (WCAG AA needs 4.5:1; a 60% tint of it measured 2.56:1).
+const PLACEHOLDER = "text-muted-foreground";
 
 /** The text cursor, blinking (home.css). */
 function Caret() {

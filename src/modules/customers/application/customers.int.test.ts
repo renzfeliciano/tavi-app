@@ -8,7 +8,7 @@ import {
   testDb,
 } from "@/db/testing";
 import type { OrgActor, Role } from "@/modules/authz";
-import { CUSTOMER_PAGE_SIZE } from "../domain/limits";
+import { DEFAULT_PAGE_SIZE } from "@/shared/pagination/page-window";
 import {
   archiveCustomer,
   createCustomer,
@@ -111,20 +111,47 @@ describe("listCustomers", () => {
 
   it("pages through long lists", async () => {
     const actor = await actorFor();
-    for (let i = 1; i <= CUSTOMER_PAGE_SIZE + 2; i++) {
+    for (let i = 1; i <= DEFAULT_PAGE_SIZE + 2; i++) {
       await add(actor, `Customer ${String(i).padStart(3, "0")}`);
     }
 
     const first = await listCustomers(actor, { page: 1 }, testDb());
     const second = await listCustomers(actor, { page: 2 }, testDb());
 
-    expect(first.customers).toHaveLength(CUSTOMER_PAGE_SIZE);
+    expect(first.customers).toHaveLength(DEFAULT_PAGE_SIZE);
     expect(first.hasMore).toBe(true);
     expect(second.customers.map((c) => c.displayName)).toEqual([
-      `Customer ${String(CUSTOMER_PAGE_SIZE + 1).padStart(3, "0")}`,
-      `Customer ${String(CUSTOMER_PAGE_SIZE + 2).padStart(3, "0")}`,
+      `Customer ${String(DEFAULT_PAGE_SIZE + 1).padStart(3, "0")}`,
+      `Customer ${String(DEFAULT_PAGE_SIZE + 2).padStart(3, "0")}`,
     ]);
     expect(second.hasMore).toBe(false);
+  });
+
+  it("says how many customers match and pages by the size asked for", async () => {
+    const actor = await actorFor();
+    for (let i = 1; i <= 12; i++) await add(actor, `Customer ${String(i).padStart(3, "0")}`);
+    await add(actor, "Zed Bakery");
+
+    const second = await listCustomers(actor, { pageSize: 10, page: 2 }, testDb());
+    const found = await listCustomers(actor, { search: "bakery" }, testDb());
+
+    expect(second).toMatchObject({ matching: 13, page: 2, pageSize: 10, pageCount: 2, from: 11, to: 13, hasMore: false });
+    expect(second.customers).toHaveLength(3);
+    expect(found).toMatchObject({ matching: 1, from: 1, to: 1, pageCount: 1 });
+    expect(found.customers.map((c) => c.displayName)).toEqual(["Zed Bakery"]);
+  });
+
+  it("brings a page past the end back to the last page, and a size that isn't offered to the default", async () => {
+    const actor = await actorFor();
+    for (let i = 1; i <= 12; i++) await add(actor, `Customer ${String(i).padStart(3, "0")}`);
+
+    const past = await listCustomers(actor, { pageSize: 10, page: 99 }, testDb());
+    const odd = await listCustomers(actor, { pageSize: 7 }, testDb());
+
+    expect(past).toMatchObject({ page: 2, from: 11, to: 12 });
+    expect(past.customers).toHaveLength(2);
+    expect(odd.pageSize).toBe(DEFAULT_PAGE_SIZE);
+    expect(odd.customers).toHaveLength(12);
   });
 
   it("shows archived customers separately", async () => {

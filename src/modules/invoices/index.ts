@@ -12,17 +12,21 @@ export {
   countOverdueInvoices,
   type InvoiceMoney,
   invoiceMoneySummary,
+  type InvoicePipeline,
+  invoicePipeline,
   type OverdueInvoice,
   overdueInvoices,
 } from "./application/attention";
 export { type ConvertQuoteResult, convertQuoteToInvoice } from "./application/conversion";
 export {
   deleteDraftInvoice,
+  findInvoiceIds,
   getInvoice,
-  INVOICE_PAGE_SIZE,
+  getInvoiceLabels,
   type InvoiceCommandResult,
   type InvoiceDetail,
   type InvoiceHeader,
+  type InvoiceLabel,
   type InvoiceLine,
   type InvoiceList,
   type InvoiceSummary,

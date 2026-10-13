@@ -166,7 +166,7 @@ describe("Home", () => {
 
     // What the email looks like when it lands: from the business, with the way in.
     const email = cards[0]!;
-    expect(within(email).getByText("Quotation QUO-000012 from Travis Renz Repair Services")).toBeInTheDocument();
+    expect(within(email).getByText("Quotation QUO-000012 from Renzo Feliciano Payod Repair Services")).toBeInTheDocument();
     expect(within(email).getByText("View and approve")).toBeInTheDocument();
     expect(within(email).getByText(/Replies go straight to your inbox/)).toBeInTheDocument();
 

@@ -5,12 +5,14 @@ import {
   closeTestDb,
   createTestOrganization,
   createTestUser,
+  fillTestOutbox,
   listAllAuditEvents,
   listAllOutboxMessages,
   resetTables,
   testDb,
 } from "@/db/testing";
 import type { Role } from "@/modules/authz";
+import { documentEmailLimitMessage, PERSON_EMAIL_LIMIT } from "@/modules/notifications";
 import { TEAM_LIMITS } from "../domain/team";
 import { invitations, memberships } from "../schema";
 import { closeOrganization } from "./organizations";
@@ -48,6 +50,7 @@ async function business(name = "Santos Aircon") {
     organizationName: name,
     userId,
     userName,
+    emailVerified: true,
     role,
   });
   return { org, owner, ownerActor: actor(owner.id, "owner"), actor };
@@ -94,6 +97,22 @@ describe("inviting", () => {
     expect((await previewInvitation(second, testDb(), NOW))?.state).toBe("open");
   });
 
+  // Like sending a quotation or invoice: a business can't email other people
+  // from Tavi until its sender has shown the address is theirs (§D).
+  it("won't email anyone for a sender who hasn't confirmed their own email", async () => {
+    const { ownerActor, org } = await business();
+    const result = await inviteMember(
+      { ...ownerActor, emailVerified: false },
+      { email: "ana@example.com", role: "member" },
+      { appUrl: APP_URL },
+      testDb(),
+      NOW,
+    );
+    expect(result).toMatchObject({ ok: false, error: expect.stringContaining("Confirm your email") });
+    expect(await testDb().select().from(invitations).where(eq(invitations.organizationId, org.id))).toEqual([]);
+    expect(await listAllOutboxMessages()).toEqual([]);
+  });
+
   it("refuses someone already in the team", async () => {
     const { ownerActor, owner } = await business();
     const result = await inviteMember(ownerActor, { email: owner.email, role: "member" }, { appUrl: APP_URL }, testDb(), NOW);
@@ -105,6 +124,16 @@ describe("inviting", () => {
     for (let i = 1; i < TEAM_LIMITS.maxPeople; i++) await invite(ownerActor, `p${i}@example.com`);
     const result = await inviteMember(ownerActor, { email: "one-too-many@example.com", role: "member" }, { appUrl: APP_URL }, testDb(), NOW);
     expect(result).toMatchObject({ ok: false, error: expect.stringContaining(`up to ${TEAM_LIMITS.maxPeople} people`) });
+  });
+
+  it("won't invite once the person has used their email cap across all their businesses", async () => {
+    const { ownerActor } = await business();
+    const elsewhere = await createTestOrganization();
+    await fillTestOutbox(elsewhere.id, PERSON_EMAIL_LIMIT.max, testDb(), ownerActor.userId);
+
+    const result = await inviteMember(ownerActor, { email: "ana@example.com", role: "member" }, { appUrl: APP_URL }, testDb(), NOW);
+    expect(result).toEqual({ ok: false, error: documentEmailLimitMessage(undefined, "person") });
+    expect(await testDb().select().from(invitations)).toHaveLength(0);
   });
 
   it("is for owners and admins", async () => {
