@@ -1,10 +1,10 @@
 "use server";
 
-import { formatAddressLines } from "@/config/markets";
 import { searchLineSources } from "@/modules/catalog";
 import { getCustomer, listCustomers } from "@/modules/customers";
 import { requireOrgContext } from "@/modules/identity";
 import { normalizeSearch } from "@/shared/text/search";
+import { toEditorCustomer } from "./editor-customer";
 import type { CustomerChoice, EditorCustomer, LineSourceChoice } from "./editor-types";
 
 // Lookups shared by the quote and invoice editors.
@@ -20,19 +20,7 @@ export async function searchCustomersAction(query: string): Promise<CustomerChoi
 export async function customerForDocumentAction(id: string): Promise<EditorCustomer | null> {
   const ctx = await requireOrgContext();
   const customer = await getCustomer(ctx, id);
-  if (!customer) return null;
-  return {
-    id: customer.id,
-    currency: customer.currency,
-    email: customer.email,
-    party: {
-      name: customer.displayName,
-      subtitle: customer.company,
-      addressLines: formatAddressLines(customer, ctx.market),
-      contactLines: [customer.email, customer.phone].filter((line): line is string => Boolean(line)),
-      taxId: customer.taxId ? { label: ctx.market.taxId.label, value: customer.taxId } : null,
-    },
-  };
+  return customer ? toEditorCustomer(customer, ctx.market) : null;
 }
 
 /** Products and services for the line-item picker. */

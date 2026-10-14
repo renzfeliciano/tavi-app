@@ -1,9 +1,9 @@
 import { FormSkeleton } from "@/components/skeletons";
 
 /** CustomerForm's shape: who they are, billing details, notes. */
-export function CustomerFormSkeleton() {
+export function CustomerFormSkeleton({ className = "mt-8" }: { className?: string }) {
   return (
-    <div className="mt-8 max-w-3xl">
+    <div className={`${className} max-w-3xl`}>
       <FormSkeleton
         sections={[
           ["half hint", "half", "half hint", "half"],

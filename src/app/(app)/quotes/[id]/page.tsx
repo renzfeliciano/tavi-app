@@ -9,11 +9,14 @@ import { formatRateForInput } from "@/shared/numbers/percent";
 import { formatQuantity } from "@/modules/documents";
 import { requireOrgContext } from "@/modules/identity";
 import { getQuote, type QuoteDetail } from "@/modules/quotes";
+import { todayIn } from "@/shared/dates/calendar";
 import { customerForDocumentAction } from "../../_documents/actions";
 import { DocumentEditor, type DocumentEditorState } from "../../_documents/document-editor";
 import { documentBusiness, editorContext } from "../../_documents/editor-props";
+import { DOCUMENT_BODY, DocumentSidePanel, panelPlace } from "../../_documents/side-panel";
 import { deleteDraftQuoteAction, saveQuoteDraftAction, sendQuoteAction } from "../actions";
 import { SentQuoteActions } from "../_components/sent-quote-actions";
+import { quotePanel } from "../_lib/panel";
 import { quoteDocumentView } from "../_lib/quote-view";
 
 export const metadata: Metadata = { title: "Quote" };
@@ -85,20 +88,7 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
   // A sent quote is read-only; changes go through a revision (§B.3).
   const view = quoteDocumentView(quote, { business: await documentBusiness(ctx, quote.sellerSnapshot), market: ctx.market, locale: ctx.locale });
   const name = `${title} ${quote.number ?? ""}`.trim();
-  const when = (date: Date | null) =>
-    date ? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeStyle: "short", timeZone: ctx.timezone }).format(date) : null;
-  const sentOn = quote.sentAt
-    ? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeZone: ctx.timezone }).format(quote.sentAt)
-    : null;
-  // What the customer did from the link (§B.3).
-  const decision =
-    quote.status === "APPROVED" && quote.decidedAt
-      ? `Approved by ${quote.decisionName ?? "the customer"} · ${when(quote.decidedAt)}`
-      : quote.status === "REJECTED" && quote.decidedAt
-        ? `Declined · ${when(quote.decidedAt)}${quote.decisionNote ? ` · “${quote.decisionNote}”` : ""}`
-        : quote.viewedAt && quote.status === "VIEWED"
-          ? `Opened by the customer · ${when(quote.viewedAt)}`
-          : null;
+  const panel = quotePanel(quote, { today: todayIn(ctx.timezone), locale: ctx.locale, timezone: ctx.timezone });
 
   return (
     <>
@@ -108,10 +98,7 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
         description={
           <span className="inline-flex flex-wrap items-center gap-2">
             <StatusBadge kind="quote" status={quote.status} />
-            <span>
-              {quote.customerSnapshot?.displayName}
-              {sentOn ? ` · Sent ${sentOn}` : ""}
-            </span>
+            <span>{quote.customerSnapshot?.displayName}</span>
           </span>
         }
         actions={
@@ -125,13 +112,11 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
           />
         }
       />
-      {decision && (
-        <p role="status" className="mt-4 max-w-3xl rounded-lg border border-border bg-card px-4 py-3 text-sm text-pretty">
-          {decision}
-        </p>
-      )}
-      <div className="mt-6 max-w-3xl">
-        <DocumentPaper view={view} />
+      <div className={DOCUMENT_BODY}>
+        <DocumentSidePanel label={`${title} details`} data={panel} className={panelPlace(1)} />
+        <div className="min-w-0">
+          <DocumentPaper view={view} />
+        </div>
       </div>
     </>
   );

@@ -7,6 +7,8 @@ export {
   voidInvoice,
 } from "./application/corrections";
 export { markOverdueInvoices } from "./application/expiry";
+export { type CustomerMoney, customerMoney, lastInvoiceChanges } from "./application/customer-figures";
+export { invoiceItemUsage } from "./application/item-usage";
 export { type RestoreInvoiceResult, restoreDeletedInvoice } from "./application/trash";
 export {
   countOverdueInvoices,
@@ -54,7 +56,7 @@ export {
   isPayable,
   issuedInvoiceStatus,
 } from "./domain/issuing";
-export { INVOICE_STATUSES, type InvoiceStatus } from "./domain/status";
+export { INVOICE_STATUSES, type InvoiceStatus, OWING_INVOICE_STATUSES } from "./domain/status";
 export { EDITABLE_INVOICE_STATUSES, INVOICE_EVENTS, type InvoiceEvent, transitionInvoice } from "./domain/transitions";
 export { INVOICE_REASON_MAX } from "./domain/corrections";
 export {

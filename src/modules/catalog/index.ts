@@ -18,6 +18,7 @@ export {
   taxRateInputSchemaFor,
 } from "./domain/tax-rate";
 export { taxModeExamples } from "./domain/tax-mode-examples";
+export { type ItemUse, type ItemUseTotal, mergeUse } from "./domain/usage";
 export {
   archiveCatalogItem,
   type CatalogInputOptions,

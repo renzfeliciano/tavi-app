@@ -17,6 +17,7 @@ let invoiceUrl: string;
 let customerLink: string;
 
 const toast = (text: string | RegExp) => page.locator("[data-sonner-toast]").filter({ hasText: text });
+const detailsPanel = () => page.getByRole("complementary", { name: "Billing statement details" });
 
 test.beforeAll(async ({ browser }) => {
   context = await browser.newContext();
@@ -103,6 +104,8 @@ test("sending numbers the statement and the customer sees what to pay and how", 
   expect(customerLink).toMatch(/\/i\/[\w-]{43}$/);
   await expect(page.getByRole("heading", { level: 1, name: "Billing statement INV-000001" })).toBeVisible();
   await expect(page.getByText("Unpaid", { exact: true }).first()).toBeVisible();
+  // Made from an approved quotation, it says so and links back to it.
+  await expect(detailsPanel().getByRole("link", { name: "From the approved quotation" })).toHaveAttribute("href", /^\/quotes\/[0-9a-f-]{36}$/);
 
   const customer = await (await browser.newContext()).newPage();
   const response = await customer.goto(customerLink);
@@ -118,7 +121,7 @@ test("sending numbers the statement and the customer sees what to pay and how", 
   await customer.context().close();
 
   await page.reload();
-  await expect(page.getByText(/Opened by the customer/)).toBeVisible();
+  await expect(detailsPanel().getByText("Opened by the customer")).toBeVisible();
 });
 
 test("a billing statement written from scratch can be emailed, and a draft deleted", async () => {
@@ -202,7 +205,8 @@ test("void and duplicate asks for a reason, voids it, and opens a corrected draf
 
   await page.goto(invoiceUrl);
   await expect(page.getByText("Void", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText(/^Voided .*: Wrong unit price$/)).toBeVisible();
+  // The side panel keeps what happened to it, and why.
+  await expect(detailsPanel().getByRole("listitem").filter({ hasText: "Voided" })).toContainText("Wrong unit price");
   await expect(page.getByRole("button", { name: "More actions" })).toHaveCount(0);
 });
 

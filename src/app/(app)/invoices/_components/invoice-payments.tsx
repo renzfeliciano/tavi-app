@@ -203,7 +203,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
     ) : null;
 
   return (
-    <section aria-labelledby={`${id}-heading`} className="mt-8 max-w-3xl rounded-xl border border-border bg-card p-5 shadow-xs">
+    <section aria-labelledby={`${id}-heading`} className="rounded-xl border border-border bg-card p-5 shadow-xs">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 id={`${id}-heading`} className="font-semibold">

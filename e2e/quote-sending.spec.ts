@@ -16,6 +16,7 @@ let customerLink: string;
 const axe = (p: Page) =>
   new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
 const toast = (text: string | RegExp) => page.locator("[data-sonner-toast]").filter({ hasText: text });
+const detailsPanel = () => page.getByRole("complementary", { name: "Quotation details" });
 
 async function newQuote(customerName: string) {
   await page.goto("/quotes/new");
@@ -154,7 +155,7 @@ test("the customer approves with their name, and the business sees who and when"
   // Opening the link marks it viewed for the business.
   await page.goto(url);
   await expect(page.getByText("Viewed", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText(/^Opened by the customer/)).toBeVisible();
+  await expect(detailsPanel().getByText("Opened by the customer")).toBeVisible();
 
   await customer.getByRole("button", { name: "Approve quote" }).click();
   const dialog = customer.getByRole("dialog", { name: /^Approve Quotation QUO-/ });
@@ -173,7 +174,7 @@ test("the customer approves with their name, and the business sees who and when"
 
   await page.reload();
   await expect(page.getByText("Approved", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText(/^Approved by Juan Dela Cruz · /)).toBeVisible();
+  await expect(detailsPanel().getByText("Approved by Juan Dela Cruz", { exact: true })).toBeVisible();
 });
 
 test("the customer can decline with a reason", async ({ browser }) => {
@@ -190,5 +191,5 @@ test("the customer can decline with a reason", async ({ browser }) => {
 
   await page.goto(url);
   await expect(page.getByText("Declined", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText(/^Declined · .*Found a cheaper option/)).toBeVisible();
+  await expect(detailsPanel().getByRole("listitem").filter({ hasText: "Declined" })).toContainText("Found a cheaper option");
 });

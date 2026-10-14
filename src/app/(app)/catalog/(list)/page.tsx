@@ -8,11 +8,15 @@ import { keptSize, ListSearch, ListViews, listHref, pageParam, pagedHref, sizePa
 import { ListPending, ListResults } from "@/components/list-pending";
 import { buttonVariants } from "@/components/ui/button";
 import { categoryFor } from "@/config/categories";
-import { type CatalogItemKind, type CatalogStatus, listCatalogItems } from "@/modules/catalog";
+import { type CatalogItemKind, type CatalogStatus, listCatalogItems, mergeUse } from "@/modules/catalog";
 import { requireOrgContext } from "@/modules/identity";
+import { invoiceItemUsage } from "@/modules/invoices";
+import { quoteItemUsage } from "@/modules/quotes";
+import { todayIn } from "@/shared/dates/calendar";
 import { parsePageSize } from "@/shared/pagination/page-window";
 import { normalizeSearch } from "@/shared/text/search";
 import { CatalogListSkeleton, catalogColumns } from "../_components/catalog-list";
+import { catalogRows } from "../_lib/usage";
 import { itemHref, KIND_LABEL, KIND_SEGMENT, KIND_TABS, kindFromSegment, newItemHref, startingKind } from "../_lib/kinds";
 
 export const metadata: Metadata = { title: "Products & Services" };
@@ -47,6 +51,15 @@ export default async function CatalogPage({ searchParams }: PageProps<"/catalog"
     }
   }
   const label = KIND_LABEL[kind];
+  // When each listed item was last put on a sent document: two small queries over this page only.
+  const ids = list.items.map((item) => item.id);
+  const [quoteUse, invoiceUse] = await Promise.all([quoteItemUsage(ctx, ids), invoiceItemUsage(ctx, ids)]);
+  const rows = catalogRows({
+    items: list.items,
+    usage: mergeUse([quoteUse, invoiceUse]),
+    today: todayIn(ctx.timezone),
+    locale: ctx.locale,
+  });
   // Starter names for the business's own kind of work: a head start, never prices or invented data.
   const starters =
     kind === "service" && ctx.organizationCategory && !search && status === "active" && list.total === 0
@@ -161,7 +174,7 @@ export default async function CatalogPage({ searchParams }: PageProps<"/catalog"
             <DataTable
               label={`${label.plural} list`}
               columns={catalogColumns(kind, ctx.locale)}
-              rows={list.items}
+              rows={rows}
               rowKey={(item) => item.id}
               rowHref={(item) => itemHref(kind, item.id)}
               controls={2}

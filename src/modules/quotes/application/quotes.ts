@@ -53,6 +53,8 @@ export type QuoteHeader = {
   /** The invoice this approved quote became, once converted. */
   convertedInvoiceId: string | null;
   cancelledAt: Date | null;
+  /** Why the business called it off, when it said. */
+  cancelReason: string | null;
   updatedAt: Date;
 };
 
@@ -137,6 +139,7 @@ export const headerColumns = {
   decisionNote: quotes.decisionNote,
   convertedInvoiceId: quotes.convertedInvoiceId,
   cancelledAt: quotes.cancelledAt,
+  cancelReason: quotes.cancelReason,
   updatedAt: quotes.updatedAt,
 };
 
@@ -425,12 +428,18 @@ export async function deleteDraftQuote(
 
 /**
  * The business's quotes, most recently changed first, optionally filtered by
- * status or searched by number or customer. Sent quotes show the customer as
+ * status or customer, or searched by number or customer name. Sent quotes show the customer as
  * snapshotted; drafts show the customer as they are now.
  */
 export async function listQuotes(
   actor: OrgActor,
-  { search = null, status, page = 1, pageSize }: { search?: string | null; status?: QuoteStatus; page?: number; pageSize?: number },
+  {
+    search = null,
+    status,
+    customerId,
+    page = 1,
+    pageSize,
+  }: { search?: string | null; status?: QuoteStatus; customerId?: string; page?: number; pageSize?: number },
   db: Database = getDb(),
 ): Promise<QuoteList> {
   assertCan(actor, "quotes.read");
@@ -445,7 +454,12 @@ export async function listQuotes(
       customerIds.length > 0 ? inArray(quotes.customerId, customerIds) : undefined,
     );
   }
-  const where = and(ofOrganization(actor), status ? eq(quotes.status, status) : undefined, matches);
+  const where = and(
+    ofOrganization(actor),
+    status ? eq(quotes.status, status) : undefined,
+    customerId ? eq(quotes.customerId, customerId) : undefined,
+    matches,
+  );
 
   const [[matching], [total]] = await Promise.all([
     db.select({ value: count() }).from(quotes).where(where),

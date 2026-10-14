@@ -5,23 +5,30 @@ import {
   PageHeaderSkeleton,
   TextSkeleton,
 } from "@/components/skeletons";
+import { DOCUMENT_BODY, DocumentSidePanelSkeleton, panelPlace } from "../../../_documents/side-panel";
 
-// A sent bill: the way back, its number, status and actions, its payments, then the bill itself.
+// A sent bill: the way back, its number, status and actions, then its payments, the panel and the bill itself,
+// laid out as the page lays them out.
 export default function InvoiceLoading() {
   return (
     <LoadingScreen label="Loading billing statement">
       <PageHeaderSkeleton back badge title="w-56" description="w-64" actions={["w-28", "w-24"]} />
-      <div className="mt-8 max-w-3xl rounded-xl border border-border bg-card p-5 shadow-xs">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <TextSkeleton size="base" width="w-24" />
-            <TextSkeleton width="w-44" />
+      <div className={DOCUMENT_BODY}>
+        <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <TextSkeleton size="base" width="w-24" />
+              <TextSkeleton width="w-44" />
+            </div>
+            <ButtonSkeleton width="w-36" />
           </div>
-          <ButtonSkeleton width="w-36" />
+          {/* Most often the first thing seen is "No payments yet." */}
+          <TextSkeleton width="w-32" className="mt-3" />
         </div>
-      </div>
-      <div className="mt-6 max-w-3xl">
-        <DocumentPaperSkeleton />
+        <DocumentSidePanelSkeleton className={panelPlace(2)} />
+        <div className="min-w-0">
+          <DocumentPaperSkeleton />
+        </div>
       </div>
     </LoadingScreen>
   );

@@ -26,6 +26,8 @@ export {
   sendQuote,
 } from "./application/sending";
 export { expireQuotesPastValidity } from "./application/expiry";
+export { lastQuoteChanges } from "./application/customer-figures";
+export { quoteItemUsage } from "./application/item-usage";
 export { type RestoreQuoteResult, restoreDeletedQuote } from "./application/trash";
 export {
   type AttentionQuote,

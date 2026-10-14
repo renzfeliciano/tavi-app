@@ -9,15 +9,16 @@ type PageHeaderProps = {
   className?: string;
 };
 
+/**
+ * The header's container. From sm up the actions sit beside the title; when they don't fit there they wrap onto
+ * their own row, at the right, rather than squeezing the title. Shared with the loading skeleton, so the rule
+ * under the header and the room around it are where the real ones will be.
+ */
+export const PAGE_HEADER = "flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-6";
+
 export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
   return (
-    <header
-      className={cn(
-        // From sm up the actions sit beside the title; when they don't fit there they wrap onto their own row, at the right, rather than squeezing the title.
-        "flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-6",
-        className,
-      )}
-    >
+    <header className={cn(PAGE_HEADER, className)}>
       <div className="grid min-w-0 gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-balance [overflow-wrap:anywhere] lg:text-3xl">{title}</h1>
         {description && (

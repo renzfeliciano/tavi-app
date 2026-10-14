@@ -9,11 +9,15 @@ import { keptSize, ListSearch, ListViews, listHref, pageParam, pagedHref, sizePa
 import { ListPending, ListResults } from "@/components/list-pending";
 import { buttonVariants } from "@/components/ui/button";
 import { documentWording } from "@/config/markets";
-import { type CustomerStatus, listCustomers } from "@/modules/customers";
+import { type CustomerStatus, latestActivity, listCustomers } from "@/modules/customers";
 import { requireOrgContext } from "@/modules/identity";
+import { customerMoney, lastInvoiceChanges } from "@/modules/invoices";
+import { lastQuoteChanges } from "@/modules/quotes";
+import { todayIn } from "@/shared/dates/calendar";
 import { parsePageSize } from "@/shared/pagination/page-window";
 import { normalizeSearch } from "@/shared/text/search";
 import { CustomerListSkeleton, customerColumns, customerSummary } from "../_components/customer-list";
+import { customerRows } from "../_lib/figures";
 
 export const metadata: Metadata = { title: "Customers" };
 
@@ -28,6 +32,26 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
   const page = pageParam(params.page);
   const list = await listCustomers(ctx, { search, status, page, pageSize: parsePageSize(params.size) });
   const documents = documentWording(ctx.market).quotesAndInvoices;
+
+  // What each listed customer owes and when anything last happened with them: three small queries over this page only.
+  const today = todayIn(ctx.timezone);
+  const ids = list.customers.map((customer) => customer.id);
+  const [money, invoiceChanges, quoteChanges] = await Promise.all([
+    customerMoney(ctx, ids, { today }),
+    lastInvoiceChanges(ctx, ids),
+    lastQuoteChanges(ctx, ids),
+  ]);
+  const rows = customerRows({
+    customers: list.customers,
+    money,
+    changes: latestActivity([
+      { kind: "invoice", changes: invoiceChanges },
+      { kind: "quote", changes: quoteChanges },
+    ]),
+    timezone: ctx.timezone,
+    today,
+    locale: ctx.locale,
+  });
 
   // Brand-new business: nothing to search or filter yet.
   if (list.matching === 0 && !search && status === "active" && list.archivedCount === 0) {
@@ -102,8 +126,8 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
           ) : (
             <DataTable
               label="Customer list"
-              columns={customerColumns}
-              rows={list.customers}
+              columns={customerColumns(ctx.locale, ctx.market)}
+              rows={rows}
               rowKey={(customer) => customer.id}
               rowHref={(customer) => `/customers/${customer.id}` as Route}
               phoneSummary={customerSummary}

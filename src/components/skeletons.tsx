@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "cn";
+import { PAGE_HEADER } from "@/components/app-shell/page-header";
 import { PageLoader } from "@/components/brand/page-loader";
 import { LightScope } from "@/components/theme/light-scope";
 import { STRIP_SECTION, STRIP_TILE, stripRowClass } from "@/components/summary-strip";
@@ -95,9 +96,14 @@ export function ButtonSkeleton({ width, size = "default" }: { width: string; siz
   return <Skeleton className={cn(size === "lg" ? "h-10 pointer-coarse:h-12" : "h-9 pointer-coarse:h-11", width)} />;
 }
 
-/** A StatusBadge. */
+/** A Badge (the small tag in settings lists), 1.25rem tall. A document's StatusBadge is taller: StatusBadgeSkeleton. */
 export function BadgeSkeleton() {
   return <Skeleton className="h-5 w-16 shrink-0 rounded-full" />;
+}
+
+/** A StatusBadge, 1.5rem tall, so the line it sits on holds the height it will have. */
+export function StatusBadgeSkeleton() {
+  return <Skeleton className="h-6 w-16 shrink-0 rounded-full" />;
 }
 
 /** An input, select or combobox on its own. */
@@ -135,14 +141,16 @@ export function PageHeaderSkeleton({
   return (
     <>
       {back && <TextSkeleton width="w-36" className="mb-4 h-9 rounded-md pointer-coarse:h-11" />}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className={PAGE_HEADER}>
         <div className="grid gap-1">
-          <TextSkeleton size="2xl" width={title} />
+          {/* The title is text-2xl, and text-3xl from the large breakpoint. */}
+          <TextSkeleton size="2xl" width={title} className="lg:h-9" />
           {lines.length > 0 && (
             <div>
               {lines.map((width, i) => (
-                <div key={i} className="flex h-5 items-center gap-2">
-                  {badge && i === 0 && <BadgeSkeleton />}
+                // A StatusBadge is 1.5rem tall, which makes the line it leads 1.5rem; a line of small text is 1.25rem.
+                <div key={i} className={cn("flex items-center gap-2", badge && i === 0 ? "h-6" : "h-5")}>
+                  {badge && i === 0 && <StatusBadgeSkeleton />}
                   <Skeleton className={cn("h-3.5 max-w-full", width)} />
                 </div>
               ))}
@@ -516,7 +524,7 @@ export function PortalDocumentSkeleton({ label, balance = false }: { label: stri
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <TextSkeleton width="w-52" />
             <div className="flex items-center gap-3">
-              <BadgeSkeleton />
+              <StatusBadgeSkeleton />
               <TextSkeleton width="w-24" />
             </div>
           </div>

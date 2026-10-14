@@ -2,7 +2,8 @@ import { CatalogPrice } from "@/components/catalog-price";
 import { type DataColumn, DataTableSkeleton } from "@/components/data-table";
 import { KIND_ICON } from "@/components/kind-icon";
 import { CellSub, CellTitle } from "@/components/list-cells";
-import type { CatalogItem, CatalogItemKind } from "@/modules/catalog";
+import type { CatalogItemKind } from "@/modules/catalog";
+import { type CatalogRow, usedTimes } from "../_lib/usage";
 
 /** A product or service's icon on a small tile: a wrench for work, a box for goods. */
 function KindTile({ kind }: { kind: CatalogItemKind }) {
@@ -19,9 +20,10 @@ function KindTile({ kind }: { kind: CatalogItemKind }) {
 
 /**
  * The catalog list's columns for one kind: one definition for the table and for its skeleton, so the two never
- * drift. Only products have a SKU, so only their list has that column.
+ * drift. Only products have a SKU, so only their list has that column; on a phone, where that column is left
+ * out, the SKU goes under the name instead.
  */
-export const catalogColumns = (kind: CatalogItemKind, locale: string): DataColumn<CatalogItem>[] => [
+export const catalogColumns = (kind: CatalogItemKind, locale: string): DataColumn<CatalogRow>[] => [
   {
     id: "item",
     header: kind === "product" ? "Product" : "Service",
@@ -34,7 +36,13 @@ export const catalogColumns = (kind: CatalogItemKind, locale: string): DataColum
         <KindTile kind={item.kind} />
         <span className="min-w-0 flex-1">
           <CellTitle>{item.name}</CellTitle>
-          {item.description && <CellSub>{item.description}</CellSub>}
+          {(item.description || item.sku) && (
+            <CellSub>
+              {item.sku && <span className="font-mono md:hidden">{item.sku}</span>}
+              {item.sku && item.description && <span className="md:hidden"> · </span>}
+              {item.description}
+            </CellSub>
+          )}
         </span>
       </span>
     ),
@@ -47,11 +55,27 @@ export const catalogColumns = (kind: CatalogItemKind, locale: string): DataColum
           width: "minmax(0,1fr)",
           hideBelow: "md",
           skeleton: "sm",
-          cell: (item: CatalogItem) =>
+          cell: (item: CatalogRow) =>
             item.sku ? <span className="block truncate font-mono text-sm">{item.sku}</span> : <CellSub>No SKU</CellSub>,
-        } satisfies DataColumn<CatalogItem>,
+        } satisfies DataColumn<CatalogRow>,
       ]
     : []),
+  {
+    id: "used",
+    header: "Last used",
+    width: "minmax(0,1.1fr)",
+    hideBelow: "lg",
+    skeleton: ["sm", "md"],
+    cell: ({ use }) =>
+      use ? (
+        <>
+          <span className="block truncate text-sm">{use.when}</span>
+          <CellSub>{usedTimes(use.count)}</CellSub>
+        </>
+      ) : (
+        <CellSub>Never used</CellSub>
+      ),
+  },
   {
     id: "price",
     header: "Price",

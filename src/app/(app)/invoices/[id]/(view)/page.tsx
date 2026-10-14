@@ -13,11 +13,13 @@ import { formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { customerForDocumentAction } from "../../../_documents/actions";
 import { DocumentEditor } from "../../../_documents/document-editor";
 import { documentBusiness, editorContext } from "../../../_documents/editor-props";
+import { DOCUMENT_BODY, DocumentSidePanel, panelPlace } from "../../../_documents/side-panel";
 import { deleteDraftInvoiceAction, saveInvoiceDraftAction, sendInvoiceAction } from "../../actions";
 import { InvoicePayments } from "../../_components/invoice-payments";
 import { SentInvoiceActions } from "../../_components/sent-invoice-actions";
 import { toEditorState } from "../../_lib/editor-state";
 import { invoiceDocumentView } from "../../_lib/invoice-view";
+import { invoicePanel } from "../../_lib/panel";
 
 export const metadata: Metadata = { title: "Invoice" };
 
@@ -74,17 +76,15 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
     locale: ctx.locale,
   });
   const name = `${invoiceTitle(invoice, ctx.market)} ${invoice.number ?? ""}`.trim();
-  const when = (date: Date | null) =>
-    date ? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeZone: ctx.timezone }).format(date) : null;
-  const sentOn = when(invoice.sentAt);
-  const viewedOn = when(invoice.viewedAt);
-  const editedOn = when(invoice.editedAt);
-  const closedNote =
-    invoice.status === "VOID"
-      ? `Voided${when(invoice.voidedAt) ? ` ${when(invoice.voidedAt)}` : ""}: ${invoice.voidReason ?? ""}`
-      : invoice.status === "CANCELLED"
-        ? `Cancelled${when(invoice.cancelledAt) ? ` ${when(invoice.cancelledAt)}` : ""}: ${invoice.cancelReason ?? ""}`
-        : null;
+  const today = todayIn(ctx.timezone);
+  const panel = invoicePanel(invoice, {
+    today,
+    locale: ctx.locale,
+    timezone: ctx.timezone,
+    quoteTitle: ctx.market.documents.quote.singular,
+  });
+  // A voided or cancelled statement takes no more payments, so its payments card is gone.
+  const hasPayments = invoice.status !== "VOID" && invoice.status !== "CANCELLED";
 
   return (
     <>
@@ -94,13 +94,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
         description={
           <span className="inline-flex flex-wrap items-center gap-2">
             <StatusBadge kind="invoice" status={invoice.status} />
-            <span>
-              {invoice.customerSnapshot?.displayName}
-              {sentOn ? ` · Sent ${sentOn}` : ""}
-              {viewedOn ? ` · Opened by the customer ${viewedOn}` : ""}
-              {editedOn ? ` · Updated ${editedOn}` : ""}
-            </span>
-            {fromQuote}
+            <span>{invoice.customerSnapshot?.displayName}</span>
           </span>
         }
         actions={
@@ -123,50 +117,52 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
                     currency: invoice.currency,
                     locale: ctx.locale,
                     dueDate: invoice.dueDate,
-                    today: todayIn(ctx.timezone),
+                    today,
                   }
                 : null
             }
           />
         }
       />
-      {closedNote && (
-        <p role="status" className="mt-4 max-w-3xl rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-pretty">
-          {closedNote}
-        </p>
-      )}
-      {invoice.status !== "VOID" && invoice.status !== "CANCELLED" && (
-        <InvoicePayments
-          invoiceId={invoice.id}
-          name={name}
-          currency={invoice.currency}
-          locale={ctx.locale}
-          today={todayIn(ctx.timezone)}
-          balanceMinor={invoice.totalMinor - invoice.amountPaidMinor}
-          payable={isPayable(invoice.status)}
-          canRecord={can(ctx, "payments.record")}
-          canVoid={can(ctx, "payments.void")}
-          customerEmail={invoice.customerSnapshot?.email ?? null}
-          methodLabels={ctx.market.paymentMethodLabels}
-          detailLabels={ctx.market.paymentDetailLabels}
-          detailExamples={ctx.market.paymentDetailExamples}
-          chequeDateLabel={ctx.market.chequeDateLabel}
-          taxWithheld={ctx.market.taxWithheld}
-          receiptTitle={ctx.market.documents.receipt.singular}
-          payments={(await listInvoicePayments(ctx, invoice.id)).map((p) => ({
-            id: p.id,
-            receiptNumber: p.receiptNumber,
-            paidOn: p.paidOn,
-            method: p.method,
-            details: paymentProofRows(p, ctx.market, (date) => formatCalendarDate(date, ctx.locale)),
-            amountMinor: p.amountMinor,
-            withheldMinor: p.withheldMinor,
-            voidReason: p.voidReason,
-          }))}
+      <div className={DOCUMENT_BODY}>
+        {hasPayments && (
+          <InvoicePayments
+            invoiceId={invoice.id}
+            name={name}
+            currency={invoice.currency}
+            locale={ctx.locale}
+            today={today}
+            balanceMinor={invoice.totalMinor - invoice.amountPaidMinor}
+            payable={isPayable(invoice.status)}
+            canRecord={can(ctx, "payments.record")}
+            canVoid={can(ctx, "payments.void")}
+            customerEmail={invoice.customerSnapshot?.email ?? null}
+            methodLabels={ctx.market.paymentMethodLabels}
+            detailLabels={ctx.market.paymentDetailLabels}
+            detailExamples={ctx.market.paymentDetailExamples}
+            chequeDateLabel={ctx.market.chequeDateLabel}
+            taxWithheld={ctx.market.taxWithheld}
+            receiptTitle={ctx.market.documents.receipt.singular}
+            payments={(await listInvoicePayments(ctx, invoice.id)).map((p) => ({
+              id: p.id,
+              receiptNumber: p.receiptNumber,
+              paidOn: p.paidOn,
+              method: p.method,
+              details: paymentProofRows(p, ctx.market, (date) => formatCalendarDate(date, ctx.locale)),
+              amountMinor: p.amountMinor,
+              withheldMinor: p.withheldMinor,
+              voidReason: p.voidReason,
+            }))}
+          />
+        )}
+        <DocumentSidePanel
+          label={`${ctx.market.documents.invoice.singular} details`}
+          data={panel}
+          className={panelPlace(hasPayments ? 2 : 1)}
         />
-      )}
-      <div className="mt-6 max-w-3xl">
-        <DocumentPaper view={view} />
+        <div className="min-w-0">
+          <DocumentPaper view={view} />
+        </div>
       </div>
     </>
   );

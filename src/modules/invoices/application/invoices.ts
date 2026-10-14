@@ -558,18 +558,29 @@ export async function getInvoiceLabels(
 
 /**
  * The business's invoices, most recently changed first, optionally filtered
- * by status or searched by number or customer. Issued invoices show the
+ * by status or customer, or searched by number or customer name. Issued invoices show the
  * customer as snapshotted; drafts show the customer as they are now.
  */
 export async function listInvoices(
   actor: OrgActor,
-  { search = null, status, page = 1, pageSize }: { search?: string | null; status?: InvoiceStatus; page?: number; pageSize?: number },
+  {
+    search = null,
+    status,
+    customerId,
+    page = 1,
+    pageSize,
+  }: { search?: string | null; status?: InvoiceStatus; customerId?: string; page?: number; pageSize?: number },
   db: Database = getDb(),
 ): Promise<InvoiceList> {
   assertCan(actor, "invoices.read");
 
   const matches = search ? await searchMatch(actor, search, db) : undefined;
-  const where = and(ofOrganization(actor), status ? eq(invoices.status, status) : undefined, matches);
+  const where = and(
+    ofOrganization(actor),
+    status ? eq(invoices.status, status) : undefined,
+    customerId ? eq(invoices.customerId, customerId) : undefined,
+    matches,
+  );
 
   const [[matching], [total]] = await Promise.all([
     db.select({ value: count() }).from(invoices).where(where),
