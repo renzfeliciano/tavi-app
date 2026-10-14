@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { JumpLinks } from "@/components/jump-links";
 import { currencyOptions } from "@/config/currencies";
 import { documentWording } from "@/config/markets";
 import { can } from "@/modules/authz";
@@ -58,6 +59,16 @@ export default async function BusinessProfilePage() {
       <SettingsPageHeader
         title="Business profile"
         description={`What your customers see on ${docs.quotesAndInvoices}, and where new ones start from.`}
+      />
+      <JumpLinks
+        links={[
+          { id: "logo", label: "Logo" },
+          { id: "payment-qr", label: "Payment QR codes" },
+          { id: "details", label: "Business details" },
+          { id: "contact", label: "Contact and address" },
+          { id: "document-defaults", label: "Document defaults" },
+          { id: "terms", label: "Notes and terms" },
+        ]}
       />
       {!editable && <ReadOnlyNotice />}
       <div className="mt-8 grid max-w-3xl gap-8">

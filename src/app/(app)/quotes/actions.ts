@@ -8,6 +8,7 @@ import {
   cancelQuote,
   createQuoteLink,
   deleteDraftQuote,
+  deleteQuoteRecord,
   reviseQuote,
   saveQuoteDraft,
   sendQuote,
@@ -99,4 +100,14 @@ export async function cancelQuoteAction(id: string, reason: string): Promise<Com
   revalidatePath(`/quotes/${id}`);
   if (result.ok) return { ok: true };
   return { ok: false, error: "error" in result ? result.error : GONE };
+}
+
+/** The owner: moves a sent quotation, in any status, to the recycle bin. */
+export async function deleteQuoteRecordAction(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await requireOrgContext();
+  const result = await deleteQuoteRecord(ctx, id);
+  revalidatePath("/quotes");
+  revalidatePath("/recycle-bin");
+  if (result.ok) return { ok: true };
+  return { ok: false, error: "error" in result ? result.error : "This quote no longer exists." };
 }

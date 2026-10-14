@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { MARKETS } from "@/config/markets";
+import type { WithholdingStatus } from "@/modules/payments/client";
 import { type PaymentRow, paymentColumns } from "./payment-list";
 
 const payment = (over: Partial<PaymentRow> = {}): PaymentRow => ({
@@ -26,8 +27,8 @@ const payment = (over: Partial<PaymentRow> = {}): PaymentRow => ({
   ...over,
 });
 
-const cell = (id: string, row: PaymentRow) => {
-  const column = paymentColumns("en-PH", MARKETS.PH).find((c) => c.id === id);
+const cell = (id: string, row: PaymentRow, statuses?: Map<string, WithholdingStatus>) => {
+  const column = paymentColumns("en-PH", MARKETS.PH, statuses).find((c) => c.id === id);
   if (!column) throw new Error(`no ${id} column`);
   return render(<>{column.cell(row)}</>);
 };
@@ -43,5 +44,32 @@ describe("payment list columns", () => {
     cell("invoice", payment({ invoiceNumber: null }));
 
     expect(screen.getByText("Draft")).toBeInTheDocument();
+  });
+
+  it("marks a payment still waiting for its 2307 beside the receipt number", () => {
+    cell("payer", payment({ withheldMinor: 6_000 }), new Map([["p1", "pending" as const]]));
+
+    expect(screen.getByText("OR-000001")).toBeInTheDocument();
+    expect(screen.getByText("2307 pending")).toBeInTheDocument();
+  });
+
+  it("marks a payment whose 2307 is recorded", () => {
+    cell("payer", payment({ withheldMinor: 6_000 }), new Map([["p1", "received" as const]]));
+
+    expect(screen.getByText("2307 received")).toBeInTheDocument();
+  });
+
+  it("shows no badge when nothing was withheld, when the status isn't known, or when the payment is void", () => {
+    const none = cell("payer", payment(), new Map([["p1", "none" as const]]));
+    expect(screen.queryByText(/^2307/)).not.toBeInTheDocument();
+    none.unmount();
+
+    const unknown = cell("payer", payment());
+    expect(screen.queryByText(/^2307/)).not.toBeInTheDocument();
+    unknown.unmount();
+
+    cell("payer", payment({ withheldMinor: 6_000, voidedAt: new Date("2026-10-02T00:00:00Z") }), new Map([["p1", "pending" as const]]));
+    expect(screen.queryByText(/^2307/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Voided/)).toBeInTheDocument();
   });
 });

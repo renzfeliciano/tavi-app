@@ -104,16 +104,14 @@ export function NumberingForm({ kind, title, description, prefix, padding, nextV
               )}
             </FormField>
             {editable && (
-              <Button
-                type="submit"
-                variant="outline"
-                disabled={!changed}
-                pending={pending}
-                pendingLabel="Saving…"
-                className="w-full sm:mt-6 sm:ml-auto sm:w-auto"
-              >
-                Save
-              </Button>
+              <div className="flex w-full items-center justify-between gap-3 sm:mt-6 sm:ml-auto sm:w-auto">
+                <p role="status" className="text-sm text-muted-foreground">
+                  {changed ? "Unsaved changes" : state.savedAt ? "Saved" : ""}
+                </p>
+                <Button type="submit" variant="outline" disabled={!changed} pending={pending} pendingLabel="Saving…">
+                  Save
+                </Button>
+              </div>
             )}
           </fieldset>
         </div>

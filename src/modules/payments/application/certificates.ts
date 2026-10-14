@@ -6,8 +6,14 @@ import { customers, files, invoices } from "@/db/schema";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import { removeWithholdingScan } from "@/modules/files";
 import { getDocumentSettings } from "@/modules/organizations";
+import { putInTrash, takeFromTrash } from "@/modules/trash";
 import { type CalendarDate, compareDates, todayIn } from "@/shared/dates/calendar";
 import { tooLong } from "@/shared/validation/messages";
+import {
+  certificateLabel,
+  certificateTrashPayload,
+  parseCertificateTrashPayload,
+} from "../domain/trash-payload";
 import {
   type CertificateInput,
   LINK_MESSAGES,
@@ -345,5 +351,121 @@ export async function voidCertificate(
       unlinkedPaymentIds: unlinked.map((link) => link.paymentId),
     });
     return { ok: true };
+  });
+}
+
+export type DeleteCertificateResult = { ok: true } | { ok: false; error: string } | { ok: false; notFound: true };
+export type RestoreCertificateResult = { ok: true; certificateId: string } | { ok: false; error: string } | { ok: false; notFound: true };
+
+/**
+ * Moves a voided 2307 to the recycle bin, rows and all (docs/superpowers/specs/2026-10-14-owner-delete-recycle-bin-design.md).
+ * Owner only. One in force has to be voided first, which takes its payments off it. Its scan is deleted with it, so
+ * a restored 2307 comes back without the scan.
+ */
+export async function deleteVoidedCertificate(
+  actor: OrgActor,
+  id: string,
+  db: Database = getDb(),
+  now: Date = new Date(),
+): Promise<DeleteCertificateResult> {
+  assertCan(actor, "records.delete");
+  if (!isUuid(id)) return { ok: false, notFound: true };
+
+  return db.transaction(async (tx): Promise<DeleteCertificateResult> => {
+    const [certificate] = await tx
+      .select()
+      .from(withholdingCertificates)
+      .where(and(eq(withholdingCertificates.id, id), eq(withholdingCertificates.organizationId, actor.organizationId)))
+      .for("update");
+    if (!certificate) return { ok: false, notFound: true };
+    if (!certificate.voidedAt || certificate.voidReason === null) {
+      return { ok: false, error: "Void this 2307 first. Then it can be deleted." };
+    }
+    const lines = await tx
+      .select()
+      .from(withholdingCertificateLines)
+      .where(eq(withholdingCertificateLines.certificateId, id))
+      .orderBy(withholdingCertificateLines.position);
+    const [customer] = await tx
+      .select({ displayName: customers.displayName })
+      .from(customers)
+      .where(and(eq(customers.id, certificate.customerId), eq(customers.organizationId, actor.organizationId)));
+
+    await putInTrash(
+      tx,
+      actor,
+      {
+        kind: "certificate",
+        originalId: certificate.id,
+        customerName: customer?.displayName ?? null,
+        label: certificateLabel(certificate.payorName, certificate.periodFrom),
+        totalMinor: lines.reduce((sum, line) => sum + line.taxWithheldMinor, 0),
+        currency: certificate.currency,
+        payload: certificateTrashPayload({
+          ...certificate,
+          voidedAt: certificate.voidedAt.toISOString(),
+          voidReason: certificate.voidReason,
+          createdAt: certificate.createdAt.toISOString(),
+          updatedAt: certificate.updatedAt.toISOString(),
+          lines,
+        }),
+      },
+      now,
+    );
+    // The lines go with it (cascade); the scan is personal paperwork, so it goes now rather than outliving the bin.
+    await tx.delete(withholdingCertificates).where(eq(withholdingCertificates.id, certificate.id));
+    if (certificate.fileId) await removeWithholdingScan(tx, actor, certificate.fileId);
+    await auditCertificate(tx, actor, "withholding_certificate.deleted", certificate.id, {
+      customerId: certificate.customerId,
+      periodFrom: certificate.periodFrom,
+      periodTo: certificate.periodTo,
+      lineCount: lines.length,
+      hadScan: Boolean(certificate.fileId),
+    });
+    return { ok: true };
+  });
+}
+
+/** Brings a deleted 2307 back from the recycle bin under its own id, still void, with no payments and no scan. Owner only. */
+export async function restoreDeletedCertificate(
+  actor: OrgActor,
+  trashId: string,
+  db: Database = getDb(),
+  now: Date = new Date(),
+): Promise<RestoreCertificateResult> {
+  assertCan(actor, "records.delete");
+  return db.transaction(async (tx): Promise<RestoreCertificateResult> => {
+    const taken = await takeFromTrash(tx, actor, "certificate", trashId, now);
+    if (!taken) return { ok: false, notFound: true };
+    const parsed = parseCertificateTrashPayload(taken.payload);
+    // Rolls back, so the item stays in the bin rather than vanishing unread.
+    if (!parsed.ok) throw new Error("A recycle bin item for a 2307 couldn't be read");
+    // Drizzle only reads the table's own columns, so the payload's version marker is left behind.
+    const { lines, ...header }: Omit<typeof parsed.payload, "v"> = parsed.payload;
+
+    const [customer] = await tx
+      .select({ id: customers.id })
+      .from(customers)
+      .where(and(eq(customers.id, header.customerId), eq(customers.organizationId, actor.organizationId)));
+    if (!customer) throw new Error("A deleted 2307's customer is gone");
+    await tx.insert(withholdingCertificates).values({
+      ...header,
+      id: taken.originalId,
+      organizationId: actor.organizationId,
+      fileId: null,
+      voidedAt: new Date(header.voidedAt),
+      createdAt: new Date(header.createdAt),
+      updatedAt: new Date(header.updatedAt),
+    });
+    await tx.insert(withholdingCertificateLines).values(
+      lines.map((line) => ({ ...line, organizationId: actor.organizationId, certificateId: taken.originalId })),
+    );
+    await auditCertificate(tx, actor, "withholding_certificate.restored", taken.originalId, {
+      customerId: header.customerId,
+      periodFrom: header.periodFrom,
+      periodTo: header.periodTo,
+      lineCount: lines.length,
+    });
+    return { ok: true, certificateId: taken.originalId };
   });
 }

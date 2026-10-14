@@ -181,8 +181,8 @@ export default function PrivacyPage() {
             documents and payments, and then deleted; the activity history goes with them.
           </li>
           <li>
-            A draft quote or bill you delete: kept in your recycle bin for {TRASH_RETENTION_DAYS} days so you can bring it back, then
-            removed for good. Owners and admins can remove it sooner.
+            A draft, sent quotation, voided payment or voided 2307 you delete: kept in your recycle bin for {TRASH_RETENTION_DAYS} days so
+            you can bring it back, then removed for good. Owners and admins can remove it sooner.
           </li>
           <li>
             Signed-in devices: until you sign out or the session ends. Rate-limit counters: up to a day. Emails:

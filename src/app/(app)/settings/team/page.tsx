@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { MailIcon } from "lucide-react";
+import { Monogram } from "@/components/monogram";
 import { can } from "@/modules/authz";
 import { requireOrgContext } from "@/modules/identity";
-import { listTeam, ROLE_LABELS, TEAM_LIMITS } from "@/modules/organizations";
+import { listTeam, TEAM_LIMITS } from "@/modules/organizations";
 import { ReadOnlyNotice, SettingsPageHeader } from "../_components/settings-page-header";
 import { InviteForm } from "./invite-form";
+import { RolePill } from "./role-pill";
 import {
   CancelInvitationButton,
   LeaveBusinessButton,
@@ -62,18 +64,21 @@ export default async function TeamPage() {
             const manageable = canManage && !self && assignable !== null;
             return (
               <li key={m.userId} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
-                <div className="grid min-w-0 flex-1 gap-0.5">
-                  <span className="truncate font-medium">
-                    {m.name}
-                    {self && <span className="font-normal text-muted-foreground"> (you)</span>}
-                  </span>
-                  <span className="truncate text-sm text-muted-foreground">{m.email}</span>
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <Monogram name={m.name} />
+                  <div className="grid min-w-0 gap-0.5">
+                    <span className="truncate font-medium">
+                      {m.name}
+                      {self && <span className="font-normal text-muted-foreground"> (you)</span>}
+                    </span>
+                    <span className="truncate text-sm text-muted-foreground">{m.email}</span>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {manageable && assignable ? (
                     <RoleSelect userId={m.userId} name={m.name} role={assignable} />
                   ) : (
-                    <span className="text-sm font-medium text-ink-subtle">{ROLE_LABELS[m.role]}</span>
+                    <RolePill role={m.role} />
                   )}
                   {canTransfer && !self && (
                     <TransferOwnershipButton userId={m.userId} name={m.name} businessName={ctx.organizationName} />
@@ -97,16 +102,21 @@ export default async function TeamPage() {
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs">
             {invitations.map((i) => (
               <li key={i.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
-                <div className="flex min-w-0 flex-1 items-start gap-3">
-                  <MailIcon aria-hidden="true" className="mt-1 size-4 shrink-0 text-muted-foreground" />
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="grid size-9 shrink-0 place-items-center rounded-full border border-dashed border-border-strong text-ink-subtle"
+                  >
+                    <MailIcon className="size-4" />
+                  </span>
                   <div className="grid min-w-0 gap-0.5">
                     <span className="truncate font-medium">{i.email}</span>
                     <span className="text-sm text-muted-foreground">
-                      {ROLE_LABELS[i.role]} ·{" "}
                       {i.state === "open" ? `Expires ${date.format(i.expiresAt)}` : `Expired ${date.format(i.expiresAt)}`}
                     </span>
                   </div>
                 </div>
+                <RolePill role={i.role} />
                 {canManage && (
                   <div className="flex flex-wrap gap-2">
                     {i.state === "expired" && <ResendInvitationButton email={i.email} role={i.role} />}

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { NumberingForm } from "./numbering-form";
 
@@ -17,5 +17,15 @@ describe("the numbering form's prefix example", () => {
     form(kind);
 
     expect(screen.getByLabelText("Prefix")).toHaveAttribute("placeholder", example);
+  });
+});
+
+describe("the numbering form's state", () => {
+  it("says changes are unsaved after the prefix changes, and the save button wakes up", () => {
+    form("quote");
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Prefix"), { target: { value: "QT" } });
+    expect(screen.getByRole("status")).toHaveTextContent("Unsaved changes");
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
   });
 });

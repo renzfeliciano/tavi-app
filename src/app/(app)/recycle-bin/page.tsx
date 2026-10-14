@@ -10,7 +10,8 @@ import { can } from "@/modules/authz";
 import { formatRate, listCatalogItems, listTaxRates } from "@/modules/catalog";
 import { listCustomers } from "@/modules/customers";
 import { requireOrgContext } from "@/modules/identity";
-import { listTrash, TRASH_RETENTION_DAYS, type TrashItem } from "@/modules/trash";
+import { listTrash, TRASH_RETENTION_DAYS } from "@/modules/trash";
+import { trashItemKindName, trashItemName } from "./_lib/trash-names";
 import { archivedCustomerRestore, archivedItemRestore, archivedTaxRestore } from "./_lib/restore-actions";
 import { discardTrashItemAction, emptyTrashAction, restoreTrashItemAction } from "./actions";
 import { EmptyBinButton, RestoreButton, TrashRowActions } from "./_components/trash-actions";
@@ -34,18 +35,15 @@ export default async function RecycleBinPage() {
     archivedCustomers.archivedCount + archivedProducts.archivedCount + archivedServices.archivedCount + archivedTaxes.length;
 
   const when = new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeZone: ctx.timezone });
-  const documentName = (item: TrashItem) =>
-    `${ctx.market.documents[item.kind === "invoice" ? "invoice" : "quote"].singular} draft`;
-  const nameOf = (item: TrashItem) => `${documentName(item)}${item.customerName ? ` for ${item.customerName}` : ""}`;
 
   if (trash.length === 0 && archivedTotal === 0) {
     return (
       <>
         <BackLink href="/settings">Settings</BackLink>
-        <PageHeader title="Recycle bin" description={`Deleted drafts wait here for ${TRASH_RETENTION_DAYS} days, so a slip can be undone.`} />
+        <PageHeader title="Recycle bin" description={`Deleted records wait here for ${TRASH_RETENTION_DAYS} days, so a slip can be undone.`} />
         <SectionEmpty
           title="Nothing deleted"
-          description={`When you delete a draft, it waits here for ${TRASH_RETENTION_DAYS} days before it's gone for good. Archived customers, products, services and taxes show up here too.`}
+          description={`When you delete a record, it waits here for ${TRASH_RETENTION_DAYS} days before it's gone for good. Archived customers, products, services and taxes show up here too.`}
           expression="resting"
         />
       </>
@@ -57,22 +55,22 @@ export default async function RecycleBinPage() {
       <BackLink href="/settings">Settings</BackLink>
       <PageHeader
         title="Recycle bin"
-        description={`Deleted drafts wait here for ${TRASH_RETENTION_DAYS} days, then they're gone for good. Archived records stay until you restore them.`}
+        description={`Deleted records wait here for ${TRASH_RETENTION_DAYS} days, then they're gone for good. Archived records stay until you restore them.`}
         actions={canDiscard && trash.length > 0 ? <EmptyBinButton count={trash.length} empty={emptyTrashAction} /> : undefined}
       />
 
       <div className="mt-8 grid gap-10">
-        <section aria-labelledby="deleted-drafts">
-          <h2 id="deleted-drafts" className="text-base font-semibold">
-            Deleted drafts
+        <section aria-labelledby="deleted-records">
+          <h2 id="deleted-records" className="text-base font-semibold">
+            Deleted records
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Restoring brings a draft back exactly as you left it. Sent {ctx.market.documents.quote.plural.toLowerCase()} and{" "}
-            {ctx.market.documents.invoice.plural.toLowerCase()} are never deleted: cancel or void them instead.
+            Restoring brings a record back exactly as it was. Issued {ctx.market.documents.invoice.plural.toLowerCase()} are never
+            deleted: void them instead.
           </p>
           {trash.length === 0 ? (
             <p className="mt-4 rounded-xl border border-dashed border-border px-5 py-6 text-sm text-muted-foreground">
-              No deleted drafts.
+              Nothing deleted.
             </p>
           ) : (
             <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs">
@@ -80,7 +78,7 @@ export default async function RecycleBinPage() {
                 <li key={item.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                   <div className="min-w-0">
                     <p className="font-medium [overflow-wrap:anywhere]">
-                      {documentName(item)} · {item.customerName ?? <MissingCustomer />}
+                      {trashItemKindName(item, ctx.market)} · {item.customerName ?? <MissingCustomer />}
                     </p>
                     <p className="mt-0.5 text-sm text-muted-foreground">
                       Deleted {when.format(item.deletedAt)} ·{" "}
@@ -92,7 +90,7 @@ export default async function RecycleBinPage() {
                   <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
                     <MoneyAmount amountMinor={item.totalMinor} currency={item.currency} locale={ctx.locale} className="font-medium" />
                     <TrashRowActions
-                      name={nameOf(item)}
+                      name={trashItemName(item, ctx.market)}
                       restore={restoreTrashItemAction.bind(null, item.kind, item.id)}
                       discard={canDiscard ? discardTrashItemAction.bind(null, item.id) : null}
                     />

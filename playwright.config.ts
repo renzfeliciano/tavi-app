@@ -14,7 +14,25 @@ const databaseUrl = testDatabaseUrl();
 export const OWNER_STATE = "e2e/.auth/owner.json";
 
 /** Specs that sign up their own fresh business. */
-const ACCOUNT_CREATING_SPECS = [/auth\.spec\.ts/, /settings\.spec\.ts/, /customers\.spec\.ts/, /catalog\.spec\.ts/, /quotes\.spec\.ts/, /quote-sending\.spec\.ts/, /invoices\.spec\.ts/, /team\.spec\.ts/, /data-table\.spec\.ts/, /customer-record\.spec\.ts/, /document-panel\.spec\.ts/, /catalog-usage\.spec\.ts/];
+const ACCOUNT_CREATING_SPECS = [
+  /auth\.spec\.ts/,
+  /settings\.spec\.ts/,
+  /customers\.spec\.ts/,
+  /catalog\.spec\.ts/,
+  /quotes\.spec\.ts/,
+  /quote-sending\.spec\.ts/,
+  /invoices\.spec\.ts/,
+  /team\.spec\.ts/,
+  /data-table\.spec\.ts/,
+  /customer-record\.spec\.ts/,
+  /document-panel\.spec\.ts/,
+  /catalog-usage\.spec\.ts/,
+  /withholding\.spec\.ts/,
+  /reports-aging\.spec\.ts/,
+  /settings-polish\.spec\.ts/,
+  /owner-delete\.spec\.ts/,
+  /withholding-loading\.spec\.ts/,
+];
 
 export default defineConfig({
   testDir: "./e2e",
@@ -35,7 +53,11 @@ export default defineConfig({
   },
   projects: [
     // Signs up one owner, creates their business and saves the session.
-    { name: "setup", testMatch: /auth\.setup\.ts/, use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
     {
       name: "desktop",
       use: { ...devices["Desktop Chrome"], storageState: OWNER_STATE },

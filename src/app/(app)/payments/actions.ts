@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireOrgContext } from "@/modules/identity";
 import { flushOutboxAfterResponse } from "@/modules/notifications";
 import { env } from "@/shared/env";
-import { type RawPayment, recordPayment, voidPayment } from "@/modules/payments";
+import { deleteVoidedPayment, type RawPayment, recordPayment, voidPayment } from "@/modules/payments";
 
 const GONE = "This invoice no longer exists.";
 
@@ -41,5 +41,16 @@ export async function voidPaymentAction(
   revalidatePath("/payments");
   if (result.ok) return { ok: true };
   if ("errors" in result) return { ok: false, errors: result.errors };
+  return { ok: false, error: "error" in result ? result.error : "This payment no longer exists." };
+}
+
+/** The owner: moves a void payment to the recycle bin. */
+export async function deletePaymentAction(paymentId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await requireOrgContext();
+  const result = await deleteVoidedPayment(ctx, paymentId);
+  revalidatePath("/invoices");
+  revalidatePath("/payments");
+  revalidatePath("/recycle-bin");
+  if (result.ok) return { ok: true };
   return { ok: false, error: "error" in result ? result.error : "This payment no longer exists." };
 }

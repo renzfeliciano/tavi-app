@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { JumpLinks } from "@/components/jump-links";
 import { can } from "@/modules/authz";
 import { listRegistrationDocuments } from "@/modules/files";
 import { requireOrgContext } from "@/modules/identity";
@@ -75,8 +76,17 @@ export default async function RegistrationPage() {
         title="Registration"
         description={`Your ${authority} and business name registration, the returns and renewals that follow, and your certificates.`}
       />
+      <JumpLinks
+        links={[
+          { id: "tax-status", label: `${ctx.market.taxId.label} and tax status` },
+          { id: "deadlines", label: "Return dates" },
+          { id: "tax-registration", label: `${authority} registration` },
+          { id: "name-registration", label: "Business name" },
+          { id: "certificates", label: "Certificates" },
+        ]}
+      />
       <div className="mt-8 grid max-w-3xl gap-8">
-        <section aria-labelledby="tax-id-heading" className="rounded-xl border border-border bg-card px-5 py-4 shadow-xs sm:px-6">
+        <section id="tax-status" aria-labelledby="tax-id-heading" className="scroll-mt-20 rounded-xl border border-border bg-card px-5 py-4 shadow-xs sm:px-6">
           <h2 id="tax-id-heading" className="font-semibold">
             {ctx.market.taxId.label} and tax status
           </h2>

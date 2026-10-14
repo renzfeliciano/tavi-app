@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FormAlert } from "@/components/form-alert";
 import { FormField } from "@/components/form-field";
+import { SaveBar, useFormDirty } from "@/components/save-bar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,6 +39,7 @@ export function RegistrationForm({ editable, active, labels, titles, statementNa
   const [turningOff, setTurningOff] = useState(false);
   const values = state.values ?? initial;
   const error = (field: keyof RegistrationValues) => state.errors?.[field];
+  const { dirty, formProps } = useFormDirty(state.savedAt);
 
   useEffect(() => {
     if (state.savedAt) toast.success(`Invoice registration saved. New bills are issued as “${state.values?.title}”.`);
@@ -56,7 +58,7 @@ export function RegistrationForm({ editable, active, labels, titles, statementNa
 
   return (
     <section aria-labelledby="registration-heading" className="rounded-xl border border-border bg-card shadow-xs">
-      <form action={formAction} noValidate key={state.savedAt ?? "initial"}>
+      <form action={formAction} noValidate key={state.savedAt ?? "initial"} {...formProps}>
         <header className="border-b border-border px-5 py-4 sm:px-6">
           <h2 id="registration-heading" className="font-semibold">
             Registration details
@@ -118,19 +120,22 @@ export function RegistrationForm({ editable, active, labels, titles, statementNa
               />
             )}
           </FormField>
-          {editable && (
-            <div className="flex flex-col-reverse gap-2 sm:col-span-2 sm:flex-row sm:justify-end">
-              {active && (
-                <Button type="button" variant="outline" onClick={() => setConfirmOff(true)}>
-                  Turn off invoice mode
-                </Button>
-              )}
-              <Button type="submit" pending={pending} pendingLabel="Saving…">
-                {active ? "Save changes" : "Save and turn on invoice mode"}
-              </Button>
-            </div>
-          )}
         </fieldset>
+        {editable && (
+          <SaveBar
+            dirty={dirty}
+            saved={Boolean(state.savedAt)}
+            pending={pending}
+            label={active ? "Save changes" : "Save and turn on invoice mode"}
+            className="mx-5 mb-5 sm:mx-6"
+          >
+            {active && (
+              <Button type="button" variant="outline" onClick={() => setConfirmOff(true)}>
+                Turn off invoice mode
+              </Button>
+            )}
+          </SaveBar>
+        )}
       </form>
 
       <Dialog open={confirmOff} onOpenChange={setConfirmOff}>

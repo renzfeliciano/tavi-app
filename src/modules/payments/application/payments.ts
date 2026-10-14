@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, isNull, notExists, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { MarketProfile, PaymentMethod } from "@/config/markets";
 import { type Database, type Executor, getDb } from "@/db";
@@ -25,10 +25,12 @@ import { formatMoney } from "@/shared/money";
 import { type PageMeta, pageMeta, pageWindow } from "@/shared/pagination/page-window";
 import { escapeLikePattern } from "@/shared/text/search";
 import { tooLong } from "@/shared/validation/messages";
+import { putInTrash, takeFromTrash } from "@/modules/trash";
 import { parseAckRecipients } from "../domain/ack-recipients";
 import { parseIdempotencyKey } from "../domain/idempotency";
 import { parsePaymentInput, type RawPayment } from "../domain/payment-input";
 import { paymentProofRows } from "../domain/payment-proof";
+import { parsePaymentTrashPayload, paymentTrashPayload } from "../domain/trash-payload";
 import { payments, withholdingCertificatePayments } from "../schema";
 import { auditCertificate } from "./certificate-audit";
 
@@ -81,7 +83,11 @@ const columns = {
 
 const isUuid = (id: string) => z.uuid().safeParse(id).success;
 
-function audit(tx: Executor, actor: OrgActor, action: "payment.recorded" | "payment.voided", paymentId: string, metadata: Record<string, unknown>) {
+function audit(
+  tx: Executor,
+  actor: OrgActor,
+  action: "payment.recorded" | "payment.voided" | "payment.deleted" | "payment.restored",
+  paymentId: string, metadata: Record<string, unknown>) {
   return recordAuditEvent(tx, {
     action,
     actorType: "user",
@@ -329,6 +335,107 @@ export async function voidPayment(
   });
 }
 
+export type DeletePaymentResult = { ok: true } | { ok: false; error: string } | { ok: false; notFound: true };
+export type RestorePaymentResult = { ok: true; paymentId: string } | { ok: false; error: string } | { ok: false; notFound: true };
+
+/**
+ * Moves a voided payment to the recycle bin (docs/superpowers/specs/2026-10-14-owner-delete-recycle-bin-design.md).
+ * Owner only. A payment that still counts has to be voided first: the void is what puts the money back on the
+ * bill and takes the payment off any 2307, so a delete never changes what a customer owes.
+ */
+export async function deleteVoidedPayment(
+  actor: OrgActor,
+  paymentId: string,
+  db: Database = getDb(),
+  now: Date = new Date(),
+): Promise<DeletePaymentResult> {
+  assertCan(actor, "records.delete");
+  if (!isUuid(paymentId)) return { ok: false, notFound: true };
+  const [found] = await db
+    .select({ invoiceId: payments.invoiceId })
+    .from(payments)
+    .where(and(eq(payments.id, paymentId), eq(payments.organizationId, actor.organizationId)));
+  if (!found) return { ok: false, notFound: true };
+  const customerName = (await getInvoiceLabels(actor, [found.invoiceId], db)).get(found.invoiceId)?.customerName ?? null;
+
+  return db.transaction(async (tx): Promise<DeletePaymentResult> => {
+    // Same lock order as recording and voiding: the invoice, then its payment.
+    const invoice = await lockInvoiceForPayment(tx, actor, found.invoiceId);
+    if (!invoice) return { ok: false, notFound: true };
+    const [payment] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for("update");
+    if (!payment) return { ok: false, notFound: true };
+    if (!payment.voidedAt || payment.voidReason === null) return { ok: false, error: "Void this payment first. Then it can be deleted." };
+
+    await putInTrash(
+      tx,
+      actor,
+      {
+        kind: "payment",
+        originalId: payment.id,
+        customerName,
+        label: payment.receiptNumber,
+        totalMinor: payment.amountMinor + payment.withheldMinor,
+        currency: payment.currency,
+        payload: paymentTrashPayload({
+          ...payment,
+          voidedAt: payment.voidedAt.toISOString(),
+          voidReason: payment.voidReason,
+          createdAt: payment.createdAt.toISOString(),
+          updatedAt: payment.updatedAt.toISOString(),
+        }),
+      },
+      now,
+    );
+    await tx.delete(payments).where(eq(payments.id, payment.id));
+    await audit(tx, actor, "payment.deleted", payment.id, {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      receiptNumber: payment.receiptNumber,
+      amountMinor: payment.amountMinor,
+      withheldMinor: payment.withheldMinor,
+    });
+    return { ok: true };
+  });
+}
+
+/** Brings a deleted payment back from the recycle bin, under its own id and receipt number, still void. Owner only. */
+export async function restoreDeletedPayment(
+  actor: OrgActor,
+  trashId: string,
+  db: Database = getDb(),
+  now: Date = new Date(),
+): Promise<RestorePaymentResult> {
+  assertCan(actor, "records.delete");
+  return db.transaction(async (tx): Promise<RestorePaymentResult> => {
+    const taken = await takeFromTrash(tx, actor, "payment", trashId, now);
+    if (!taken) return { ok: false, notFound: true };
+    const parsed = parsePaymentTrashPayload(taken.payload);
+    // Rolls back, so the item stays in the bin rather than vanishing unread.
+    if (!parsed.ok) throw new Error("A recycle bin item for a payment couldn't be read");
+    // Drizzle only reads the table's own columns, so the payload's version marker is left behind.
+    const kept: Omit<typeof parsed.payload, "v"> = parsed.payload;
+
+    const invoice = await lockInvoiceForPayment(tx, actor, kept.invoiceId);
+    if (!invoice) throw new Error("A deleted payment's billing statement is gone");
+    await tx.insert(payments).values({
+      ...kept,
+      id: taken.originalId,
+      organizationId: actor.organizationId,
+      voidedAt: new Date(kept.voidedAt),
+      createdAt: new Date(kept.createdAt),
+      updatedAt: new Date(kept.updatedAt),
+    });
+    await audit(tx, actor, "payment.restored", taken.originalId, {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      receiptNumber: kept.receiptNumber,
+      amountMinor: kept.amountMinor,
+      withheldMinor: kept.withheldMinor,
+    });
+    return { ok: true, paymentId: taken.originalId };
+  });
+}
+
 /** An invoice's payments, oldest first, voided ones included (they stay on the record). */
 export async function listInvoicePayments(actor: OrgActor, invoiceId: string, db: Database = getDb()): Promise<Payment[]> {
   assertCan(actor, "payments.read");
@@ -358,11 +465,17 @@ export type PaymentList = PageMeta & { payments: PaymentListItem[]; total: numbe
 
 /**
  * Every payment the business recorded, newest first, optionally searched by receipt number, reference, who paid,
- * bank or wallet, or the billing statement's number or customer.
+ * bank or wallet, or the billing statement's number or customer. `withholding: "pending"` keeps only the payments
+ * still waiting for a 2307.
  */
 export async function listPayments(
   actor: OrgActor,
-  { search = null, page = 1, pageSize }: { search?: string | null; page?: number; pageSize?: number },
+  {
+    search = null,
+    page = 1,
+    pageSize,
+    withholding,
+  }: { search?: string | null; page?: number; pageSize?: number; withholding?: "pending" },
   db: Database = getDb(),
 ): Promise<PaymentList> {
   assertCan(actor, "payments.read");
@@ -379,7 +492,21 @@ export async function listPayments(
       invoiceIds.length > 0 ? inArray(payments.invoiceId, invoiceIds) : undefined,
     );
   }
-  const where = and(ofOrganization, matches);
+  // "2307 pending": active, tax withheld, and no certificate has it yet.
+  const pending =
+    withholding === "pending"
+      ? and(
+          isNull(payments.voidedAt),
+          sql`${payments.withheldMinor} > 0`,
+          notExists(
+            db
+              .select({ one: sql`1` })
+              .from(withholdingCertificatePayments)
+              .where(eq(withholdingCertificatePayments.paymentId, payments.id)),
+          ),
+        )
+      : undefined;
+  const where = and(ofOrganization, matches, pending);
 
   const [[matching], [total]] = await Promise.all([
     db.select({ value: count() }).from(payments).where(where),

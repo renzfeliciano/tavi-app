@@ -73,7 +73,7 @@ export type MarketProfile = {
    * authority (PH: creditable withholding tax, BIR Form 2307), or null.
    * It counts toward the balance, so the invoice closes.
    */
-  taxWithheld: { label: string; hint: string } | null;
+  taxWithheld: { label: string; hint: string; certificate: { name: string; short: string } } | null;
   /**
    * ATC codes (with their rate in basis points) offered as suggestions on a withholding certificate. A person can
    * always type another code and rate, so this is a starting list, not a rule. Empty where `taxWithheld` is null.
@@ -296,6 +296,8 @@ export const MARKETS = {
     taxWithheld: {
       label: "Tax withheld (BIR Form 2307)",
       hint: "If your customer withheld creditable tax, enter it here. It counts toward the balance; keep their Form 2307.",
+      // What the customer sends later, in full and in the short form badges and links use ("2307 pending").
+      certificate: { name: "BIR Form 2307", short: "2307" },
     },
     // The one ATC on the sample certificate. More are added once the CPA confirms them (compliance questionnaire, CPA question 8).
     withholdingAtcs: [{ code: "WI160", rateBps: 200 }],

@@ -9,7 +9,7 @@ import {
 import { ReportSectionsSkeleton } from "./_components/report-sections-skeleton";
 
 // Reports: header, the period tabs and dates, then sales, payments and unpaid
-// bills, each with its heading, download button, figures and rows.
+// bills, each with its heading, download button, figures and rows, then the 2307 section with its picker.
 export default function ReportsLoading() {
   return (
     <LoadingScreen label="Loading reports">

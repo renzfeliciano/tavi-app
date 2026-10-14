@@ -23,7 +23,7 @@ export function DeadlinesCard({
   missing: { text: string; href: "/settings/business" | null } | null;
 }) {
   return (
-    <section aria-labelledby="deadlines-heading" className="rounded-xl border border-border bg-card shadow-xs">
+    <section id="deadlines" aria-labelledby="deadlines-heading" className="scroll-mt-20 rounded-xl border border-border bg-card shadow-xs">
       <header className="grid gap-0.5 border-b border-border px-5 py-4 sm:px-6">
         <h2 id="deadlines-heading" className="font-semibold">
           Coming up

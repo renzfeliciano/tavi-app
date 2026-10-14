@@ -9,6 +9,7 @@ export async function exportTrash(executor: Executor, organizationId: string) {
       kind: trashItems.kind,
       originalId: trashItems.originalId,
       customerName: trashItems.customerName,
+      label: trashItems.label,
       totalMinor: trashItems.totalMinor,
       currency: trashItems.currency,
       deletedAt: trashItems.deletedAt,

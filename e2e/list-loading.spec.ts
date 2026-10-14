@@ -69,7 +69,8 @@ test.describe("lists while a tab, page or search is loading", () => {
 
     await page.getByLabel("From", { exact: true }).fill("2026-01-01");
     await page.getByLabel("To", { exact: true }).fill("2026-01-31");
-    await page.getByRole("button", { name: "Show" }).click();
+    // The 2307 section has its own Show button; the dates' comes first.
+    await page.getByRole("button", { name: "Show" }).first().click();
 
     await expect(loading(page, "Loading reports")).toBeVisible();
     await expect(page).toHaveURL(/\/reports\?from=2026-01-01&to=2026-01-31$/);

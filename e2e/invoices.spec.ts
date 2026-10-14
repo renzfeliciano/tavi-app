@@ -418,7 +418,8 @@ test("reports total the period's sales and payments, age what's unpaid, and down
 
   await page.getByLabel("From").fill("2026-09-30");
   await page.getByLabel("To", { exact: true }).fill("2026-09-01");
-  await page.getByRole("button", { name: "Show" }).click();
+  // The 2307 section has its own Show button; the dates' comes first.
+  await page.getByRole("button", { name: "Show" }).first().click();
   await expect(page.getByText("Choose an end date on or after the start date.")).toBeVisible();
 });
 

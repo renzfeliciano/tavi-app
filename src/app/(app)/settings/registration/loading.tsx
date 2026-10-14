@@ -2,6 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ButtonSkeleton,
   FormSkeleton,
+  JumpLinksSkeleton,
   LoadingScreen,
   PageHeaderSkeleton,
   SectionHeadSkeleton,
@@ -13,6 +14,7 @@ export default function RegistrationSettingsLoading() {
   return (
     <LoadingScreen label="Loading registration">
       <PageHeaderSkeleton back title="w-36" description={["w-120", "w-40"]} />
+      <JumpLinksSkeleton widths={["w-36", "w-24", "w-32", "w-28", "w-24"]} />
       <div className="mt-8 grid max-w-3xl gap-8">
         <div className="grid gap-2 rounded-xl border border-border bg-card px-5 py-4 shadow-xs sm:px-6">
           <TextSkeleton width="w-40" size="base" />
@@ -32,7 +34,7 @@ export default function RegistrationSettingsLoading() {
             </div>
           ))}
         </div>
-        <FormSkeleton sections={[["half", "half", "half", "half hint", "half hint", "half hint"], ["half", "half", "half", "half"]]} />
+        <FormSkeleton saveBar sections={[["half", "half", "half", "half hint", "half hint", "half hint"], ["half", "half", "half", "half"]]} />
         <div className="rounded-xl border border-border bg-card shadow-xs">
           <SectionHeadSkeleton title="w-28" description="w-80" />
           <div className="flex items-center gap-2 px-5 py-4 sm:px-6">

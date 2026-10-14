@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { MARKETS } from "@/config/markets";
 import type { PaymentRow, SalesRow, UnpaidRow } from "@/modules/reports";
-import { paymentsCsv, salesCsv, unpaidCsv } from "./report-csv";
+import type { WithholdingCsvRow } from "@/modules/payments";
+import { paymentsCsv, salesCsv, unpaidCsv, withholdingCsv } from "./report-csv";
 
 const market = MARKETS.PH;
 const lines = (csv: string) => csv.replace(/^\uFEFF/, "").trimEnd().split("\r\n");
@@ -88,5 +89,61 @@ describe("unpaidCsv", () => {
     expect(lines(unpaidCsv([bill], "2026-10-02"))[1]).toBe(
       "INV-000002,Billing statement,Juan Dela Cruz,2026-09-01,2026-09-16,16,PHP,2000.00,500.00,1500.00",
     );
+  });
+});
+
+describe("withholdingCsv", () => {
+  const received: WithholdingCsvRow = {
+    status: "Received",
+    payorTin: "987-654-321-000",
+    payorName: "Dela Cruz Trading",
+    receivedOn: "2026-09-20",
+    atcCode: "WI160",
+    rateBps: 200,
+    monthMinor: [50_000, 0, 75_000],
+    totalMinor: 125_000,
+    taxWithheldMinor: 2_500,
+    billingStatements: "INV-000001; INV-000002",
+    hasScan: true,
+    currency: "PHP",
+  };
+  const pending: WithholdingCsvRow = {
+    status: "Pending",
+    payorTin: "",
+    payorName: "Maria Reyes",
+    receivedOn: null,
+    atcCode: null,
+    rateBps: null,
+    monthMinor: null,
+    totalMinor: null,
+    taxWithheldMinor: 500,
+    billingStatements: "INV-000003",
+    hasScan: null,
+    currency: "PHP",
+  };
+
+  it("writes the quarter, one row per certificate row, then one per pending payment, in the spec's column order", () => {
+    expect(lines(withholdingCsv([received, pending], market, { year: 2026, quarter: 3 }))).toEqual([
+      "Quarter,Status,Payor TIN,Payor name,Received on,ATC,Rate %,Month 1,Month 2,Month 3,Total income payments,Tax withheld,Billing statements,Has scan,Currency",
+      "Q3 2026,Received,987-654-321-000,Dela Cruz Trading,2026-09-20,WI160,2.00,500.00,0.00,750.00,1250.00,25.00,INV-000001; INV-000002,Yes,PHP",
+      "Q3 2026,Pending,,Maria Reyes,,,,,,,,5.00,INV-000003,,PHP",
+    ]);
+  });
+
+  it("says No for a certificate without a scan and prints the rate to two decimals", () => {
+    const [, row] = lines(withholdingCsv([{ ...received, hasScan: false, rateBps: 250 }], market, { year: 2026, quarter: 3 }));
+    expect(row?.split(",").slice(5, 7)).toEqual(["WI160", "2.50"]);
+    expect(row?.endsWith(",No,PHP")).toBe(true);
+  });
+
+  it("stops a spreadsheet from running a payor's name as a formula", () => {
+    for (const name of ["=cmd|x", "+1", "-2+3", "@SUM(A1)"]) {
+      const [, row] = lines(withholdingCsv([{ ...received, payorName: name }], market, { year: 2026, quarter: 3 }));
+      expect(row).toContain(`,'${name},`);
+    }
+  });
+
+  it("writes only the header for an empty quarter", () => {
+    expect(lines(withholdingCsv([], market, { year: 2026, quarter: 1 }))).toHaveLength(1);
   });
 });

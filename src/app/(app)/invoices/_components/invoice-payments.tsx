@@ -23,11 +23,19 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { PAYMENT_METHODS, type PaymentDetailExamples, type PaymentDetailLabels, type PaymentMethod } from "@/config/markets";
-import { MAX_ACK_RECIPIENTS, PAYMENT_LIMITS, parseAckRecipients, type ProofRow, type RawPayment } from "@/modules/payments/client";
+import {
+  MAX_ACK_RECIPIENTS,
+  PAYMENT_LIMITS,
+  parseAckRecipients,
+  type ProofRow,
+  type RawPayment,
+  type WithholdingStatus,
+} from "@/modules/payments/client";
 import { formatCalendarDate } from "@/shared/dates/calendar";
 import { formatAmountForInput, formatMoney } from "@/shared/money";
 import { eg } from "@/shared/text/example";
 import { recordPaymentAction, voidPaymentAction } from "../../payments/actions";
+import { WithholdingBadge } from "../../payments/_components/withholding-badge";
 
 export type InvoicePaymentRow = {
   id: string;
@@ -38,6 +46,8 @@ export type InvoicePaymentRow = {
   details: ProofRow[];
   amountMinor: number;
   withheldMinor: number;
+  /** Whether the 2307 for the tax withheld is recorded; left out where it isn't known. */
+  withholding?: WithholdingStatus;
   voidReason: string | null;
 };
 
@@ -59,7 +69,7 @@ type InvoicePaymentsProps = {
   /** What those fields show while empty, for each method. */
   detailExamples: PaymentDetailExamples;
   chequeDateLabel: string;
-  taxWithheld: { label: string; hint: string } | null;
+  taxWithheld: { label: string; hint: string; certificate: { name: string; short: string } } | null;
   /** e.g. "Payment acknowledgement". */
   receiptTitle: string;
   payments: InvoicePaymentRow[];
@@ -255,6 +265,11 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
                     ? ` · ${props.taxWithheld.label} ${money(payment.withheldMinor)}`
                     : ""}
                 </p>
+                {!payment.voidReason && props.taxWithheld && payment.withholding && payment.withholding !== "none" && (
+                  <p className="mt-1">
+                    <WithholdingBadge status={payment.withholding} certificate={props.taxWithheld.certificate.short} compact />
+                  </p>
+                )}
                 {payment.voidReason && <p className="text-muted-foreground">Voided: {payment.voidReason}</p>}
               </div>
               <div className="flex items-center gap-3">

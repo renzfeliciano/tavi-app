@@ -5,7 +5,7 @@ import { users } from "@/modules/identity/schema";
 import { organizations } from "@/modules/organizations/schema";
 import { TRASH_KINDS } from "./domain/trash";
 
-// The recycle bin (D27): a deleted draft quote or bill, kept whole for a while.
+// The recycle bin (D27): a deleted draft, sent quotation, voided payment or voided 2307, kept whole for a while.
 // The draft's own rows are removed as before, so no list, report or number
 // sequence ever sees it; `payload` holds what restoring needs, and `customer_name`
 // and the total are what the bin page shows. `expires_at` is
@@ -21,6 +21,8 @@ export const trashItems = pgTable(
     /** The deleted draft's id: restoring brings it back under the same one. */
     originalId: uuid("original_id").notNull(),
     customerName: text("customer_name"),
+    /** The number the record carried (quotation or receipt number, or who and which quarter for a 2307), so the bin can name it. */
+    label: text("label"),
     totalMinor: bigint("total_minor", { mode: "number" }).notNull(),
     currency: char("currency", { length: 3 }).notNull(),
     payload: jsonb("payload").notNull(),
@@ -33,7 +35,7 @@ export const trashItems = pgTable(
     unique("trash_items_organization_original_unique").on(t.organizationId, t.kind, t.originalId),
     index("trash_items_organization_deleted_idx").on(t.organizationId, t.deletedAt.desc()),
     index("trash_items_expires_idx").on(t.expiresAt),
-    check("trash_items_kind", sql`${t.kind} in ('invoice', 'quote')`),
+    check("trash_items_kind", sql`${t.kind} in ('invoice', 'quote', 'sent_quote', 'payment', 'certificate')`),
     check("trash_items_currency_iso", sql`${t.currency} ~ '^[A-Z]{3}$'`),
     check("trash_items_total_not_negative", sql`${t.totalMinor} >= 0`),
     check("trash_items_expires_after_deleted", sql`${t.expiresAt} > ${t.deletedAt}`),

@@ -16,5 +16,5 @@ export {
   type UploadDocumentResult,
   uploadRegistrationDocument,
 } from "./application/registration-documents";
-export { removeWithholdingScan, type UploadScanResult, uploadWithholdingScan } from "./application/withholding-scans";
+export { discardWithholdingScan, removeWithholdingScan, type UploadScanResult, uploadWithholdingScan } from "./application/withholding-scans";
 export { DOCUMENT_MESSAGES, MAX_UPLOAD_BYTES, REGISTRATION_DOCUMENTS, UPLOAD_MESSAGES } from "./domain/limits";

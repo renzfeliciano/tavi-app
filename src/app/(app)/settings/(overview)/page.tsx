@@ -1,12 +1,9 @@
 import type { Metadata, Route } from "next";
-import Link from "next/link";
 import {
   BuildingIcon,
-  ChevronRightIcon,
   ClipboardCheckIcon,
   FileBadgeIcon,
   HashIcon,
-  type LucideIcon,
   PercentIcon,
   ShieldCheckIcon,
   Trash2Icon,
@@ -15,16 +12,31 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { documentWording, type MarketProfile } from "@/config/markets";
-import { requireOrgContext } from "@/modules/identity";
+import { can } from "@/modules/authz";
+import { listTaxRates } from "@/modules/catalog";
+import { listMyDevices, requireOrgContext } from "@/modules/identity";
+import { getInvoiceRegistration } from "@/modules/invoices";
+import { getBusinessProfile, getBusinessRegistration, listTeam } from "@/modules/organizations";
+import { SettingsList, type SettingsSection } from "../_components/settings-list";
+import {
+  businessProfileState,
+  devicesState,
+  invoiceModeState,
+  type RowState,
+  registrationState,
+  taxRatesState,
+  teamState,
+} from "../_lib/row-states";
 
 export const metadata: Metadata = { title: "Settings" };
 
-type Section = { href: Route; title: string; description: string; icon: LucideIcon };
+/** The short status on each row, by href. A row with none (or one this role may not read) shows only its purpose. */
+type States = Partial<Record<string, RowState>>;
 
 // Descriptions use the business's market wording (its tax-ID name, its taxes, its document names).
-function sectionsFor(market: MarketProfile): Section[] {
+function sectionsFor(market: MarketProfile, states: States): SettingsSection[] {
   const suggestedTax = market.suggestedTaxRates[0]?.name;
-  return [
+  const sections: SettingsSection[] = [
     {
       href: "/settings/business",
       title: "Business profile",
@@ -88,35 +100,33 @@ function sectionsFor(market: MarketProfile): Section[] {
       icon: UserRoundIcon,
     },
   ];
+  return sections.map((section) => ({ ...section, state: states[section.href] }));
 }
 
 export default async function SettingsPage() {
-  const { market } = await requireOrgContext();
+  const ctx = await requireOrgContext();
+  const { market } = ctx;
+  // Each status reads only what this person's role may read; a failed read just leaves the row without one.
+  const [profile, registration, rates, invoicing, team, devices] = await Promise.all([
+    getBusinessProfile(ctx).catch(() => null),
+    market.registration && can(ctx, "organization.manage") ? getBusinessRegistration(ctx).catch(() => null) : null,
+    can(ctx, "catalog.read") ? listTaxRates(ctx).catch(() => null) : null,
+    market.invoiceRegistration && can(ctx, "invoices.read") ? getInvoiceRegistration(ctx).catch(() => undefined) : undefined,
+    listTeam(ctx).catch(() => null),
+    listMyDevices().catch(() => null),
+  ]);
+  const states: States = {
+    ...(profile && { "/settings/business": businessProfileState(profile, market.taxId.label) }),
+    ...(registration && { "/settings/registration": registrationState(registration) }),
+    ...(rates && { "/settings/tax-rates": taxRatesState(rates) }),
+    ...(invoicing !== undefined && { "/settings/invoicing": invoiceModeState(invoicing) }),
+    ...(team && { "/settings/team": teamState(team.members.length, team.invitations.length) }),
+    ...(devices && { "/settings/security": devicesState(devices.length) }),
+  };
   return (
     <>
       <PageHeader title="Settings" description="Your business details, document defaults and account." />
-      <ul className="mt-8 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-        {sectionsFor(market).map((section) => {
-          const Icon = section.icon;
-          return (
-            <li key={section.title}>
-              <Link
-                href={section.href}
-                className="flex items-center gap-4 px-5 py-4 transition-colors duration-(--duration-fast) hover:bg-accent"
-              >
-                <span className="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-background">
-                  <Icon aria-hidden="true" className="size-4 text-ink-subtle" />
-                </span>
-                <span className="grid flex-1 gap-0.5">
-                  <span className="font-medium">{section.title}</span>
-                  <span className="text-sm text-pretty text-muted-foreground">{section.description}</span>
-                </span>
-                <ChevronRightIcon aria-hidden="true" className="size-4 text-muted-foreground" />
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      <SettingsList sections={sectionsFor(market, states)} />
     </>
   );
 }

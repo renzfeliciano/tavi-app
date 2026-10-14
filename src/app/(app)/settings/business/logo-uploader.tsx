@@ -99,7 +99,7 @@ export function LogoUploader({
   const extreme = shown ? logoLooksExtreme(shown) : false;
 
   return (
-    <section aria-labelledby="logo-heading" className="rounded-xl border border-border bg-card shadow-xs">
+    <section id="logo" aria-labelledby="logo-heading" className="scroll-mt-20 rounded-xl border border-border bg-card shadow-xs">
       <header className="grid gap-0.5 border-b border-border px-5 py-4 sm:px-6">
         <h2 id="logo-heading" className="font-semibold">
           Logo

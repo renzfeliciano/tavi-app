@@ -108,6 +108,7 @@ describe("lists with controls", () => {
       "(app)/customers/(list)",
       "(app)/invoices/(list)",
       "(app)/payments/(list)",
+      "(app)/payments/withholding/(list)",
       "(app)/quotes/(list)",
       "(app)/reports",
     ]);

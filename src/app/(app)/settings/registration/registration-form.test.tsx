@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MARKETS } from "@/config/markets";
 import { REGISTRATION_FIELDS } from "@/modules/organizations/client";
@@ -36,5 +36,19 @@ describe("the registration form's examples", () => {
     render(<RegistrationForm initial={{ ...empty, nameRegistrationAuthority: "dti" }} copy={copy} editable />);
 
     expect(screen.getByLabelText(/^Business Name No\./)).toHaveAttribute("placeholder", "e.g. 1234567");
+  });
+});
+
+describe("the registration form's save bar", () => {
+  it("says changes are unsaved once a field is edited", () => {
+    render(<RegistrationForm initial={empty} copy={copy} editable />);
+    expect(screen.getByRole("status")).toHaveTextContent("No changes yet");
+    fireEvent.change(screen.getByLabelText(/^Line of business/), { target: { value: "Auto repair" } });
+    expect(screen.getByRole("status")).toHaveTextContent("Unsaved changes");
+  });
+
+  it("has no save bar for a member who cannot edit", () => {
+    render(<RegistrationForm initial={empty} copy={copy} editable={false} />);
+    expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument();
   });
 });

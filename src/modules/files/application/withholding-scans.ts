@@ -84,3 +84,13 @@ export async function removeWithholdingScan(executor: Executor, actor: OrgActor,
       and(eq(files.id, fileId), eq(files.organizationId, actor.organizationId), eq(files.purpose, "withholding_certificate")),
     );
 }
+
+/**
+ * Throws away a scan that was uploaded for a certificate and never attached to
+ * one (the certificate was refused). Needs `payments.record`; only a scan of the
+ * caller's own business is removed.
+ */
+export async function discardWithholdingScan(actor: OrgActor, fileId: string, db: Database = getDb()): Promise<void> {
+  assertCan(actor, "payments.record");
+  await removeWithholdingScan(db, actor, fileId);
+}

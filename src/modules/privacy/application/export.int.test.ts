@@ -42,6 +42,7 @@ describe("exportBusinessData", () => {
       quotes: [],
       invoices: [],
       payments: [],
+      withholdingCertificates: [],
     });
     expect(data.customers.map((c: { displayName: string }) => c.displayName)).toEqual(["Juan Dela Cruz"]);
     expect(JSON.stringify(data)).not.toContain("Not mine");
@@ -56,7 +57,7 @@ describe("exportBusinessData", () => {
     const actor = await actorFor("owner", "Acme");
     const other = await actorFor("owner", "Other Co");
     const now = new Date("2026-10-02T03:00:00Z");
-    const draft = { kind: "quote" as const, originalId: crypto.randomUUID(), customerName: "Juan Dela Cruz", totalMinor: 150_000, currency: "PHP", payload: { v: 1, lines: [] } };
+    const draft = { kind: "sent_quote" as const, label: "QUO-000007", originalId: crypto.randomUUID(), customerName: "Juan Dela Cruz", totalMinor: 150_000, currency: "PHP", payload: { v: 1, lines: [] } };
     await db.transaction(async (tx) => {
       await putInTrash(tx, actor, draft, now);
       await putInTrash(tx, other, { ...draft, originalId: crypto.randomUUID(), customerName: "Not mine" }, now);
@@ -65,7 +66,7 @@ describe("exportBusinessData", () => {
     const result = await exportBusinessData(actor, db, now);
     if (!result.ok) throw new Error("export refused");
     const data = JSON.parse(result.body);
-    expect(data.recycleBin).toMatchObject([{ kind: "quote", customerName: "Juan Dela Cruz", totalMinor: 150000, originalId: draft.originalId }]);
+    expect(data.recycleBin).toMatchObject([{ kind: "sent_quote", label: "QUO-000007", customerName: "Juan Dela Cruz", totalMinor: 150000, originalId: draft.originalId }]);
     expect(JSON.stringify(data)).not.toContain("Not mine");
   });
 

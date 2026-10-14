@@ -4,7 +4,7 @@ import { closeTestDb, createTestOrganization, createTestUser, listAllAuditEvents
 import { ForbiddenError, type OrgActor, type Role } from "@/modules/authz";
 import { DOCUMENT_MESSAGES, MAX_UPLOAD_BYTES } from "../domain/limits";
 import { readOrganizationFile, uploadRegistrationDocument } from "./registration-documents";
-import { removeWithholdingScan, uploadWithholdingScan } from "./withholding-scans";
+import { discardWithholdingScan, removeWithholdingScan, uploadWithholdingScan } from "./withholding-scans";
 
 // The scan of a 2307 certificate: stored in the files store with its own
 // purpose, readable by anyone who can read payments, never part of the
@@ -106,5 +106,26 @@ describe("removeWithholdingScan", () => {
 
     await removeWithholdingScan(testDb(), owner, scanId);
     expect(await readOrganizationFile(owner, scanId, testDb())).toBeNull();
+  });
+});
+
+describe("discardWithholdingScan", () => {
+  it("removes a scan the person just uploaded, when the certificate it was for was refused", async () => {
+    const owner = await actorFor();
+    const scan = await uploadWithholdingScan(owner, { bytes: pdf(), fileName: "2307.pdf" }, testDb());
+    const scanId = scan.ok ? scan.fileId : "";
+
+    await discardWithholdingScan(owner, scanId, testDb());
+    expect(await readOrganizationFile(owner, scanId, testDb())).toBeNull();
+  });
+
+  it("is for people who can record payments, and leaves other businesses' files alone", async () => {
+    const owner = await actorFor();
+    const scan = await uploadWithholdingScan(owner, { bytes: pdf(), fileName: "2307.pdf" }, testDb());
+    const scanId = scan.ok ? scan.fileId : "";
+
+    const stranger = await actorFor();
+    await discardWithholdingScan(stranger, scanId, testDb());
+    expect(await readOrganizationFile(owner, scanId, testDb())).not.toBeNull();
   });
 });

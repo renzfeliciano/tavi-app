@@ -112,7 +112,7 @@ export function PaymentQrEditor({
   }
 
   return (
-    <section aria-labelledby={`${id}-heading`} className="rounded-xl border border-border bg-card shadow-xs">
+    <section id="payment-qr" aria-labelledby={`${id}-heading`} className="scroll-mt-20 rounded-xl border border-border bg-card shadow-xs">
       <header className="grid gap-0.5 border-b border-border px-5 py-4 sm:px-6">
         <h2 id={`${id}-heading`} className="font-semibold">
           Payment QR codes

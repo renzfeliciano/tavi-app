@@ -4,7 +4,9 @@ import { CellSub, CellTitle } from "@/components/list-cells";
 import { MoneyAmount } from "@/components/money-amount";
 import { MARKETS, type MarketProfile } from "@/config/markets";
 import type { PaymentList } from "@/modules/payments";
+import type { WithholdingStatus } from "@/modules/payments/client";
 import { formatCalendarDate } from "@/shared/dates/calendar";
+import { WithholdingBadge } from "./withholding-badge";
 
 export type PaymentRow = PaymentList["payments"][number];
 
@@ -15,10 +17,14 @@ const payer = (payment: PaymentRow) => payment.customerName ?? payment.payerName
 const how = (payment: PaymentRow, market: Pick<MarketProfile, "paymentMethodLabels">) =>
   [market.paymentMethodLabels[payment.method], payment.reference].filter(Boolean).join(" · ");
 
-/** The payment list's columns: one definition for the table and for its skeleton, so the two never drift. */
+/**
+ * The payment list's columns: one definition for the table and for its skeleton, so the two never drift.
+ * `withholding` says which payments still wait for a 2307 (the badge sits on the receipt line, which keeps the row's height).
+ */
 export const paymentColumns = (
   locale: string,
-  market: Pick<MarketProfile, "paymentMethodLabels">,
+  market: Pick<MarketProfile, "paymentMethodLabels" | "taxWithheld">,
+  withholding?: ReadonlyMap<string, WithholdingStatus>,
 ): DataColumn<PaymentRow>[] => [
   {
     id: "payer",
@@ -29,9 +35,19 @@ export const paymentColumns = (
     cell: (payment) => (
       <>
         <CellTitle>{payer(payment)}</CellTitle>
-        <CellSub>
-          <DocumentNumber number={payment.receiptNumber} />
-          {payment.voidedAt && " · Voided"}
+        <CellSub className="flex items-center gap-2">
+          <span className="min-w-0 truncate">
+            <DocumentNumber number={payment.receiptNumber} />
+            {payment.voidedAt && " · Voided"}
+          </span>
+          {!payment.voidedAt && market.taxWithheld && (
+            <WithholdingBadge
+              status={withholding?.get(payment.id) ?? "none"}
+              certificate={market.taxWithheld.certificate.short}
+              compact
+              className="shrink-0"
+            />
+          )}
         </CellSub>
       </>
     ),
@@ -83,5 +99,5 @@ export const paymentSummary =
 
 /** The payment list's panel while its rows load: the loading screen's, and what stands in for the rows while a page or search loads. */
 export function PaymentListSkeleton() {
-  return <DataTableSkeleton label="Payment list" columns={paymentColumns("en-PH", MARKETS.PH)} summary strip />;
+  return <DataTableSkeleton label="Payment list" columns={paymentColumns("en-PH", MARKETS.PH)} controls={2} summary strip />;
 }

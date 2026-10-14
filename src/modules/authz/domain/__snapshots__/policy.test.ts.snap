@@ -58,6 +58,7 @@ exports[`role matrix (docs/foundation-proposal.md §E) > matches the documented 
     "quotes.read",
     "quotes.send",
     "quotes.write",
+    "records.delete",
     "reports.read",
     "users.manage",
   ],

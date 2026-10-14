@@ -42,6 +42,60 @@ const lineSchema = z.object({
 
 const payloadSchema = z.object({ v: z.literal(1), header: headerSchema, lines: z.array(lineSchema) });
 
+const moment = z.iso.datetime();
+const text = z.string().nullable();
+
+// A quotation that was sent (version 2): the whole row, so restoring puts back its number, status,
+// the customer and business as they were when it went out, and any decision. A quotation that became a
+// billing statement is never deleted, so there is no conversion to keep.
+const sentSchema = z.object({
+  v: z.literal(2),
+  quote: z.object({
+    customerId: z.uuid().nullable(),
+    number: z.string(),
+    revision: z.number().int().min(1),
+    status: z.enum(["DRAFT", "SENT", "VIEWED", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED"]),
+    currency: z.string().regex(/^[A-Z]{3}$/),
+    taxMode: z.enum(["inclusive", "exclusive"]),
+    issueDate: date,
+    validUntil: date,
+    customerSnapshot: z.record(z.string(), z.unknown()).nullable(),
+    sellerSnapshot: z.record(z.string(), z.unknown()).nullable(),
+    notes: text,
+    terms: text,
+    subtotalMinor: minor,
+    discountTotalMinor: minor,
+    taxTotalMinor: minor,
+    totalMinor: minor,
+    sentAt: moment.nullable(),
+    viewedAt: moment.nullable(),
+    decidedAt: moment.nullable(),
+    decisionName: text,
+    decisionNote: text,
+    decisionContentHash: text,
+    decisionIp: text,
+    decisionUserAgent: text,
+    cancelledAt: moment.nullable(),
+    cancelReason: text,
+    createdBy: z.uuid().nullable(),
+    createdAt: moment,
+    updatedAt: moment,
+  }),
+  lines: z.array(lineSchema),
+});
+
+export type SentQuoteTrashPayload = z.infer<typeof sentSchema>;
+
+/** The payload for a sent quotation: picks exactly the kept fields, whatever else the row carries. */
+export function sentQuoteTrashPayload(quote: SentQuoteTrashPayload["quote"], lines: readonly QuoteTrashLine[]): SentQuoteTrashPayload {
+  return sentSchema.parse({ v: 2, quote, lines: lines.map((line) => lineSchema.parse(line)) });
+}
+
+export function parseSentQuoteTrashPayload(value: unknown): { ok: true; payload: SentQuoteTrashPayload } | { ok: false } {
+  const parsed = sentSchema.safeParse(value);
+  return parsed.success ? { ok: true, payload: parsed.data } : { ok: false };
+}
+
 export type QuoteTrashPayload = z.infer<typeof payloadSchema>;
 export type QuoteTrashHeader = z.infer<typeof headerSchema>;
 export type QuoteTrashLine = z.infer<typeof lineSchema>;

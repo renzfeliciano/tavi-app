@@ -24,8 +24,14 @@ describe("trashDaysLeft", () => {
 
 describe("trashKindCapability", () => {
   it("restoring needs the same capability as writing that kind of document", () => {
-    expect(TRASH_KINDS).toEqual(["invoice", "quote"]);
+    expect(TRASH_KINDS).toEqual(["invoice", "quote", "sent_quote", "payment", "certificate"]);
     expect(trashKindCapability("invoice")).toBe("invoices.write");
     expect(trashKindCapability("quote")).toBe("quotes.write");
+  });
+
+  it("restoring a sent quotation, payment or 2307 is the owner's, like deleting it", () => {
+    for (const kind of ["sent_quote", "payment", "certificate"] as const) {
+      expect(trashKindCapability(kind)).toBe("records.delete");
+    }
   });
 });

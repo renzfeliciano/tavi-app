@@ -256,16 +256,41 @@ export function FormSectionSkeleton({ fields }: { fields: FieldShape[] }) {
   );
 }
 
-/** A record or settings form: its sections, then the save button on the right. */
-export function FormSkeleton({ sections }: { sections: FieldShape[][] }) {
+/** The sticky save bar (SaveBar): its status words on the left, the save button on the right. */
+export function SaveBarSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-5 py-3 shadow-sm", className)}>
+      <TextSkeleton width="w-32" />
+      <ButtonSkeleton width="w-32" />
+    </div>
+  );
+}
+
+/** JumpLinks: a row of small link buttons under the page header, one per section. */
+export function JumpLinksSkeleton({ widths }: { widths: string[] }) {
+  return (
+    <div className="mt-6 flex flex-wrap gap-2">
+      {widths.map((width, i) => (
+        <Skeleton key={i} className={cn("h-8 rounded-md pointer-coarse:h-11", width)} />
+      ))}
+    </div>
+  );
+}
+
+/** A record or settings form: its sections, then the save button on the right (or, with `saveBar`, the save bar). */
+export function FormSkeleton({ sections, saveBar = false }: { sections: FieldShape[][]; saveBar?: boolean }) {
   return (
     <div className="grid gap-8">
       {sections.map((fields, i) => (
         <FormSectionSkeleton key={i} fields={fields} />
       ))}
-      <div className="flex justify-end">
-        <ButtonSkeleton size="lg" width="w-full sm:w-36" />
-      </div>
+      {saveBar ? (
+        <SaveBarSkeleton />
+      ) : (
+        <div className="flex justify-end">
+          <ButtonSkeleton size="lg" width="w-full sm:w-36" />
+        </div>
+      )}
     </div>
   );
 }

@@ -91,7 +91,7 @@ export function DocumentsCard({
   const error = clientError ?? (uploading ? null : state.error);
 
   return (
-    <section aria-labelledby="documents-heading" className="rounded-xl border border-border bg-card shadow-xs">
+    <section id="certificates" aria-labelledby="documents-heading" className="scroll-mt-20 rounded-xl border border-border bg-card shadow-xs">
       <header className="grid gap-0.5 border-b border-border px-5 py-4 sm:px-6">
         <h2 id="documents-heading" className="font-semibold">
           Certificates

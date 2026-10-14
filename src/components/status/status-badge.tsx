@@ -12,7 +12,7 @@ type StatusBadgeProps = (
   | { kind: "invoice"; status: InvoiceStatus }
 ) & { className?: string };
 
-const TONE_CLASSES: Record<StatusTone, string> = {
+export const TONE_CLASSES: Record<StatusTone, string> = {
   neutral: "border-border-strong bg-secondary text-ink-subtle",
   info: "border-info/25 bg-info-subtle text-info-strong",
   success: "border-success/25 bg-success-subtle text-success-strong",

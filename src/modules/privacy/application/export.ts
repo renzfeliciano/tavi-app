@@ -7,7 +7,7 @@ import { exportCustomers } from "@/modules/customers";
 import { getAccountForExport } from "@/modules/identity";
 import { exportInvoices } from "@/modules/invoices";
 import { exportTeam, getOrganizationForExport } from "@/modules/organizations";
-import { exportPayments } from "@/modules/payments";
+import { exportPayments, exportWithholdingCertificates } from "@/modules/payments";
 import { exportQuotes } from "@/modules/quotes";
 import { consumeRateLimit } from "@/modules/system";
 import { exportTrash } from "@/modules/trash";
@@ -29,7 +29,8 @@ export type ExportResult =
 /**
  * Everything the business keeps in Tavi, as one JSON file: the business
  * profile, the person's own account, tax rates, products, services,
- * customers, quotes and bills with their lines, and payments. Read in one
+ * customers, quotes and bills with their lines, payments, and withholding
+ * certificates. Read in one
  * repeatable-read transaction so the file is a consistent snapshot. Customer
  * link tokens, logos and the activity history aren't included.
  */
@@ -52,6 +53,7 @@ export async function exportBusinessData(
       const quotes = await exportQuotes(tx, organizationId);
       const invoices = await exportInvoices(tx, organizationId);
       const payments = await exportPayments(tx, organizationId);
+      const withholdingCertificates = await exportWithholdingCertificates(tx, organizationId);
       const team = await exportTeam(tx, organizationId);
       const recycleBin = await exportTrash(tx, organizationId);
 
@@ -80,6 +82,7 @@ export async function exportBusinessData(
         quotes: attachLines(quotes.quotes, quotes.lines, (line) => line.quoteId),
         invoices: attachLines(invoices.invoices, invoices.lines, (line) => line.invoiceId),
         payments,
+        withholdingCertificates,
         recycleBin,
       };
     },

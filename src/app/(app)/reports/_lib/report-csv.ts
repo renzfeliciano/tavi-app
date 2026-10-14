@@ -1,6 +1,7 @@
 import { invoiceStatusPresentation } from "@/components/status/presentation";
 import type { MarketProfile } from "@/config/markets";
 import type { InvoiceStatus } from "@/modules/invoices";
+import type { Quarter, WithholdingCsvRow } from "@/modules/payments";
 import { daysOverdue, type PaymentRow, type SalesRow, toCsv, type UnpaidRow } from "@/modules/reports";
 import type { CalendarDate } from "@/shared/dates/calendar";
 import { minorToDecimalString } from "@/shared/money";
@@ -109,6 +110,48 @@ export function unpaidCsv(rows: readonly UnpaidRow[], today: CalendarDate): stri
       money(r.totalMinor, r.currency),
       money(r.paidMinor, r.currency),
       money(r.totalMinor - r.paidMinor, r.currency),
+    ]),
+  ]);
+}
+
+/** The 2307 report (spec section 8): one row per certificate row, then one per payment still waiting for its certificate. */
+export function withholdingCsv(rows: readonly WithholdingCsvRow[], market: Market, { year, quarter }: { year: number; quarter: Quarter }): string {
+  const label = `Q${quarter} ${year}`;
+  const optionalMoney = (minor: number | null, currency: string) => (minor === null ? null : money(minor, currency));
+  return toCsv([
+    [
+      "Quarter",
+      "Status",
+      `Payor ${market.taxId.label}`,
+      "Payor name",
+      "Received on",
+      "ATC",
+      "Rate %",
+      "Month 1",
+      "Month 2",
+      "Month 3",
+      "Total income payments",
+      "Tax withheld",
+      "Billing statements",
+      "Has scan",
+      "Currency",
+    ],
+    ...rows.map((r) => [
+      label,
+      r.status,
+      r.payorTin,
+      r.payorName,
+      r.receivedOn,
+      r.atcCode,
+      r.rateBps === null ? null : (r.rateBps / 100).toFixed(2),
+      optionalMoney(r.monthMinor?.[0] ?? null, r.currency),
+      optionalMoney(r.monthMinor?.[1] ?? null, r.currency),
+      optionalMoney(r.monthMinor?.[2] ?? null, r.currency),
+      optionalMoney(r.totalMinor, r.currency),
+      money(r.taxWithheldMinor, r.currency),
+      r.billingStatements,
+      r.hasScan === null ? null : r.hasScan ? "Yes" : "No",
+      r.currency,
     ]),
   ]);
 }

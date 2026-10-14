@@ -1,7 +1,6 @@
 import type { Metadata, Route } from "next";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { DownloadIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { FormAlert } from "@/components/form-alert";
 import { ListViews } from "@/components/list-controls";
@@ -14,6 +13,7 @@ import { brand } from "@/config/brand";
 import { can } from "@/modules/authz";
 import { requireOrgContext } from "@/modules/identity";
 import { getBusinessProfile } from "@/modules/organizations";
+import { withholdingReport } from "@/modules/payments";
 import {
   AGING_BUCKETS,
   type AgingBucket,
@@ -27,8 +27,12 @@ import {
   unpaidReport,
 } from "@/modules/reports";
 import { formatCalendarDate, todayIn } from "@/shared/dates/calendar";
+import { AgingBar } from "./_components/aging-bar";
 import { Compared, Figures } from "./_components/report-figures";
+import { Quiet, ReportSection, Rows } from "./_components/report-parts";
 import { ReportSectionsSkeleton } from "./_components/report-sections-skeleton";
+import { WithholdingSection } from "./_components/withholding-section";
+import { parseWithholdingQuarter } from "./_lib/withholding-quarter";
 
 export const metadata: Metadata = { title: "Reports" };
 
@@ -61,15 +65,23 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const ctx = await requireOrgContext();
   if (!can(ctx, "reports.read")) notFound();
   const today = todayIn(ctx.timezone);
-  const { period, error } = parseReportPeriod(await searchParams, today);
+  const query = await searchParams;
+  const { period, error } = parseReportPeriod(query, today);
   const before = previousPeriod(period);
-  const [sales, payments, unpaid, profile, salesBefore, paymentsBefore] = await Promise.all([
+  // The 2307 section has its own year and quarter (a quarter's certificates, whatever period the page shows).
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? null;
+  const asked = parseWithholdingQuarter(first(query.wyear), first(query.wquarter), today);
+  const withheldQuarter = asked.ok ? asked : parseWithholdingQuarter(null, null, today);
+  const [sales, payments, unpaid, profile, salesBefore, paymentsBefore, withheld] = await Promise.all([
     salesReport(ctx, { period, market: ctx.market }),
     paymentsReport(ctx, { period }),
     unpaidReport(ctx, { today, market: ctx.market }),
     getBusinessProfile(ctx),
     salesReport(ctx, { period: before, market: ctx.market }),
     paymentsReport(ctx, { period: before }),
+    ctx.market.taxWithheld && withheldQuarter.ok
+      ? withholdingReport(ctx, { year: withheldQuarter.year, quarter: withheldQuarter.quarter })
+      : null,
   ]);
   const { market, locale } = ctx;
   const statement = market.documents.invoice.singular.toLowerCase();
@@ -116,7 +128,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
           </p>
         </div>
 
-        <ListResults label="Loading reports" skeleton={<ReportSectionsSkeleton />}>
+        <ListResults label="Loading reports" skeleton={<ReportSectionsSkeleton withholding={Boolean(market.taxWithheld)} />}>
           <ReportSection
             id="sales"
             title="Sales"
@@ -271,6 +283,11 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
                     ]}
                     currency={unpaid.summaries.length > 1 ? s.currency : null}
                   />
+                  <AgingBar
+                    slices={AGING_BUCKETS.map((b) => ({ key: b.key, label: BUCKET_LABELS[b.key], amountMinor: s.buckets[b.key] }))}
+                    currency={s.currency}
+                    locale={locale}
+                  />
                   <Rows
                     label={`Who owes the most (${s.currency})`}
                     rows={s.byCustomer.slice(0, TOP).map((c) => [
@@ -289,6 +306,19 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
               ))
             )}
           </ReportSection>
+
+          {withheld && market.taxWithheld && withheldQuarter.ok && (
+            <WithholdingSection
+              report={withheld}
+              locale={locale}
+              certificate={market.taxWithheld.certificate}
+              taxIdLabel={market.taxId.label}
+              years={withholdingYears(today, withheldQuarter.year)}
+              carry={period.preset ? { period: period.preset } : { from: period.from, to: period.to }}
+              csv={`/reports/csv?report=withholding&year=${withheldQuarter.year}&quarter=${withheldQuarter.quarter}`}
+              error={asked.ok ? null : asked.error}
+            />
+          )}
         </ListResults>
       </ListPending>
     </>
@@ -305,59 +335,11 @@ const periodWord = (period: ReportPeriod) =>
         ? "the year before"
         : "the previous period";
 
+/** The years the 2307 picker offers: this year and four before it, plus the one being shown. */
+const withholdingYears = (today: string, shown: number) => {
+  const thisYear = Number(today.slice(0, 4));
+  return [...new Set([...Array.from({ length: 5 }, (_, i) => thisYear - i), shown])].sort((a, b) => b - a);
+};
+
 const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 const countOf = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
-
-function ReportSection({
-  id,
-  title,
-  description,
-  csv,
-  children,
-}: {
-  id: string;
-  title: string;
-  description: string;
-  csv: string;
-  children: ReactNode;
-}) {
-  return (
-    <section aria-labelledby={`${id}-heading`} className="mt-10 grid gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="grid gap-0.5">
-          <h2 id={`${id}-heading`} className="text-base font-semibold">
-            {title}
-          </h2>
-          <p className="text-sm text-pretty text-muted-foreground">{description}</p>
-        </div>
-        <a href={csv} download className={buttonVariants({ variant: "outline" })}>
-          <DownloadIcon aria-hidden="true" />
-          Download CSV<span className="sr-only"> of {title.toLowerCase()}</span>
-        </a>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Rows({ label, rows }: { label: string; rows: [ReactNode, ReactNode][] }) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-      <h3 className="border-b border-border px-5 py-3 text-sm font-medium sm:px-6">{label}</h3>
-      <dl className="divide-y divide-border">
-        {rows.map(([name, value], i) => (
-          <div key={i} className="flex items-center justify-between gap-4 px-5 py-3 text-sm sm:px-6">
-            <dt className="min-w-0">{name}</dt>
-            <dd className="shrink-0 font-medium">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
-function Quiet({ children }: { children: ReactNode }) {
-  return (
-    <p className="rounded-xl border border-dashed border-border-strong px-5 py-4 text-sm text-muted-foreground">{children}</p>
-  );
-}

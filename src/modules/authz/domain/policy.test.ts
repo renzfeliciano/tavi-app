@@ -16,8 +16,8 @@ describe("role matrix (docs/foundation-proposal.md §E)", () => {
     expect([...capabilitiesFor("owner")].sort()).toEqual([...CAPABILITIES].sort());
   });
 
-  it("keeps billing, org deletion and ownership transfer owner-only", () => {
-    for (const cap of ["billing.manage", "organization.delete", "ownership.transfer"] as const) {
+  it("keeps billing, org deletion, ownership transfer and deleting records owner-only", () => {
+    for (const cap of ["billing.manage", "organization.delete", "ownership.transfer", "records.delete"] as const) {
       expect(can(ctx("owner"), cap)).toBe(true);
       expect(can(ctx("admin"), cap)).toBe(false);
       expect(can(ctx("member"), cap)).toBe(false);

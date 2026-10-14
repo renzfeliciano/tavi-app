@@ -60,7 +60,7 @@ describe("EmptyBinButton", () => {
     render(<EmptyBinButton count={3} empty={empty} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Empty recycle bin" }));
-    expect(screen.getByText(/3 deleted drafts/)).toBeTruthy();
+    expect(screen.getByText(/3 deleted records/)).toBeTruthy();
     fireEvent.click(screen.getAllByRole("button", { name: "Empty recycle bin" }).at(-1)!);
     await waitFor(() => expect(empty).toHaveBeenCalled());
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Recycle bin emptied."));

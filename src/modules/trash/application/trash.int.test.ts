@@ -89,6 +89,42 @@ describe("the recycle bin", () => {
     expect(await listTrash({ ...actor, role: "member" }, testDb(), NOW)).toHaveLength(2);
   });
 
+  it("keeps the number a deleted record carried, and shows sent quotations, payments and 2307s only to the owner", async () => {
+    const owner = await member("owner");
+    const admin: OrgActor = { ...owner, role: "admin" };
+    await testDb().transaction(async (tx) => {
+      await putInTrash(tx, owner, entry({ kind: "sent_quote", label: "QUO-000012" }), NOW);
+      await putInTrash(tx, owner, entry({ kind: "payment", label: "PAR-000003" }), NOW);
+      await putInTrash(tx, owner, entry({ kind: "certificate", label: "Acme Corp, 2026 Q3" }), NOW);
+      await putInTrash(tx, owner, entry({ kind: "quote" }), NOW);
+    });
+
+    const ownerItems = await listTrash(owner, testDb(), day(1));
+    expect(ownerItems.map((i) => [i.kind, i.label]).sort()).toEqual(
+      [
+        ["certificate", "Acme Corp, 2026 Q3"],
+        ["payment", "PAR-000003"],
+        ["quote", null],
+        ["sent_quote", "QUO-000012"],
+      ].sort(),
+    );
+    expect((await listTrash(admin, testDb(), day(1))).map((i) => i.kind)).toEqual(["quote"]);
+  });
+
+  it("keeps what only the owner may delete out of an admin's reach, even when they empty the bin", async () => {
+    const owner = await member("owner");
+    const admin: OrgActor = { ...owner, role: "admin" };
+    const keptId = await testDb().transaction(async (tx) => {
+      await putInTrash(tx, owner, entry({ kind: "quote" }), NOW);
+      return putInTrash(tx, owner, entry({ kind: "sent_quote", label: "QUO-000012" }), NOW);
+    });
+
+    expect(await discardTrashItem(admin, keptId, testDb())).toEqual({ ok: false, notFound: true });
+    expect(await emptyTrash(admin, testDb())).toEqual({ ok: true, removed: 1 });
+    expect((await listTrash(owner, testDb(), day(1))).map((i) => i.kind)).toEqual(["sent_quote"]);
+    expect(await discardTrashItem(owner, keptId, testDb())).toEqual({ ok: true });
+  });
+
   it("lets an owner or admin delete one item forever, and records it", async () => {
     const actor = await member("admin");
     const trashId = await testDb().transaction((tx) => putInTrash(tx, actor, entry({ customerName: "Gone" }), NOW));

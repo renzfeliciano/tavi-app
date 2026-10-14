@@ -1,18 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CheckIcon } from "lucide-react";
+import { AuthSlip } from "@/components/auth-slip";
 import { AuthMascot, AuthStageProvider } from "@/components/auth-stage";
 import { Tagline } from "@/components/brand/tagline";
 import { Wordmark } from "@/components/brand/wordmark";
 import { ThemeCorner } from "@/components/theme/theme-toggle";
 import { LegalLinks } from "@/components/legal/legal-document";
-
-/** The three moments of a job, in order. The last one is the point of it all, so it carries the check. */
-const FLOW = [
-  ["Quote", "approved"],
-  ["Invoice", "sent"],
-  ["Payment", "recorded"],
-] as const;
 
 /**
  * Sign-in, sign-up, reset and onboarding. On wide screens the Stamp sits on a
@@ -31,28 +24,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
           <Wordmark size={26} mark />
         </Link>
 
-        <div className="mx-auto grid w-full max-w-xs justify-items-center gap-10">
+        <div className="mx-auto grid w-full max-w-xs justify-items-center gap-8">
           <AuthMascot size="xl" />
-          <ol className="relative w-full font-mono text-sm before:absolute before:top-6 before:bottom-6 before:left-[0.6875rem] before:w-px before:bg-foreground/25">
-            {FLOW.map(([what, state], i) => {
-              const last = i === FLOW.length - 1;
-              return (
-                <li key={what} className="relative grid grid-cols-[1.375rem_1fr_auto] items-center gap-x-4 py-3">
-                  <span
-                    className={
-                      last
-                        ? "relative z-10 grid size-[1.375rem] place-items-center rounded-full bg-stamp text-white"
-                        : "relative z-10 grid size-[1.375rem] place-items-center rounded-full border border-foreground/40 bg-surface-sunken text-[0.65rem] text-foreground tabular-nums"
-                    }
-                  >
-                    {last ? <CheckIcon className="size-3" strokeWidth={3} /> : i + 1}
-                  </span>
-                  <span className="font-semibold">{what}</span>
-                  <span className="text-muted-foreground">{state}</span>
-                </li>
-              );
-            })}
-          </ol>
+          <AuthSlip />
         </div>
 
         <p className="text-sm text-muted-foreground">

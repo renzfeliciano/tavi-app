@@ -14,6 +14,8 @@ export type TrashEntryInput = {
   kind: TrashKind;
   originalId: string;
   customerName: string | null;
+  /** The number it carried, when it had one. */
+  label?: string | null;
   totalMinor: number;
   currency: string;
   payload: unknown;
@@ -24,6 +26,7 @@ export type TrashItem = {
   kind: TrashKind;
   originalId: string;
   customerName: string | null;
+  label: string | null;
   totalMinor: number;
   currency: string;
   deletedAt: Date;
@@ -36,7 +39,10 @@ export type TakenTrashItem = { originalId: string; payload: unknown };
 const isUuid = (id: string) => z.uuid().safeParse(id).success;
 const ofOrganization = (actor: Pick<OrgActor, "organizationId">) => eq(trashItems.organizationId, actor.organizationId);
 
-/** Keeps a deleted draft; returns the bin item's id. The caller has checked who may delete it. */
+/** The kinds this person may restore, which are also the only ones they may remove for good. */
+const kindsFor = (actor: OrgActor) => TRASH_KINDS.filter((kind) => can(actor, trashKindCapability(kind)));
+
+/** Keeps a deleted record; returns the bin item's id. The caller has checked who may delete it. */
 export async function putInTrash(
   tx: Executor,
   actor: OrgActor,
@@ -50,6 +56,7 @@ export async function putInTrash(
       kind: entry.kind,
       originalId: entry.originalId,
       customerName: entry.customerName,
+      label: entry.label ?? null,
       totalMinor: entry.totalMinor,
       currency: entry.currency,
       payload: entry.payload,
@@ -89,7 +96,7 @@ export async function takeFromTrash(
 
 /** What's in the bin, newest first: only the kinds this person may restore, and nothing that has lapsed. */
 export async function listTrash(actor: OrgActor, db: Database = getDb(), now: Date = new Date()): Promise<TrashItem[]> {
-  const kinds = TRASH_KINDS.filter((kind) => can(actor, trashKindCapability(kind)));
+  const kinds = kindsFor(actor);
   if (kinds.length === 0) return [];
   const rows = await db
     .select({
@@ -97,6 +104,7 @@ export async function listTrash(actor: OrgActor, db: Database = getDb(), now: Da
       kind: trashItems.kind,
       originalId: trashItems.originalId,
       customerName: trashItems.customerName,
+      label: trashItems.label,
       totalMinor: trashItems.totalMinor,
       currency: trashItems.currency,
       deletedAt: trashItems.deletedAt,
@@ -120,7 +128,7 @@ function audit(tx: Executor, actor: OrgActor, action: "trash.item_deleted" | "tr
   });
 }
 
-/** Deletes one item for good. Owners and admins only. */
+/** Deletes one item for good. Owners and admins only, and only the kinds they may restore. */
 export async function discardTrashItem(
   actor: OrgActor,
   trashId: string,
@@ -131,7 +139,7 @@ export async function discardTrashItem(
   return db.transaction(async (tx) => {
     const [row] = await tx
       .delete(trashItems)
-      .where(and(eq(trashItems.id, trashId), ofOrganization(actor)))
+      .where(and(eq(trashItems.id, trashId), ofOrganization(actor), inArray(trashItems.kind, kindsFor(actor))))
       .returning({ kind: trashItems.kind, customerName: trashItems.customerName, totalMinor: trashItems.totalMinor });
     if (!row) return { ok: false as const, notFound: true as const };
     await audit(tx, actor, "trash.item_deleted", { kind: row.kind, customerName: row.customerName, totalMinor: row.totalMinor });
@@ -139,11 +147,14 @@ export async function discardTrashItem(
   });
 }
 
-/** Deletes everything in the business's bin for good. Owners and admins only. */
+/** Deletes everything in the business's bin for good that the person may restore. Owners and admins only. */
 export async function emptyTrash(actor: OrgActor, db: Database = getDb()): Promise<{ ok: true; removed: number }> {
   assertCan(actor, "organization.manage");
   return db.transaction(async (tx) => {
-    const rows = await tx.delete(trashItems).where(ofOrganization(actor)).returning({ id: trashItems.id });
+    const rows = await tx
+      .delete(trashItems)
+      .where(and(ofOrganization(actor), inArray(trashItems.kind, kindsFor(actor))))
+      .returning({ id: trashItems.id });
     if (rows.length > 0) await audit(tx, actor, "trash.emptied", { removed: rows.length });
     return { ok: true as const, removed: rows.length };
   });

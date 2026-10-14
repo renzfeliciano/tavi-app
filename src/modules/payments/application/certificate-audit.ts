@@ -13,7 +13,9 @@ export function auditCertificate(
     | "withholding_certificate.recorded"
     | "withholding_certificate.updated"
     | "withholding_certificate.voided"
-    | "withholding_certificate.payment_unlinked",
+    | "withholding_certificate.payment_unlinked"
+    | "withholding_certificate.deleted"
+    | "withholding_certificate.restored",
   certificateId: string,
   metadata: Record<string, unknown>,
 ) {

@@ -95,7 +95,7 @@ Taxpayers setting up electronic sales reporting may deduct an **additional 100% 
 1. **Most early TAVI users may be micro taxpayers** (under ₱3M gross sales) and therefore **not required** to e-invoice. They still need *registered* invoices. That means either a BIR-printed booklet, with TAVI producing billing statements and quotations (supplementary documents with the notice), or registering TAVI as their system (AC/PTU) so TAVI prints their invoices (D13).
 2. **Small and larger users who invoice through TAVI would likely be covered**, under "other invoicing software", and possibly as "e-commerce" for services sold over the internet. They would need a PTI and EIS certification, and TAVI would need to produce structured JSON per the BIR's specification. **TAVI does not do this yet**, and the ESP rules are still pending.
 3. **Editing issued invoices conflicts with the e-invoice rules.** Decision D7 lets a sent invoice be edited until the first payment, but S4 IV.8 forbids altering an issued e-invoice (credit note to decrease, new invoice to increase). **Proposal for the founder:** once a business is in invoice mode (registered invoices), issued invoices become immutable in TAVI. Corrections go through void-and-reissue now and credit notes later. D7 would stay only for billing statements.
-4. **Structured data from day one.** TAVI already stores every invoice field as structured data (integer amounts, per-line tax snapshots, discounts), and payments will record withholding. That is the data the JSON requires (S4 IV.6.b), so a later JSON export is an addition, not a rebuild.
+4. **Structured data from day one.** TAVI already stores every invoice field as structured data (integer amounts, per-line tax snapshots, discounts), and payments record the tax a customer withheld. That is the data the JSON requires (S4 IV.6.b), so a later JSON export is an addition, not a rebuild.
 5. **Downtime fallback** (S4 IV.11) implies TAVI will eventually need a way to record manual invoice numbers and link replacement e-invoices to them.
 
 ## 3a. What TAVI does now (D19, 8 Oct 2026)
@@ -117,7 +117,7 @@ The questions below are still worth asking when a CPA or the RDO is available, b
 5. Are **quotations** "supplementary documents" that must carry "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX."?
 6. May a **non-electronic** registered invoice (CAS-generated, printed) be corrected after issuance, or is void-and-reissue / credit memo the only correct method?
 7. Where is the **JSON field specification** published, and does TAVI need a BIR account on `eis-cert.bir.gov.ph` to read it?
-8. When a corporate customer **withholds creditable tax** (BIR Form 2307), is it enough to record the withheld amount against the invoice, or must the invoice show it?
+8. When a corporate customer **withholds creditable tax** (BIR Form 2307), is it enough to record the withheld amount against the invoice, or must the invoice show it? (TAVI records it on the payment, then keeps the 2307 certificate the customer sends, with the payor's TIN, name and address, its ATC rows and a scan, and lists both in a quarterly Reports section and CSV for the accountant. The ATC list holds only WI160 until a CPA confirms the others; any other code can be typed with its rate.)
 
 ## Links
 

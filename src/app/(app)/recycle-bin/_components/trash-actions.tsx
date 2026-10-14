@@ -69,7 +69,7 @@ function DiscardDialog({ trigger, title, description, confirmLabel, pendingLabel
 }
 
 type TrashRowActionsProps = {
-  /** Shown in the toasts, e.g. "Billing statement draft for Juan Dela Cruz". */
+  /** Shown in the toasts, e.g. "Billing statement draft for Juan Dela Cruz" or "Quotation QUO-000012 for Juan Dela Cruz". */
   name: string;
   /** Server actions, already bound to the item. `discard` is null when this person can't delete for good. */
   restore: () => Promise<RestoreResult>;
@@ -105,7 +105,7 @@ export function TrashRowActions({ name, restore, discard }: TrashRowActionsProps
       {discard && (
         <DiscardDialog
           trigger="Delete forever"
-          title="Delete this draft forever?"
+          title="Delete this forever?"
           description={`${name} can't be brought back after this.`}
           confirmLabel="Delete forever"
           pendingLabel="Deleting…"
@@ -127,7 +127,7 @@ export function EmptyBinButton({ count, empty }: { count: number; empty: () => P
       triggerVariant="outline"
       trigger="Empty recycle bin"
       title="Empty the recycle bin?"
-      description={`${count} deleted ${count === 1 ? "draft" : "drafts"} will be removed for good. This can't be undone.`}
+      description={`${count} deleted ${count === 1 ? "record" : "records"} will be removed for good. This can't be undone.`}
       confirmLabel="Empty recycle bin"
       pendingLabel="Emptying…"
       onConfirm={async () => {

@@ -29,6 +29,7 @@ export const CAPABILITIES = [
   "billing.manage",
   "organization.delete",
   "ownership.transfer",
+  "records.delete",
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
@@ -62,6 +63,8 @@ const OWNERSHIP: readonly Capability[] = [
   "billing.manage",
   "organization.delete",
   "ownership.transfer",
+  // Deleting a sent quotation, a voided payment or a voided 2307 into the recycle bin (and bringing it back).
+  "records.delete",
 ];
 
 const ROLE_CAPABILITIES: Record<Role, ReadonlySet<Capability>> = {

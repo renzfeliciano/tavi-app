@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/app-shell/back-link";
 import { PageHeader } from "@/components/app-shell/page-header";
+import { DeleteRecordButton } from "@/components/delete-record-button";
 import { DocumentPaper } from "@/components/document/document-paper";
 import { StatusBadge } from "@/components/status/status-badge";
 import { formatAmountForInput } from "@/shared/money";
 import { formatRateForInput } from "@/shared/numbers/percent";
 import { formatQuantity } from "@/modules/documents";
+import { can } from "@/modules/authz";
 import { requireOrgContext } from "@/modules/identity";
 import { getQuote, type QuoteDetail } from "@/modules/quotes";
 import { todayIn } from "@/shared/dates/calendar";
@@ -14,7 +16,7 @@ import { customerForDocumentAction } from "../../_documents/actions";
 import { DocumentEditor, type DocumentEditorState } from "../../_documents/document-editor";
 import { documentBusiness, editorContext } from "../../_documents/editor-props";
 import { DOCUMENT_BODY, DocumentSidePanel, panelPlace } from "../../_documents/side-panel";
-import { deleteDraftQuoteAction, saveQuoteDraftAction, sendQuoteAction } from "../actions";
+import { deleteDraftQuoteAction, deleteQuoteRecordAction, saveQuoteDraftAction, sendQuoteAction } from "../actions";
 import { SentQuoteActions } from "../_components/sent-quote-actions";
 import { quotePanel } from "../_lib/panel";
 import { quoteDocumentView } from "../_lib/quote-view";
@@ -56,6 +58,16 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
   const quote = await getQuote(ctx, id);
   if (!quote) notFound();
   const title = ctx.market.documents.quote.singular;
+  // The owner can delete a quotation that was sent, unless it became a billing statement (it stays on record).
+  const deleteButton = (name: string) =>
+    quote.number !== null && !quote.convertedInvoiceId && can(ctx, "records.delete") ? (
+      <DeleteRecordButton
+        name={name}
+        description="The customer's link stops working and its number stays used."
+        remove={deleteQuoteRecordAction.bind(null, quote.id)}
+        redirectTo="/quotes"
+      />
+    ) : null;
 
   if (quote.status === "DRAFT") {
     const [editor, customer] = await Promise.all([
@@ -68,7 +80,12 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
         <PageHeader
           title={quote.number ? `${title} ${quote.number}` : `Draft ${title.toLowerCase()}`}
           description="Changes save as you go."
-          actions={<StatusBadge kind="quote" status={quote.status} />}
+          actions={
+            <>
+              <StatusBadge kind="quote" status={quote.status} />
+              {deleteButton(`${title} ${quote.number}`)}
+            </>
+          }
         />
         <DocumentEditor
           {...editor}
@@ -102,20 +119,24 @@ export default async function QuotePage({ params }: PageProps<"/quotes/[id]">) {
           </span>
         }
         actions={
-          <SentQuoteActions
-            id={quote.id}
-            status={quote.status}
-            name={name}
-            shareChannels={ctx.market.shareChannels}
-            convertedInvoiceId={quote.convertedInvoiceId}
-            invoiceTitle={ctx.market.documents.invoice.singular}
-          />
+          <div className="flex flex-wrap gap-2">
+            <SentQuoteActions
+              id={quote.id}
+              status={quote.status}
+              name={name}
+              shareChannels={ctx.market.shareChannels}
+              convertedInvoiceId={quote.convertedInvoiceId}
+              invoiceTitle={ctx.market.documents.invoice.singular}
+            />
+          </div>
         }
       />
       <div className={DOCUMENT_BODY}>
         <DocumentSidePanel label={`${title} details`} data={panel} className={panelPlace(1)} />
         <div className="min-w-0">
           <DocumentPaper view={view} />
+          {/* Below the paper, not in the header: it is rare, and a wider header would wrap on a laptop. */}
+          {deleteButton(name) && <div className="mt-4 flex justify-end">{deleteButton(name)}</div>}
         </div>
       </div>
     </>

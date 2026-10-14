@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/status/status-badge";
 import { can } from "@/modules/authz";
 import { requireOrgContext } from "@/modules/identity";
 import { getInvoice, invoiceTitle, isPayable } from "@/modules/invoices";
-import { listInvoicePayments, paymentProofRows } from "@/modules/payments";
+import { listInvoicePayments, paymentProofRows, paymentWithholdingStatus } from "@/modules/payments";
 import { formatCalendarDate, todayIn } from "@/shared/dates/calendar";
 import { customerForDocumentAction } from "../../../_documents/actions";
 import { DocumentEditor } from "../../../_documents/document-editor";
@@ -85,6 +85,11 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
   });
   // A voided or cancelled statement takes no more payments, so its payments card is gone.
   const hasPayments = invoice.status !== "VOID" && invoice.status !== "CANCELLED";
+  // The payments, and where each one's withheld tax stands on its 2307: one query for all of them.
+  const invoicePayments = hasPayments ? await listInvoicePayments(ctx, invoice.id) : [];
+  const withholding = ctx.market.taxWithheld
+    ? await paymentWithholdingStatus(ctx, invoicePayments.filter((p) => p.withheldMinor > 0).map((p) => p.id))
+    : new Map<string, never>();
 
   return (
     <>
@@ -143,7 +148,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
             chequeDateLabel={ctx.market.chequeDateLabel}
             taxWithheld={ctx.market.taxWithheld}
             receiptTitle={ctx.market.documents.receipt.singular}
-            payments={(await listInvoicePayments(ctx, invoice.id)).map((p) => ({
+            payments={invoicePayments.map((p) => ({
               id: p.id,
               receiptNumber: p.receiptNumber,
               paidOn: p.paidOn,
@@ -151,6 +156,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
               details: paymentProofRows(p, ctx.market, (date) => formatCalendarDate(date, ctx.locale)),
               amountMinor: p.amountMinor,
               withheldMinor: p.withheldMinor,
+              withholding: withholding.get(p.id),
               voidReason: p.voidReason,
             }))}
           />
