@@ -84,7 +84,7 @@ export function TodayCard({
   return (
     <section
       aria-labelledby={headingId}
-      className="mx-3 mt-4 mb-3 short:mt-3 short:mb-2 grid gap-2 rounded-lg border border-border bg-card p-3 shadow-xs group-data-[sidebar=collapsed]/shell:hidden"
+      className="mx-3 mt-4 mb-3 short:mt-2 short:mb-2 grid gap-2 rounded-lg border border-border bg-card p-3 shadow-xs group-data-[sidebar=collapsed]/shell:hidden"
     >
       <h2 id={headingId} className="text-eyebrow font-semibold tracking-wider text-muted-foreground uppercase">
         Today

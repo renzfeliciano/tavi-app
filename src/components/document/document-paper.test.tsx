@@ -52,3 +52,33 @@ describe("DocumentPaper payment QR codes", () => {
     expect(screen.queryByRole("region", { name: "How to pay" })).toBeNull();
   });
 });
+
+describe("DocumentPaper party label", () => {
+  const base = {
+    title: "Purchase order",
+    number: "PO-000001",
+    revision: 1,
+    business: { name: "Reyes Aircon", subtitle: null, addressLines: [], contactLines: [], taxId: null, logo: null, paymentQrs: [] },
+    customer: { name: "Santos Hardware", subtitle: null, addressLines: [], contactLines: [], taxId: null },
+    currency: "PHP",
+    locale: "en-PH",
+    taxMode: "exclusive" as const,
+    dates: [{ label: "Date", date: "2026-10-01" }],
+    lines,
+    amounts: calculateDocument({ taxMode: "exclusive", lines: lines.map(({ unitPriceMinor, quantity, discount, tax }) => ({ unitPriceMinor, quantity, discount, tax })) }),
+    notes: null,
+    terms: null,
+    notice: null,
+  };
+
+  it("says Billed to unless the document names its own label", () => {
+    render(<DocumentPaper view={buildDocumentView(base)} />);
+    expect(screen.getByText("Billed to")).toBeInTheDocument();
+  });
+
+  it("uses the document's own label, such as Order to on a purchase order", () => {
+    render(<DocumentPaper view={buildDocumentView({ ...base, partyLabel: "Order to" })} />);
+    expect(screen.getByText("Order to")).toBeInTheDocument();
+    expect(screen.queryByText("Billed to")).toBeNull();
+  });
+});

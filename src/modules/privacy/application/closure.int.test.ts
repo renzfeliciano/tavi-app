@@ -9,9 +9,9 @@ import {
   resetTables,
   testDb,
 } from "@/db/testing";
-import { accounts, memberships, organizations, sessions, shareLinks, users, verifications } from "@/db/schema";
+import { accounts, memberships, organizations, sessions, shareLinks, taxQuestionnaires, users, verifications } from "@/db/schema";
 import { createShareLink } from "@/modules/documents";
-import { listOrganizationClocks } from "@/modules/organizations";
+import { listOrganizationClocks, saveQuestionnaire } from "@/modules/organizations";
 import { closeAccount } from "./closure";
 
 beforeEach(async () => {
@@ -45,6 +45,20 @@ async function ownerWithBusiness(email = "maria@example.com") {
 }
 
 describe("closeAccount", () => {
+  it("removes the closed business's RDO/CPA worksheet, whose notes may name people, and leaves another business's alone", async () => {
+    const db = testDb();
+    const { user, org } = await ownerWithBusiness();
+    const other = await ownerWithBusiness("other@example.com");
+    const worksheet = { facts: { salesBand: "under_3m" }, questions: { withholding: { note: "Ask Rosa Reyes", answer: "", answeredOn: "" } } };
+    await saveQuestionnaire({ organizationId: org.id, userId: user.id, role: "owner" }, worksheet, db);
+    await saveQuestionnaire({ organizationId: other.org.id, userId: other.user.id, role: "owner" }, worksheet, db);
+
+    await closeAccount(user.id, db);
+
+    expect(await db.select().from(taxQuestionnaires).where(eq(taxQuestionnaires.organizationId, org.id))).toHaveLength(0);
+    expect(await db.select().from(taxQuestionnaires).where(eq(taxQuestionnaires.organizationId, other.org.id))).toHaveLength(1);
+  });
+
   it("removes the sign-in, anonymises the person and closes their own business", async () => {
     const db = testDb();
     const { user, org } = await ownerWithBusiness();

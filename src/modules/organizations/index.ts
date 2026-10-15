@@ -34,7 +34,25 @@ export {
   type UpdateRegistrationResult,
   updateBusinessRegistration,
 } from "./application/registration";
-export { BUSINESS_PROFILE_LIMITS, REGISTRATION_LIMITS } from "./domain/limits";
+export {
+  exportQuestionnaire,
+  getQuestionnaire,
+  type Questionnaire,
+  type SaveQuestionnaireResult,
+  saveQuestionnaire,
+} from "./application/questionnaire";
+export { BUSINESS_PROFILE_LIMITS, QUESTIONNAIRE_LIMITS, REGISTRATION_LIMITS } from "./domain/limits";
+export {
+  EMPTY_QUESTIONNAIRE,
+  parseQuestionnaire,
+  type QuestionEntry,
+  type QuestionnaireResult,
+  type QuestionnaireValue,
+  questionnaireChanges,
+  type QuestionStatus,
+  questionStatus,
+  readQuestionnaire,
+} from "./domain/questionnaire";
 export {
   EMPTY_REGISTRATION,
   incomeTaxConflict,

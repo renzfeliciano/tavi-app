@@ -10,6 +10,10 @@ export type TaxMode = "inclusive" | "exclusive";
 export const PAYMENT_METHODS = ["bank_transfer", "ewallet", "bank_deposit", "cash", "card", "cheque", "other"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
+/** The two titles a receipt for money that is not an invoice payment can carry (stored); each market names them. */
+export const RECEIPT_KINDS = ["collection", "acknowledgement"] as const;
+export type ReceiptKind = (typeof RECEIPT_KINDS)[number];
+
 /** The words for a payment's proof fields: one reference number, who it went through, and who paid. */
 export type PaymentDetailLabels = { reference: string; institution: string | null; payer: string };
 
@@ -45,6 +49,8 @@ export type MarketProfile = {
     business: string;
     email: string;
     phone: string;
+    /** What a receipt's "Received for" line shows while empty. */
+    receiptPurpose: string;
     address: { line1: string; line2: string; city: string; region: string; postalCode: string };
   };
   /** Under "Business name": the name customers know the business by (PH: the trade name). */
@@ -88,6 +94,10 @@ export type MarketProfile = {
     quote: { singular: string; plural: string };
     invoice: { singular: string; plural: string };
     receipt: { singular: string; plural: string; disclaimer?: string };
+    /** What the business sends a supplier to order goods or services. */
+    purchaseOrder: { singular: string; plural: string };
+    /** The printed title of each kind of receipt for money that is not an invoice payment. */
+    receiptKinds: Record<ReceiptKind, { title: string }>;
   };
   /**
    * Tax registration statuses a business can have. `statement` precedes the
@@ -212,6 +222,32 @@ export type MarketProfile = {
       }[];
     }[];
     deadlinesNote: string;
+    /**
+     * The worksheet an owner fills in before seeing their tax office or an
+     * accountant: a few facts about the business, and the questions to ask.
+     * It feeds nothing else.
+     */
+    questionnaire: {
+      /** The page's title and its Settings row. */
+      title: string;
+      /** One or two sentences under the title. */
+      intro: string;
+      /** The Settings row's line. */
+      rowSummary: string;
+      /** The question on the Registration page that links to the worksheet. */
+      visitPrompt: string;
+      /** The PDF's heading. */
+      pdfTitle: string;
+      /** The label above the place for the answer received, on the PDF. */
+      answerLabel: string;
+      facts: readonly {
+        code: string;
+        label: string;
+        hint?: string;
+        options: readonly { code: string; label: string }[];
+      }[];
+      questions: readonly { code: string; text: string; context: string }[];
+    };
   } | null;
   /** Printed in bold on documents that aren't registered invoices (PH: RR 7-2024 Sec. 6 B.15), or null. */
   supplementaryDocumentNotice: string | null;
@@ -231,6 +267,8 @@ export type MarketProfile = {
 export type MarketExamples = MarketProfile["examples"];
 /** What each payment-proof field shows while empty, per method (see `MarketProfile.paymentDetailExamples`). */
 export type PaymentDetailExamples = MarketProfile["paymentDetailExamples"];
+
+const PH_SUPPLEMENTARY_NOTICE = "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.";
 
 export const MARKETS = {
   PH: {
@@ -253,6 +291,7 @@ export const MARKETS = {
       business: "Dela Cruz Aircon Services",
       email: "juan@example.com",
       phone: "0917 123 4567",
+      receiptPurpose: "Reimbursement of fuel",
       address: { line1: "123 Rizal Street", line2: "Unit 4B, Barangay San Roque", city: "Quezon City", region: "Metro Manila", postalCode: "1100" },
     },
     businessNameHint: "Your trade name, as customers know you and as on your DTI certificate.",
@@ -311,6 +350,11 @@ export const MARKETS = {
         singular: "Payment acknowledgement",
         plural: "Payment acknowledgements",
         disclaimer: "Not a BIR official receipt.",
+      },
+      purchaseOrder: { singular: "Purchase order", plural: "Purchase orders" },
+      receiptKinds: {
+        collection: { title: "Collection receipt" },
+        acknowledgement: { title: "Acknowledgement receipt" },
       },
     },
     taxRegistrations: [
@@ -477,8 +521,89 @@ export const MARKETS = {
       ],
       deadlinesNote:
         "These follow the usual BIR calendar for your registration. A date that falls on a weekend or holiday usually moves to the next working day. Your Certificate of Registration lists the returns you must file; check it and your RDO.",
+      questionnaire: {
+        title: "RDO and CPA questions",
+        intro: "Say a few things about your business, take the questions to your RDO or accountant, and keep what they tell you.",
+        rowSummary: "What to ask your BIR office or accountant, with a place to keep what they tell you.",
+        visitPrompt: "Going to see your RDO or accountant?",
+        pdfTitle: "Questions for your RDO or accountant",
+        answerLabel: "Answer from your RDO or accountant",
+        facts: [
+          {
+            code: "salesBand",
+            label: "Your sales in the last 12 months",
+            hint: "Gross sales, before any expenses. Taxpayer class depends on it.",
+            options: [
+              { code: "under_3m", label: "Under ₱3 million" },
+              { code: "3m_to_20m", label: "₱3 million to ₱20 million" },
+              { code: "over_20m", label: "Over ₱20 million" },
+              { code: "unsure", label: "Not sure" },
+            ],
+          },
+          {
+            code: "invoicingNow",
+            label: "How you issue invoices today",
+            options: [
+              { code: "booklet", label: "BIR-printed booklet" },
+              { code: "registered_system", label: "A computerized system registered with the BIR" },
+              { code: "none", label: "I don't issue registered invoices yet" },
+            ],
+          },
+          {
+            code: "sellsOnline",
+            label: "You send quotes or invoices online, or take orders online",
+            options: [
+              { code: "yes", label: "Yes" },
+              { code: "no", label: "No" },
+              { code: "unsure", label: "Not sure" },
+            ],
+          },
+          {
+            code: "customersWithhold",
+            label: "Customers withhold tax from what they pay you (BIR Form 2307)",
+            options: [
+              { code: "yes", label: "Yes" },
+              { code: "some", label: "Some do" },
+              { code: "no", label: "No" },
+              { code: "unsure", label: "Not sure" },
+            ],
+          },
+        ],
+        questions: [
+          {
+            code: "registerSystem",
+            text: "I will issue my invoices from Tavi, a web app. Must I register it with you as my computerized invoicing system, and how?",
+            context: "Tavi prints billing statements until you enter the registration your RDO gives you; then your bills become invoices.",
+          },
+          {
+            code: "eInvoiceDuty",
+            text: "With my yearly sales, am I required to issue electronic invoices by 31 December 2026? Do I need a Permit to Issue and EIS certification first?",
+            context: "Tavi can download a registered invoice as structured data, but it is not certified and sends nothing to the BIR.",
+          },
+          {
+            code: "onlineSeller",
+            text: "I send quotes and invoices online. Does that make me an e-commerce or internet business for tax?",
+            context: "The rules name professional and freelance services supplied over the internet; the answer may depend on how you take orders.",
+          },
+          {
+            code: "quotationNotice",
+            text: `Must my quotations carry "${PH_SUPPLEMENTARY_NOTICE}"?`,
+            context: "Tavi prints this on quotations, billing statements and payment acknowledgements.",
+          },
+          {
+            code: "correctInvoice",
+            text: "If I find a mistake after issuing a registered invoice, may I correct it, or must I cancel and reissue it or issue a credit memo?",
+            context: "Tavi lets you cancel and reissue a registered invoice. It does not edit one.",
+          },
+          {
+            code: "withholding",
+            text: "When a customer withholds tax and gives me Form 2307, is recording it against the payment enough, or must it show on the invoice? Which ATC codes apply to my services?",
+            context: "Tavi records the withheld amount on the payment and keeps the 2307 certificate; it suggests only code WI160 until confirmed.",
+          },
+        ],
+      },
     },
-    supplementaryDocumentNotice: "THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.",
+    supplementaryDocumentNotice: PH_SUPPLEMENTARY_NOTICE,
     units: {
       product: "pc",
       service: "hour",

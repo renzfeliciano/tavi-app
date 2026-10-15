@@ -38,6 +38,12 @@ const ACCOUNT_CREATING_SPECS = [
   /withholding-loading\.spec\.ts/,
   /recurring\.spec\.ts/,
   /recurring-loading\.spec\.ts/,
+  /receipts\.spec\.ts/,
+  /receipts-loading\.spec\.ts/,
+  /purchase-orders\.spec\.ts/,
+  /purchase-orders-loading\.spec\.ts/,
+  /rdo-questionnaire\.spec\.ts/,
+  /rdo-questionnaire-loading\.spec\.ts/,
 ];
 
 export default defineConfig({

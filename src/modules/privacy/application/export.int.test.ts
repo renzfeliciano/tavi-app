@@ -5,6 +5,9 @@ import { MARKETS } from "@/config/markets";
 import { createCustomer } from "@/modules/customers";
 import { blankLine } from "@/modules/documents";
 import { createSchedule, issueInvoice, saveInvoiceDraft } from "@/modules/invoices";
+import { saveQuestionnaire } from "@/modules/organizations";
+import { issueReceipt, voidReceipt } from "@/modules/payments";
+import { createSupplier, issuePurchaseOrder, savePurchaseOrderDraft } from "@/modules/purchasing";
 import { putInTrash } from "@/modules/trash";
 import { exportBusinessData } from "./export";
 
@@ -113,6 +116,78 @@ describe("exportBusinessData", () => {
       ["Monthly checkup", 80_000],
     ]);
     expect(data.notes.recurringSchedules).toEqual(expect.stringContaining("recurringSchedules"));
+    expect(JSON.stringify(data)).not.toContain("Not mine");
+  });
+
+  it("includes receipts, void ones too, and only this business's", async () => {
+    const db = testDb();
+    const actor = await actorFor("owner", "Acme");
+    const other = await actorFor("owner", "Other Co");
+    const input = (payer: string) => ({ customerId: "", kind: "collection", payer, amount: "1,500", receivedOn: "2026-10-01", method: "cash", reference: "", institution: "", paidTime: "", chequeDate: "", purpose: "Reimbursement of fuel", notes: "" });
+    const now = new Date("2026-10-02T03:00:00Z");
+    const first = await issueReceipt(actor, input("Maria Santos"), { recipients: [], market: MARKETS.PH, now }, db);
+    const second = await issueReceipt(actor, input("Pedro Reyes"), { recipients: [], market: MARKETS.PH, now }, db);
+    await issueReceipt(other, input("Not mine"), { recipients: [], market: MARKETS.PH, now }, db);
+    if (!first.ok || !second.ok) throw new Error("receipt");
+    await voidReceipt(actor, second.receiptId, "Wrong amount", db);
+
+    const result = await exportBusinessData(actor, db, now);
+    if (!result.ok) throw new Error("export refused");
+    const data = JSON.parse(result.body);
+    expect(data.receipts.map((r: { receiptNumber: string; payerName: string; amountMinor: number; voidReason: string | null }) => [r.receiptNumber, r.payerName, r.amountMinor, r.voidReason])).toEqual([
+      ["REC-000001", "Maria Santos", 150_000, null],
+      ["REC-000002", "Pedro Reyes", 150_000, "Wrong amount"],
+    ]);
+    expect(data.receipts[0]).not.toHaveProperty("idempotencyKey");
+    expect(data.notes.receipts).toEqual(expect.stringContaining("receipts"));
+    expect(JSON.stringify(data)).not.toContain("Not mine");
+  });
+
+  it("includes suppliers (archived too) and purchase orders with their lines, only this business's", async () => {
+    const db = testDb();
+    const actor = await actorFor("owner", "Acme");
+    const other = await actorFor("owner", "Other Co");
+    const made = await createSupplier(actor, { displayName: "Santos Hardware", contactName: "Rosa Reyes" }, db);
+    await createSupplier(other, { displayName: "Not mine" }, db);
+    if (!made.ok) throw new Error("supplier");
+    const saved = await savePurchaseOrderDraft(
+      actor,
+      null,
+      { supplierId: made.supplier.id, currency: "PHP", orderDate: "2026-10-01", expectedDate: "", notes: "", terms: "", lines: [{ ...blankLine(), description: "Copper pipe", quantity: "2", unitLabel: "pc", unitPrice: "100" }] },
+      { locale: "en-PH" },
+      db,
+    );
+    if (!saved.ok) throw new Error("order");
+    const now = new Date("2026-10-02T03:00:00Z");
+    await issuePurchaseOrder(actor, saved.order.id, { sender: { emailVerified: true }, market: MARKETS.PH, email: null, now }, db);
+
+    const result = await exportBusinessData(actor, db, now);
+    if (!result.ok) throw new Error("export refused");
+    const data = JSON.parse(result.body);
+    expect(data.suppliers.map((x: { displayName: string; contactName: string }) => [x.displayName, x.contactName])).toEqual([["Santos Hardware", "Rosa Reyes"]]);
+    expect(data.purchaseOrders).toHaveLength(1);
+    expect(data.purchaseOrders[0]).toMatchObject({ number: "PO-000001", status: "ISSUED", totalMinor: 20_000 });
+    expect(data.purchaseOrders[0].lines.map((l: { description: string }) => l.description)).toEqual(["Copper pipe"]);
+    expect(data.notes.suppliers).toEqual(expect.stringContaining("suppliers"));
+    expect(data.notes.purchaseOrders).toEqual(expect.stringContaining("purchaseOrders"));
+    expect(JSON.stringify(data)).not.toContain("Not mine");
+  });
+
+  it("includes the RDO/CPA worksheet, only this business's", async () => {
+    const db = testDb();
+    const actor = await actorFor("owner", "Acme");
+    const other = await actorFor("owner", "Other Co");
+    await saveQuestionnaire(actor, { facts: { salesBand: "under_3m" }, questions: { withholding: { note: "Bring the 2307s", answer: "", answeredOn: "" } } }, db);
+    await saveQuestionnaire(other, { facts: {}, questions: { withholding: { note: "Not mine", answer: "", answeredOn: "" } } }, db);
+
+    const result = await exportBusinessData(actor, db, new Date("2026-10-02T03:00:00Z"));
+    if (!result.ok) throw new Error("export refused");
+    const data = JSON.parse(result.body);
+    expect(data.rdoCpaWorksheet).toMatchObject({
+      facts: { salesBand: "under_3m" },
+      questions: { withholding: { note: "Bring the 2307s", answer: null, answeredOn: null } },
+    });
+    expect(data.notes.rdoCpaWorksheet).toEqual(expect.stringContaining("rdoCpaWorksheet"));
     expect(JSON.stringify(data)).not.toContain("Not mine");
   });
 

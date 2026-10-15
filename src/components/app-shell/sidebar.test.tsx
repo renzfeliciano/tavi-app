@@ -22,7 +22,12 @@ const account: ShellAccount = {
   userName: "Maria Santos",
   userEmail: "maria@example.com",
   canReadReports: true,
-  documents: { quote: { singular: "Quotation", plural: "Quotations" }, invoice: { singular: "Billing statement", plural: "Billing statements" } },
+  canRecordPayments: true,
+  canWritePurchasing: true,
+  documents: {
+    quote: { singular: "Quotation", plural: "Quotations" }, invoice: { singular: "Billing statement", plural: "Billing statements" },
+    purchaseOrder: { singular: "Purchase order", plural: "Purchase orders" },
+  },
 };
 
 const facts: ShellFacts = {
@@ -149,13 +154,15 @@ describe("sidebar", () => {
     expect(screen.getByRole("menuitem", { name: /Add business/ })).toHaveAttribute("href", "/onboarding?new=1");
   });
 
-  it("opens New with the five things you can start", async () => {
+  it("opens New with the seven things you can start", async () => {
     await renderSidebar();
     await press(screen.getByRole("button", { name: "New" }));
     const labels = (await screen.findAllByRole("menuitem")).map((item) => item.textContent);
     expect(labels).toEqual([
       expect.stringContaining("New quotation"),
       expect.stringContaining("New billing statement"),
+      expect.stringContaining("New receipt"),
+      expect.stringContaining("New purchase order"),
       expect.stringContaining("Add customer"),
       expect.stringContaining("Product"),
       expect.stringContaining("Service"),

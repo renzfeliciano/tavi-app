@@ -9,6 +9,14 @@ export type ShellAccount = {
   userEmail: string;
   /** Whether Reports shows in the navigation (`reports.read`, D18). */
   canReadReports: boolean;
-  /** The market's names for the two documents, so navigation reads like the pages it opens. */
-  documents: { quote: { singular: string; plural: string }; invoice: { singular: string; plural: string } };
+  /** Whether "New receipt" shows in the New menu (`payments.record`). */
+  canRecordPayments: boolean;
+  /** Whether "New purchase order" shows in the New menu (`purchasing.write`). */
+  canWritePurchasing: boolean;
+  /** The market's names for the documents, so navigation reads like the pages it opens. */
+  documents: {
+    quote: { singular: string; plural: string };
+    invoice: { singular: string; plural: string };
+    purchaseOrder: { singular: string; plural: string };
+  };
 };

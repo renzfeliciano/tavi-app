@@ -1,0 +1,2 @@
+ALTER TABLE "document_sequences" DROP CONSTRAINT "document_sequences_kind";--> statement-breakpoint
+ALTER TABLE "document_sequences" ADD CONSTRAINT "document_sequences_kind" CHECK ("document_sequences"."kind" in ('quote', 'invoice', 'receipt', 'purchase_order'));

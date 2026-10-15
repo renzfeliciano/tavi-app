@@ -29,6 +29,8 @@ export const loadShell = cache(async () => {
     userName: ctx.userName,
     userEmail: ctx.userEmail,
     canReadReports: can(ctx, "reports.read"),
+    canRecordPayments: can(ctx, "payments.record"),
+    canWritePurchasing: can(ctx, "purchasing.write"),
     documents: ctx.market.documents,
   };
   return { ctx, account };

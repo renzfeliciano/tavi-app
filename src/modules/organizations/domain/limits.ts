@@ -21,3 +21,9 @@ export const REGISTRATION_LIMITS = {
   lineOfBusiness: 120,
   registrationNumber: 40,
 } as const;
+
+// The RDO/CPA worksheet (src/modules/organizations/domain/questionnaire.ts).
+export const QUESTIONNAIRE_LIMITS = {
+  note: 1000,
+  answer: 1000,
+} as const;

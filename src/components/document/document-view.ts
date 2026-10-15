@@ -38,6 +38,8 @@ export type DocumentView = {
     paymentQrs: { label: string; value: string }[];
   };
   customer: DocumentParty | null;
+  /** What the party block is called; "Billed to" unless the document says otherwise (a purchase order: "Order to"). */
+  partyLabel?: string | null;
   dates: { label: string; value: string }[];
   lines: DocumentViewLine[];
   totals: { label: string; value: string; emphasis?: boolean }[];
@@ -97,6 +99,7 @@ export type DocumentViewInput = {
   revision: number;
   business: DocumentView["business"];
   customer: DocumentParty | null;
+  partyLabel?: string | null;
   currency: string;
   locale: string;
   taxMode: TaxMode;
@@ -173,6 +176,7 @@ export function buildDocumentView(input: DocumentViewInput): DocumentView {
     revision: input.revision,
     business: input.business,
     customer: input.customer,
+    partyLabel: input.partyLabel ?? null,
     dates: input.dates.map((d) => ({ label: d.label, value: formatCalendarDate(d.date, locale) })),
     lines,
     totals,

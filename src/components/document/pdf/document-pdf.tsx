@@ -180,7 +180,7 @@ export function DocumentPdf({ view }: { view: DocumentView }) {
 
         <View style={[s.section, s.row]}>
           <View style={{ flex: 1, paddingRight: 20 }}>
-            {view.customer ? <Party label="Billed to" party={view.customer} /> : <View />}
+            {view.customer ? <Party label={view.partyLabel ?? "Billed to"} party={view.customer} /> : <View />}
             {view.imprint && (
               <View style={s.imprint} wrap={false}>
                 <Text style={s.imprintText}>{view.imprint.toUpperCase()}</Text>

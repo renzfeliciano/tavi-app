@@ -22,7 +22,7 @@ export const documentSequences = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.organizationId, t.kind] }),
-    check("document_sequences_kind", sql`${t.kind} in ('quote', 'invoice', 'receipt')`),
+    check("document_sequences_kind", sql`${t.kind} in ('quote', 'invoice', 'receipt', 'purchase_order')`),
     check("document_sequences_next_value_positive", sql`${t.nextValue} >= 1`),
     check("document_sequences_padding_range", sql`${t.padding} between 1 and 12`),
     check("document_sequences_prefix_length", sql`char_length(${t.prefix}) <= 12`),

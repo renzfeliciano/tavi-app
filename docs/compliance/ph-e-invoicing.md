@@ -110,6 +110,8 @@ The questions below are still worth asking when a CPA or the RDO is available, b
 
 ## 4. Questions for the RDO and a CPA
 
+A business owner can prepare the same questions in Tavi under Settings, RDO and CPA questions: it keeps their notes and the answers they are given, and downloads a PDF to bring along (D33). The list below is the founder's own, and includes questions about Tavi as a vendor (4 and 7) that the worksheet leaves out.
+
 1. Our users are small service businesses. If a **micro** taxpayer uses TAVI (a web app) to issue its invoices, must it register TAVI as a **CAS** (AC/PTU), or is another registration route expected for cloud invoicing software?
 2. For a **small** taxpayer (₱3M–₱20M) using TAVI: does "other invoicing software" in RMC 98-2026 Sec. III.4 cover a subscription web app like TAVI, making e-invoicing mandatory by 31 Dec 2026?
 3. Does a service business that takes orders or sends quotes and invoices **online** fall under "e-commerce or internet transactions" (RR 11-2025's definition includes professional and freelance services supplied over the internet)?

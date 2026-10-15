@@ -4,6 +4,7 @@ import {
   ClipboardCheckIcon,
   FileBadgeIcon,
   HashIcon,
+  MessageCircleQuestionMarkIcon,
   PercentIcon,
   ShieldCheckIcon,
   Trash2Icon,
@@ -50,6 +51,16 @@ function sectionsFor(market: MarketProfile, states: States): SettingsSection[] {
             title: "Registration",
             description: `${market.registration.authority} and business name registration, return dates and your certificates.`,
             icon: ClipboardCheckIcon,
+          },
+        ]
+      : []),
+    ...(market.registration
+      ? [
+          {
+            href: "/settings/questions" as Route,
+            title: market.registration.questionnaire.title,
+            description: market.registration.questionnaire.rowSummary,
+            icon: MessageCircleQuestionMarkIcon,
           },
         ]
       : []),

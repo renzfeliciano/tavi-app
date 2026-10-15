@@ -43,6 +43,9 @@ export default defineConfig({
           environment: "jsdom",
           include: ["src/**/*.test.tsx"],
           setupFiles: ["./vitest.setup.ts"],
+          // The pre-commit hook runs every file in parallel, and a cold jsdom import or a PDF render can
+          // pass the 5 s default on a busy machine without anything being wrong.
+          testTimeout: 20_000,
         },
       },
     ],

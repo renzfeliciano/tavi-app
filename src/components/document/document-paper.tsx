@@ -78,7 +78,7 @@ export function DocumentPaper({ view, className }: { view: DocumentView; classNa
       <div className="mt-10 grid gap-6 @xl:grid-cols-[minmax(0,1fr)_auto]">
         <div className="grid min-w-0 content-between gap-4 [overflow-wrap:anywhere]">
           {view.customer ? (
-            <Party label="Billed to" party={view.customer} />
+            <Party label={view.partyLabel ?? "Billed to"} party={view.customer} />
           ) : (
             <p className="text-sm text-muted-foreground italic">Choose a customer</p>
           )}

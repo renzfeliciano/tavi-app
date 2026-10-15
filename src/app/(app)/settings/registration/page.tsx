@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JumpLinks } from "@/components/jump-links";
@@ -129,6 +129,13 @@ export default async function RegistrationPage() {
           kinds={config.documentKinds.map((k) => ({ ...k }))}
           editable
         />
+        <p className="text-sm text-pretty text-muted-foreground">
+          {config.questionnaire.visitPrompt}{" "}
+          <Link href={"/settings/questions" as Route} className="font-medium text-foreground underline underline-offset-4">
+            Prepare your questions
+          </Link>
+          .
+        </p>
       </div>
     </>
   );

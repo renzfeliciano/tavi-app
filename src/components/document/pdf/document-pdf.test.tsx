@@ -160,3 +160,20 @@ describe("the footer's sign-off", () => {
     expect(style?.marginBottom).toBeGreaterThan(0);
   });
 });
+
+describe("the party's label", () => {
+  const words = (element: ReactElement) =>
+    elementsIn(element)
+      .flatMap((e) => (Array.isArray(e.props.children) ? e.props.children : [e.props.children]))
+      .filter((child): child is string => typeof child === "string");
+
+  it("says Billed to unless the document names its own", () => {
+    expect(words(<DocumentPdf view={view(1)} />)).toContain("Billed to");
+  });
+
+  it("says Order to on a purchase order, and not Billed to", () => {
+    const order = words(<DocumentPdf view={{ ...view(1), partyLabel: "Order to" }} />);
+    expect(order).toContain("Order to");
+    expect(order).not.toContain("Billed to");
+  });
+});

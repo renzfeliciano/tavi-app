@@ -1,11 +1,12 @@
 import { sql } from "drizzle-orm";
-import { bigint, char, check, date, foreignKey, index, integer, pgTable, primaryKey, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
-import { PAYMENT_METHODS } from "@/config/markets";
+import { bigint, char, check, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { PAYMENT_METHODS, RECEIPT_KINDS } from "@/config/markets";
 import { id, timestamps } from "@/db/columns";
 import { customers } from "@/modules/customers/schema";
 import { files } from "@/modules/files/schema";
 import { users } from "@/modules/identity/schema";
 import { invoices } from "@/modules/invoices/schema";
+import type { SellerSnapshot } from "@/modules/organizations";
 import { organizations } from "@/modules/organizations/schema";
 
 // Payments against an invoice (§B.5, §C). Never deleted: a mistaken payment
@@ -67,6 +68,64 @@ export const payments = pgTable(
     check("payments_method", sql`${t.method} in ('bank_transfer', 'ewallet', 'bank_deposit', 'cash', 'card', 'cheque', 'other')`),
     check("payments_paid_time", sql`${t.paidTime} is null or ${t.paidTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`),
     check("payments_void_reason", sql`${t.voidedAt} is null or ${t.voidReason} is not null`),
+  ],
+);
+
+// Receipts for money that is not an invoice payment (a reimbursement, a deposit, an advance), design:
+// docs/superpowers/specs/2026-10-15-receipts-design.md. Issued at once with the next number from the receipt
+// series (the one payment acknowledgements use) and never deleted: a mistake is voided with a reason. They are
+// not payments: no invoice, no balance, no sales figure. `payer_name` is the name as printed, also when a
+// customer is chosen; `seller` freezes the business's details at issue (D25).
+export const receipts = pgTable(
+  "receipts",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: RECEIPT_KINDS }).notNull(),
+    receiptNumber: text("receipt_number").notNull(),
+    customerId: uuid("customer_id"),
+    payerName: text("payer_name").notNull(),
+    amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
+    currency: char("currency", { length: 3 }).notNull(),
+    receivedOn: date("received_on", { mode: "string" }).notNull(),
+    method: text("method", { enum: PAYMENT_METHODS }).notNull(),
+    reference: text("reference"),
+    institution: text("institution"),
+    /** The time received, "HH:MM" (the day is `received_on`). */
+    paidTime: text("paid_time"),
+    /** A cheque's own date; can be post-dated. */
+    chequeDate: date("cheque_date", { mode: "string" }),
+    /** What the money is for ("Reimbursement of fuel"). */
+    purpose: text("purpose").notNull(),
+    notes: text("notes"),
+    seller: jsonb("seller").$type<SellerSnapshot>(),
+    /** The attempt's idempotency key: a repeat of the same request finds this receipt. */
+    idempotencyKey: text("idempotency_key"),
+    issuedBy: uuid("issued_by").references(() => users.id, { onDelete: "set null" }),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidReason: text("void_reason"),
+    voidedBy: uuid("voided_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps(),
+  },
+  (t) => [
+    unique("receipts_organization_id_id_unique").on(t.organizationId, t.id),
+    unique("receipts_organization_receipt_unique").on(t.organizationId, t.receiptNumber),
+    unique("receipts_organization_idempotency_unique").on(t.organizationId, t.idempotencyKey),
+    index("receipts_organization_received_on_idx").on(t.organizationId, t.receivedOn.desc()),
+    index("receipts_customer_idx").on(t.customerId),
+    foreignKey({
+      name: "receipts_customer_fk",
+      columns: [t.organizationId, t.customerId],
+      foreignColumns: [customers.organizationId, customers.id],
+    }),
+    check("receipts_kind", sql`${t.kind} in ('collection', 'acknowledgement')`),
+    check("receipts_amount", sql`${t.amountMinor} > 0`),
+    check("receipts_currency_iso", sql`${t.currency} ~ '^[A-Z]{3}$'`),
+    check("receipts_method", sql`${t.method} in ('bank_transfer', 'ewallet', 'bank_deposit', 'cash', 'card', 'cheque', 'other')`),
+    check("receipts_paid_time", sql`${t.paidTime} is null or ${t.paidTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`),
+    check("receipts_void_reason", sql`${t.voidedAt} is null or ${t.voidReason} is not null`),
   ],
 );
 

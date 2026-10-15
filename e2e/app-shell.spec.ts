@@ -39,7 +39,7 @@ test.describe("app shell", () => {
 
   test("the New menu offers every quick action", async ({ page }) => {
     const menu = await openNewMenu(page);
-    for (const label of ["New quotation", "New billing statement", "Add customer", "Product", "Service"]) {
+    for (const label of ["New quotation", "New billing statement", "New receipt", "New purchase order", "Add customer", "Product", "Service"]) {
       await expect(
         menu.getByRole("menuitem", { name: new RegExp(`^${label}`) }).or(
           menu.getByRole("link", { name: new RegExp(`^${label}`) }),

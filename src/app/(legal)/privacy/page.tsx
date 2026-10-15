@@ -75,12 +75,14 @@ export default function PrivacyPage() {
             <strong className="font-semibold">Your business:</strong> what you enter in its profile, such as its name,
             registered name, tax identification number (TIN), address, contact details, logo, payment instructions, the payment QR codes you add (we keep the link or code inside the QR,
             not a picture), tax registration details and, if you add them, your registration details (taxpayer type, tax office, line of business, business name registration) and
-            copies of your registration certificates. Only owners and admins can see the certificates.
+            copies of your registration certificates, and your answers to the RDO and CPA worksheet (facts about your business, and notes and replies you type). Only owners and admins can see the certificates and the worksheet. The worksheet is deleted when a business is closed.
           </li>
           <li>
-            <strong className="font-semibold">Your business&apos;s records:</strong> customers, products and services,
-            quotes, bills and payments (including the payment details you type, such as a reference or cheque number, the
-            bank or wallet and the name of whoever paid). These usually contain your customers&apos; names, contact details, addresses and
+            <strong className="font-semibold">Your business&apos;s records:</strong> customers, suppliers (their names, contact
+            people, emails, phones, addresses and TINs, as you type them), products and services,
+            quotes, bills, repeating bills (a schedule that copies a bill you issued), purchase orders to your suppliers, withholding certificates your customers give you (the payor&apos;s TIN, name and address as printed, the amounts, and the scan or photo if you keep one), payments and the receipts you issue for money that isn&apos;t a bill payment, such as a reimbursement
+            (including the payment details you type, such as a reference or cheque number, the bank or wallet and the name of
+            whoever paid; on a receipt that can be someone who isn&apos;t a customer). These usually contain your customers&apos; names, contact details, addresses and
             sometimes TINs (see the two roles above). When a bill carries a discount the law grants a buyer (for
             example a senior citizen, a person with disability or a solo parent), it also holds the number and name on
             the buyer&apos;s ID.
@@ -179,6 +181,10 @@ export default function PrivacyPage() {
             After an account is closed: the person&apos;s name, email and sign-in are removed straight away. A closed
             business&apos;s records are kept, out of use, for as long as tax rules require it to keep its issued
             documents and payments, and then deleted; the activity history goes with them.
+          </li>
+          <li>
+            Your RDO and CPA worksheet: deleted when the business is closed, because its notes can name people and no
+            tax rule asks us to keep it.
           </li>
           <li>
             A draft, sent quotation, voided payment or voided 2307 you delete: kept in your recycle bin for {TRASH_RETENTION_DAYS} days so

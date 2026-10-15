@@ -62,6 +62,10 @@ export default function TermsPage() {
           Keep your own copies of important documents (you can download PDFs of each one). We keep backups, but{" "}
           {name} shouldn&apos;t be your only record.
         </p>
+        <p>
+          A draft, sent quotation, voided payment or voided withholding certificate you delete goes to your recycle bin
+          first, where you can bring it back for a limited time before it is removed for good.
+        </p>
       </LegalSection>
 
       <LegalSection title="Documents, tax and payments">
@@ -74,6 +78,16 @@ export default function TermsPage() {
             Unless you have registered {name} with your tax authority and entered that registration in Settings, the
             bills {name} makes are not official invoices or receipts. Quotes, those bills and payment acknowledgements
             are supplementary documents.
+          </li>
+          <li>
+            Purchase orders and receipts made in {name} are not tax invoices or official receipts either. A repeating
+            bill only prepares a draft on its due date; nothing reaches your customer until a person on your team
+            reviews and sends it.
+          </li>
+          <li>
+            Withholding certificates you record are records for your own books. {name} doesn&apos;t file them or claim
+            any credit for you, and the RDO and CPA worksheet is a place for your own notes and the replies you are
+            given; it is not tax advice, and nothing in it changes your documents.
           </li>
           <li>
             {name} doesn&apos;t handle money. When you record a payment, you&apos;re recording one you received

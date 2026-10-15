@@ -12,6 +12,14 @@ import {
 const ctx = (role: (typeof ROLES)[number]) => ({ role });
 
 describe("role matrix (docs/foundation-proposal.md §E)", () => {
+  it("gives every role the everyday purchasing capabilities", () => {
+    for (const role of ROLES) {
+      for (const cap of ["purchasing.read", "purchasing.write", "purchasing.issue"] as const) {
+        expect(can(ctx(role), cap)).toBe(true);
+      }
+    }
+  });
+
   it("gives owners every capability", () => {
     expect([...capabilitiesFor("owner")].sort()).toEqual([...CAPABILITIES].sort());
   });

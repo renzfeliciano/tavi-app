@@ -9,7 +9,7 @@ Tavi already gives a payment acknowledgement, but only when money is paid agains
 Success looks like this:
 
 - From the New menu or the Payments page, a person fills one short form (who paid, how much, what for) and gets a numbered receipt at once.
-- The receipt can be downloaded as a PDF and emailed to the payer.
+- The receipt can be downloaded as a PDF, and its details emailed to the payer.
 - A mistake is voided with a reason. The number is never reused and never edited.
 - These receipts never change an invoice balance, a sales figure, the dashboard totals or a Form 2307 figure.
 
@@ -28,7 +28,7 @@ From the founder's answers (October 2026) unless marked **assumed**. The founder
 - **Amount** (assumed). One amount in the business's currency, above zero, no withheld-tax field (withholding belongs to invoice payments). The date received cannot be in the future.
 - **Who** (assumed): anyone who can record payments (`payments.record`) issues a receipt, anyone with `payments.void` voids one, and `payments.read` views them. No new permissions.
 - **Email** (recommended). The same optional email as a payment acknowledgement: up to 5 recipients, through the outbox, counted in the existing per-business email limit, checked before anything changes. A customer's email is offered as the default.
-- **No public share link in v1** (founder chose the recommended option). A payer receives the PDF by email; there is no customer page for receipts.
+- **No public share link in v1** (founder chose the recommended option). A payer receives the receipt's details in the body of an email (the outbox cannot attach files yet); the business downloads the PDF itself. There is no customer page for receipts.
 - **Not counted anywhere as sales or payments** (recommended). The invoice payments list, the dashboard, the Reports and the CSVs are unchanged. Receipts have their own list.
 - **Notice** (assumed). Receipts are supplementary documents (D13): they print the market's supplementary-document notice in bold and "Not a BIR official receipt." from the market profile.
 - **Reached from the Payments page and the New menu, not the sidebar** (recommended). The sidebar's Sales group is already four rows tall and the 730 px window only just fits. The Payments page header gets a "Receipts" link and a tab, and the New menu gets "New receipt".
@@ -50,7 +50,7 @@ From the founder's answers (October 2026) unless marked **assumed**. The founder
 |---|---|---|
 | id | uuid | primary key |
 | organization_id | uuid | required, cascade on organization delete |
-| title | text | `collection` or `acknowledgement`; check constraint |
+| kind | text | `collection` or `acknowledgement`; check constraint (the printed title comes from the market profile) |
 | receipt_number | text | required; unique per organization; allocated from the receipt series |
 | customer_id | uuid | optional; composite FK `(organization_id, customer_id)` to customers |
 | payer_name | text | required, up to 200 characters; printed name |
@@ -76,7 +76,7 @@ Indexes: `(organization_id, received_on desc)`, `(customer_id)`. Never deleted b
 - `issueReceipt(actor, input, options)`: needs `payments.record`; checks the input (`parseReceiptInput`, pure, in `domain/`); in one transaction takes the next number with `allocateDocumentNumber` for kind `receipt`, inserts the row with the seller snapshot, audits `receipt.issued`, and queues the optional email. A repeat of the same idempotency key returns the receipt already made. A customer from another business, or an archived one, is refused.
 - `voidReceipt(actor, id, reason)`: needs `payments.void`; reason required (up to 500 characters, `MAX_REASON`); audits `receipt.voided`; voiding twice is refused with a plain message.
 - `getReceipt`, `listReceipts` (search by number, payer or purpose; views All, Collection, Acknowledgement, Voided; page and size as the standing table rule), both needing `payments.read` and scoped to the actor's organization.
-- Audit actions `receipt.issued` and `receipt.voided` are added to `AUDIT_ACTIONS`.
+- Audit actions `receipt.issued`, `receipt.voided` and `receipt.emailed` are added to `AUDIT_ACTIONS`.
 
 ## 6. Screens
 

@@ -246,6 +246,41 @@
       "when": 1792001930156,
       "tag": "0034_recurring_schedules",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792029103779,
+      "tag": "0035_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792038219322,
+      "tag": "0036_purchase_order_numbering",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792038303102,
+      "tag": "0037_suppliers",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792038427955,
+      "tag": "0038_purchase_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792044817331,
+      "tag": "0039_rdo_cpa_questionnaire",
+      "breakpoints": true
     }
   ]
 }

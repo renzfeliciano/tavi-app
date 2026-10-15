@@ -1,5 +1,11 @@
 // Browser-safe exports of the organizations module.
-export { BUSINESS_PROFILE_LIMITS, REGISTRATION_LIMITS } from "./domain/limits";
+export { BUSINESS_PROFILE_LIMITS, QUESTIONNAIRE_LIMITS, REGISTRATION_LIMITS } from "./domain/limits";
+export {
+  type QuestionEntry,
+  type QuestionnaireValue,
+  type QuestionStatus,
+  questionStatus,
+} from "./domain/questionnaire";
 export {
   REGISTRATION_FIELDS,
   type RegisteringOffice,

@@ -13,6 +13,11 @@ describe("StatusBadge", () => {
     expect(screen.getByText("Declined")).toBeInTheDocument();
   });
 
+  it("uses the purchase order vocabulary for purchase orders", () => {
+    render(<StatusBadge kind="purchase_order" status="ISSUED" />);
+    expect(screen.getByText("Issued")).toBeInTheDocument();
+  });
+
   it("hides the decorative icon from assistive technology", () => {
     const { container } = render(<StatusBadge kind="quote" status="APPROVED" />);
     const icon = container.querySelector("svg");

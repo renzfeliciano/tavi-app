@@ -1,6 +1,6 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
-import { FileCheck2Icon, ReceiptTextIcon } from "lucide-react";
+import { ReceiptTextIcon } from "lucide-react";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { SectionEmpty } from "@/components/app-shell/section-empty";
 import { DataTable } from "@/components/data-table";
@@ -15,6 +15,7 @@ import { addDays, todayIn } from "@/shared/dates/calendar";
 import { parsePageSize } from "@/shared/pagination/page-window";
 import { normalizeSearch } from "@/shared/text/search";
 import { PaymentListSkeleton, paymentColumns, paymentSummary } from "../_components/payment-list";
+import { PaymentsActions } from "../_components/payments-actions";
 import { PAYMENT_WINDOWS, paymentStrip } from "../_lib/summary";
 
 export const metadata: Metadata = { title: "Payments" };
@@ -53,7 +54,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
   if (list.total === 0) {
     return (
       <>
-        <PageHeader title="Payments" description={description} />
+        <PageHeader title="Payments" description={description} actions={<PaymentsActions certificate={certificate} />} />
         <SectionEmpty
           title="No payments recorded yet"
           description={`When a customer pays by ${market.paymentMethods}, open their ${market.documents.invoice.singular.toLowerCase()} and record it there. It updates itself.`}
@@ -68,14 +69,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       <PageHeader
         title="Payments"
         description={description}
-        actions={
-          certificate && (
-            <Link href={"/payments/withholding" as Route} className={buttonVariants({ variant: "outline" })}>
-              <FileCheck2Icon aria-hidden="true" />
-              Withholding ({certificate})
-            </Link>
-          )
-        }
+        actions={<PaymentsActions certificate={certificate} />}
       />
       <SummaryStrip label="Payment summary" rows={strip} />
       <ListPending>

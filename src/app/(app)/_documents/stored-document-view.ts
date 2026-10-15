@@ -75,6 +75,8 @@ export function storedDocumentView(
   doc: StoredDocument,
   options: {
     title: string;
+    /** What the party block is called, when not "Billed to". */
+    partyLabel?: string | null;
     dates: { label: string; date: CalendarDate }[];
     business: DocumentView["business"];
     market: MarketProfile;
@@ -107,6 +109,7 @@ export function storedDocumentView(
     number: doc.number,
     revision: doc.revision,
     business: options.business,
+    partyLabel: options.partyLabel ?? null,
     customer: snapshot
       ? {
           name: snapshot.displayName,

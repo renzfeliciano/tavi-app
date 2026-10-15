@@ -24,7 +24,12 @@ const account: ShellAccount = {
   userName: "Travis Renz's Repair Shop",
   userEmail: "travis@example.com",
   canReadReports: true,
-  documents: { quote: { singular: "Quotation", plural: "Quotations" }, invoice: { singular: "Billing statement", plural: "Billing statements" } },
+  canRecordPayments: true,
+  canWritePurchasing: true,
+  documents: {
+    quote: { singular: "Quotation", plural: "Quotations" }, invoice: { singular: "Billing statement", plural: "Billing statements" },
+    purchaseOrder: { singular: "Purchase order", plural: "Purchase orders" },
+  },
 };
 
 const facts: ShellFacts = {
@@ -120,7 +125,7 @@ describe("sidebar fit", () => {
   it("tightens the rows and drops Today's figures on a short window, so everything fits without scrolling", async () => {
     await renderSidebar("expanded");
 
-    expect(screen.getByRole("link", { name: /^Dashboard/ })).toHaveClass("short:h-7");
+    expect(screen.getByRole("link", { name: /^Dashboard/ })).toHaveClass("short:h-6.5");
     const figures = screen.getByText("Draft quotations").closest("dl");
     expect(figures).toHaveClass("short:hidden");
   });

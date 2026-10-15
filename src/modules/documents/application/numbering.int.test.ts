@@ -33,6 +33,7 @@ describe("getDocumentNumbering", () => {
       { kind: "quote", prefix: "QUO-", padding: 6, nextValue: 1, nextNumber: "QUO-000001" },
       { kind: "invoice", prefix: "INV-", padding: 6, nextValue: 1, nextNumber: "INV-000001" },
       { kind: "receipt", prefix: "REC-", padding: 6, nextValue: 1, nextNumber: "REC-000001" },
+      { kind: "purchase_order", prefix: "PO-", padding: 6, nextValue: 1, nextNumber: "PO-000001" },
     ]);
   });
 

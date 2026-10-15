@@ -13,6 +13,7 @@ describe("the numbering form's prefix example", () => {
     ["quote", "e.g. QUO"],
     ["invoice", "e.g. INV"],
     ["receipt", "e.g. REC"],
+    ["purchase_order", "e.g. PO"],
   ])("shows %s numbers starting like %s", (kind, example) => {
     form(kind);
 

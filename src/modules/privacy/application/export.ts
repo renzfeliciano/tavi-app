@@ -6,8 +6,9 @@ import { exportCatalog } from "@/modules/catalog";
 import { exportCustomers } from "@/modules/customers";
 import { getAccountForExport } from "@/modules/identity";
 import { exportInvoices } from "@/modules/invoices";
-import { exportTeam, getOrganizationForExport } from "@/modules/organizations";
-import { exportPayments, exportWithholdingCertificates } from "@/modules/payments";
+import { exportQuestionnaire, exportTeam, getOrganizationForExport } from "@/modules/organizations";
+import { exportPayments, exportReceipts, exportWithholdingCertificates } from "@/modules/payments";
+import { exportPurchasing } from "@/modules/purchasing";
 import { exportQuotes } from "@/modules/quotes";
 import { consumeRateLimit } from "@/modules/system";
 import { exportTrash } from "@/modules/trash";
@@ -29,8 +30,8 @@ export type ExportResult =
 /**
  * Everything the business keeps in Tavi, as one JSON file: the business
  * profile, the person's own account, tax rates, products, services,
- * customers, quotes and bills with their lines, recurring schedules with their
- * items, payments, and withholding certificates. Read in one
+ * customers, suppliers, quotes and bills with their lines, purchase orders,
+ * recurring schedules with their items, payments, withholding certificates, and the RDO/CPA worksheet. Read in one
  * repeatable-read transaction so the file is a consistent snapshot. Customer
  * link tokens, logos and the activity history aren't included.
  */
@@ -53,8 +54,11 @@ export async function exportBusinessData(
       const quotes = await exportQuotes(tx, organizationId);
       const invoices = await exportInvoices(tx, organizationId);
       const payments = await exportPayments(tx, organizationId);
+      const receipts = await exportReceipts(tx, organizationId);
+      const purchasing = await exportPurchasing(tx, organizationId);
       const withholdingCertificates = await exportWithholdingCertificates(tx, organizationId);
       const team = await exportTeam(tx, organizationId);
+      const rdoCpaWorksheet = await exportQuestionnaire(tx, organizationId);
       const recycleBin = await exportTrash(tx, organizationId);
 
       await recordAuditEvent(tx, {
@@ -83,7 +87,11 @@ export async function exportBusinessData(
         invoices: attachLines(invoices.invoices, invoices.lines, (line) => line.invoiceId),
         recurringSchedules: attachLines(invoices.recurringSchedules, invoices.recurringLines, (line) => line.scheduleId),
         payments,
+        receipts,
+        suppliers: purchasing.suppliers,
+        purchaseOrders: attachLines(purchasing.orders, purchasing.lines, (line) => line.purchaseOrderId),
         withholdingCertificates,
+        rdoCpaWorksheet,
         recycleBin,
       };
     },
