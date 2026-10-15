@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { addTestMembership, closeTestDb, createTestOrganization, createTestUser, resetTables, testDb } from "@/db/testing";
 import { MARKETS } from "@/config/markets";
@@ -18,9 +19,12 @@ import {
   sharedQuoteContentHash,
 } from "@/modules/quotes";
 import { convertQuoteToInvoice } from "./conversion";
-import { countOverdueInvoices, invoiceMoneySummary, invoicePipeline, overdueInvoices } from "./attention";
+import { countOverdueInvoices, invoiceMoneySummary, invoicePipeline, overdueInvoices, recurringDraftsWaiting } from "./attention";
 import { saveInvoiceDraft } from "./invoices";
+import { invoices } from "../schema";
 import { issueInvoice } from "./issuing";
+import { createSchedule, runDueSchedules } from "./recurring";
+import { issuedBill, recurringScene } from "./recurring-fixtures";
 
 const NOW = new Date("2026-10-01T02:00:00Z"); // 1 Oct in Manila
 const TODAY = "2026-10-01";
@@ -212,5 +216,52 @@ describe("pipelines", () => {
       unpaid: { count: 3, totals: [{ currency: "PHP", count: 3, totalMinor: 100_000 + 50_000 + 150_000 }] },
       overdue: { count: 1, totals: [{ currency: "PHP", count: 1, totalMinor: 300_000 }] },
     });
+  });
+});
+
+// The dashboard's "recurring statements to review" (spec 7): drafts a schedule made that nobody has sent yet.
+describe("recurringDraftsWaiting", () => {
+  async function repeating() {
+    const scene = await recurringScene();
+    const billId = await issuedBill(scene.actor, scene.customerId);
+    const made = await createSchedule(scene.actor, billId, { frequency: "monthly", anchorDay: "1", startOn: "2026-11-01" }, { today: "2026-10-14" }, testDb());
+    if (!made.ok) throw new Error("schedule");
+    return { ...scene, scheduleId: made.id };
+  }
+
+  it("counts the drafts schedules made, and not the bills a person made or the ones already sent", async () => {
+    const { actor, orgId, customerId } = await repeating();
+    await runDueSchedules(orgId, "2026-11-01", testDb());
+    await runDueSchedules(orgId, "2026-12-01", testDb());
+    // A draft started by hand is not a recurring one.
+    const byHand = await saveInvoiceDraft(
+      actor,
+      null,
+      { customerId, currency: "PHP", issueDate: "2026-09-01", dueDate: "2026-10-30", notes: "", terms: "", lines: [line("750")] },
+      { locale: "en-PH" },
+      testDb(),
+    );
+    if (!byHand.ok) throw new Error("draft");
+
+    expect(await recurringDraftsWaiting(actor, testDb())).toBe(2);
+  });
+
+  it("drops a draft from the count once it is sent", async () => {
+    const { actor, orgId, scheduleId } = await repeating();
+    await runDueSchedules(orgId, "2026-11-01", testDb());
+    const [made] = await testDb().select({ id: invoices.id }).from(invoices).where(eq(invoices.recurringScheduleId, scheduleId));
+    await issueInvoice(actor, made?.id ?? "", options, testDb());
+
+    expect(await recurringDraftsWaiting(actor, testDb())).toBe(0);
+  });
+
+  it("counts only the actor's business", async () => {
+    const mine = await repeating();
+    const theirs = await repeating();
+    await runDueSchedules(mine.orgId, "2026-11-01", testDb());
+    await runDueSchedules(theirs.orgId, "2026-11-01", testDb());
+    await runDueSchedules(theirs.orgId, "2026-12-01", testDb());
+
+    expect(await recurringDraftsWaiting(mine.actor, testDb())).toBe(1);
   });
 });

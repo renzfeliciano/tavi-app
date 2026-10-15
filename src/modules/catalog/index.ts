@@ -1,4 +1,5 @@
 export {
+  activeTaxRates,
   archiveTaxRate,
   createTaxRate,
   listTaxRates,

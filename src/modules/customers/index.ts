@@ -1,6 +1,7 @@
 export {
   archiveCustomer,
   createCustomer,
+  customerIsActive,
   type Customer,
   type CustomerActionResult,
   type CustomerList,

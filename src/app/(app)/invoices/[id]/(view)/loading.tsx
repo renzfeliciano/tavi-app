@@ -7,12 +7,13 @@ import {
 } from "@/components/skeletons";
 import { DOCUMENT_BODY, DocumentSidePanelSkeleton, panelPlace } from "../../../_documents/side-panel";
 
-// A sent bill: the way back, its number, status and actions, then its payments, the panel and the bill itself,
+// A sent bill: the way back, its number, status and actions (Repeat this, Download PDF, Copy link, Remind, Edit and the
+// more menu, which wrap onto a second row beside a long title), then its payments, the panel and the bill itself,
 // laid out as the page lays them out.
 export default function InvoiceLoading() {
   return (
     <LoadingScreen label="Loading billing statement">
-      <PageHeaderSkeleton back badge title="w-56" description="w-64" actions={["w-28", "w-24"]} />
+      <PageHeaderSkeleton back badge title="w-56" description="w-64" actions={["w-30", "w-34", "w-30", "w-24", "w-20", "w-9"]} />
       <div className={DOCUMENT_BODY}>
         <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-3">

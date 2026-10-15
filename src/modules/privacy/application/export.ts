@@ -29,8 +29,8 @@ export type ExportResult =
 /**
  * Everything the business keeps in Tavi, as one JSON file: the business
  * profile, the person's own account, tax rates, products, services,
- * customers, quotes and bills with their lines, payments, and withholding
- * certificates. Read in one
+ * customers, quotes and bills with their lines, recurring schedules with their
+ * items, payments, and withholding certificates. Read in one
  * repeatable-read transaction so the file is a consistent snapshot. Customer
  * link tokens, logos and the activity history aren't included.
  */
@@ -81,6 +81,7 @@ export async function exportBusinessData(
         customers,
         quotes: attachLines(quotes.quotes, quotes.lines, (line) => line.quoteId),
         invoices: attachLines(invoices.invoices, invoices.lines, (line) => line.invoiceId),
+        recurringSchedules: attachLines(invoices.recurringSchedules, invoices.recurringLines, (line) => line.scheduleId),
         payments,
         withholdingCertificates,
         recycleBin,

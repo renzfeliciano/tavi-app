@@ -10,6 +10,7 @@ const invoice = (over: Partial<InvoiceHeader> = {}): InvoiceHeader =>
     customerId: "c1",
     customerSnapshot,
     sourceQuoteId: null,
+    recurringScheduleId: null,
     issueDate: "2026-10-01",
     dueDate: "2026-10-20",
     sentAt: new Date("2026-10-01T01:00:00Z"),
@@ -97,6 +98,15 @@ describe("a billing statement's side panel", () => {
       { key: "quote", label: "From the approved quotation", href: "/quotes/q1" },
     ]);
     expect(invoicePanel(invoice(), options).related).toEqual([]);
+  });
+
+  it("links back to the recurring schedule that made it", () => {
+    expect(invoicePanel(invoice({ recurringScheduleId: "s1" }), options).related).toEqual([
+      { key: "schedule", label: "From a recurring schedule", href: "/recurring/s1" },
+    ]);
+    expect(
+      invoicePanel(invoice({ sourceQuoteId: "q1", recurringScheduleId: "s1" }), options).related.map((r) => r.key),
+    ).toEqual(["quote", "schedule"]);
   });
 
   it("does not link to a customer record that is gone", () => {

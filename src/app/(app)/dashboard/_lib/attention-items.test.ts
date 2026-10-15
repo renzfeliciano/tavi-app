@@ -9,6 +9,8 @@ const base: AttentionInput = {
   now: NOW,
   locale: "en-PH",
   quoteName: "Quotation",
+  recurringWaiting: 0,
+  invoiceName: { singular: "Billing statement", plural: "Billing statements" },
 };
 const quote = (id: string, overrides: Record<string, unknown> = {}) => ({
   id,
@@ -89,5 +91,30 @@ describe("attentionItems", () => {
 
   it("has nothing when nothing needs attention", () => {
     expect(attentionItems(base)).toEqual([]);
+  });
+
+  it("asks for a look at the drafts recurring schedules made, only when there are some", () => {
+    expect(attentionItems(base).map((i) => i.kind)).not.toContain("recurring");
+
+    const [many] = attentionItems({ ...base, recurringWaiting: 3 });
+    expect(many).toMatchObject({
+      key: "recurring-review",
+      kind: "recurring",
+      href: "/invoices?status=draft",
+      number: null,
+      title: "3 recurring billing statements to review",
+    });
+    const [one] = attentionItems({ ...base, recurringWaiting: 1 });
+    expect(one?.title).toBe("1 recurring billing statement to review");
+  });
+
+  it("puts the drafts to review after money already late and ready to bill, and before the nudges", () => {
+    const items = attentionItems({
+      ...base,
+      recurringWaiting: 2,
+      overdue: [{ id: "i1", number: "INV-000001", currency: "PHP", balanceMinor: 50000, dueDate: "2026-10-01", customerName: "Maria" }],
+      quotes: { approvedNotInvoiced: [quote("1", { status: "APPROVED" })], awaitingReply: [quote("2")], staleDrafts: [] },
+    });
+    expect(items.map((i) => i.kind)).toEqual(["overdue", "approved", "recurring", "waiting"]);
   });
 });

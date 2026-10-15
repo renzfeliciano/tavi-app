@@ -2,8 +2,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // Same rows, same heights and same column as SidebarBody, so when the real
 // sidebar lands nothing moves. The nav is the shape most accounts have:
-// Dashboard, then Sales (3), then Manage (4).
-const NAV_GROUPS = [1, 3, 4] as const;
+// Dashboard, then Sales (4), then Manage (4).
+const NAV_GROUPS = [1, 4, 4] as const;
 const COLLAPSED_HIDE = "group-data-[sidebar=collapsed]/shell:hidden";
 
 function SidebarSkeleton() {

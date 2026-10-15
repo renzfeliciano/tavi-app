@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { type Database, getDb } from "@/db";
 import { assertCan, type OrgActor } from "@/modules/authz";
 import type { CalendarDate } from "@/shared/dates/calendar";
@@ -128,4 +128,14 @@ export async function countOverdueInvoices(
     .from(invoices)
     .where(and(eq(invoices.organizationId, actor.organizationId), inArray(invoices.status, [...OWING]), lt(invoices.dueDate, today)));
   return row?.total ?? 0;
+}
+
+/** Drafts that a recurring schedule made and nobody has sent yet: what the dashboard asks the person to review. */
+export async function recurringDraftsWaiting(actor: OrgActor, db: Database = getDb()): Promise<number> {
+  assertCan(actor, "invoices.read");
+  const [row] = await db
+    .select({ value: count() })
+    .from(invoices)
+    .where(and(eq(invoices.organizationId, actor.organizationId), eq(invoices.status, "DRAFT"), isNotNull(invoices.recurringScheduleId)));
+  return row?.value ?? 0;
 }

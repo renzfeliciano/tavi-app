@@ -42,6 +42,8 @@ export type InvoiceHeader = {
   status: InvoiceStatus;
   customerId: string | null;
   sourceQuoteId: string | null;
+  /** The recurring schedule that made this draft, if one did. */
+  recurringScheduleId: string | null;
   currency: string;
   taxMode: TaxMode;
   issueDate: CalendarDate;
@@ -137,6 +139,7 @@ export const headerColumns = {
   status: invoices.status,
   customerId: invoices.customerId,
   sourceQuoteId: invoices.sourceQuoteId,
+  recurringScheduleId: invoices.recurringScheduleId,
   currency: invoices.currency,
   taxMode: invoices.taxMode,
   issueDate: invoices.issueDate,

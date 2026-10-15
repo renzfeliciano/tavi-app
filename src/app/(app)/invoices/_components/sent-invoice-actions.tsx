@@ -2,7 +2,7 @@
 
 import { reminderMessage } from "@/lib/reminder-message";
 import { shareLink } from "@/lib/share-link";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Ban, CopyPlusIcon, DownloadIcon, FileJsonIcon, FileXIcon, LinkIcon, MoreHorizontalIcon, PencilIcon, SendIcon } from "lucide-react";
@@ -43,6 +43,8 @@ type SentInvoiceActionsProps = {
   /** Void and cancel need the invoices.void capability (checked again on the server). */
   canVoid: boolean;
   shareChannels: string;
+  /** An action the page adds first in the row (Repeat this), so the buttons stay one row that wraps together. */
+  leading?: ReactNode;
   /** What's still owed, for the payment reminder. Nothing owed, no reminder. */
   reminder: {
     customerName: string | null;
@@ -93,6 +95,7 @@ export function SentInvoiceActions({
   eInvoice,
   canVoid,
   shareChannels,
+  leading,
   reminder,
 }: SentInvoiceActionsProps) {
   const router = useRouter();
@@ -180,6 +183,7 @@ export function SentInvoiceActions({
 
   return (
     <div className="flex flex-wrap gap-2">
+      {leading}
       <a href={`/invoices/${id}/pdf`} download className={buttonVariants({ variant: "outline" })}>
         <DownloadIcon aria-hidden="true" />
         {registered && printed ? "Download reprint" : "Download PDF"}

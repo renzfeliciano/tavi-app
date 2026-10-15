@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type Database, type Executor, getDb, isUniqueViolation } from "@/db";
 import { type AuditAction, recordAuditEvent } from "@/modules/audit";
@@ -223,4 +223,16 @@ export async function restoreTaxRate(
     }
     throw error;
   }
+}
+
+/** A business's tax rates that are not archived, by id. For jobs that run with no signed-in person (the recurring-bill job). */
+export async function activeTaxRates(
+  organizationId: string,
+  db: Executor = getDb(),
+): Promise<Map<string, { id: string; name: string; rateBps: number }>> {
+  const rows = await db
+    .select({ id: taxRates.id, name: taxRates.name, rateBps: taxRates.rateBps })
+    .from(taxRates)
+    .where(and(eq(taxRates.organizationId, organizationId), isNull(taxRates.archivedAt)));
+  return new Map(rows.map((row) => [row.id, row]));
 }

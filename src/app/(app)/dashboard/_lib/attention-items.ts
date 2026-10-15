@@ -5,7 +5,7 @@ import { type CalendarDate, formatCalendarDate } from "@/shared/dates/calendar";
 import { daysLate, lateLabel } from "@/shared/dates/lateness";
 import { timeAgo } from "./time-ago";
 
-export type AttentionKind = "overdue" | "approved" | "waiting" | "draft";
+export type AttentionKind = "overdue" | "approved" | "recurring" | "waiting" | "draft";
 
 export type AttentionItem = {
   key: string;
@@ -29,12 +29,16 @@ export type AttentionInput = {
   locale: string;
   /** The market's word for one quotation ("Quotation"). */
   quoteName: string;
+  /** Drafts that recurring schedules made and nobody has sent yet. */
+  recurringWaiting: number;
+  /** The market's words for one and many bills ("Billing statement"). */
+  invoiceName: { singular: string; plural: string };
 };
 
 const join = (...parts: (string | null | undefined)[]) => parts.filter(Boolean).join(" · ");
 
 /** Most urgent first: money already late, then money ready to bill, then nudges. */
-export function attentionItems({ overdue, quotes, today, now, locale, quoteName }: AttentionInput): AttentionItem[] {
+export function attentionItems({ overdue, quotes, today, now, locale, quoteName, recurringWaiting, invoiceName }: AttentionInput): AttentionItem[] {
   const since = (verb: string, date: Date | null) => (date ? `${verb} ${timeAgo(date, now, locale)}` : null);
   const quoteRow = (kind: AttentionKind, q: AttentionQuote, phrase: string | null): AttentionItem => ({
     key: `${kind}-${q.id}`,
@@ -58,6 +62,18 @@ export function attentionItems({ overdue, quotes, today, now, locale, quoteName 
       }),
     ),
     ...quotes.approvedNotInvoiced.map((q) => quoteRow("approved", q, since("approved", q.since))),
+    ...(recurringWaiting > 0
+      ? [
+          {
+            key: "recurring-review",
+            kind: "recurring",
+            href: "/invoices?status=draft" as Route,
+            number: null,
+            title: `${recurringWaiting} recurring ${(recurringWaiting === 1 ? invoiceName.singular : invoiceName.plural).toLowerCase()} to review`,
+            detail: "",
+          } satisfies AttentionItem,
+        ]
+      : []),
     ...quotes.awaitingReply.map((q) => quoteRow("waiting", q, since("sent", q.since))),
     ...quotes.staleDrafts.map(
       (q): AttentionItem => ({

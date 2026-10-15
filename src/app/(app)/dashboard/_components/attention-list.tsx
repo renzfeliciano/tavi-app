@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CircleAlertIcon, CircleCheckIcon, ClockIcon, type LucideIcon, PencilLineIcon, ThumbsUpIcon } from "lucide-react";
+import { CircleAlertIcon, CircleCheckIcon, ClockIcon, type LucideIcon, PencilLineIcon, RepeatIcon, ThumbsUpIcon } from "lucide-react";
 import { DocumentNumber } from "@/components/document-number";
 import { MoneyAmount } from "@/components/money-amount";
 import type { AttentionItem, AttentionKind } from "../_lib/attention-items";
@@ -8,6 +8,7 @@ import { MARK, type Tone } from "./tone";
 const KINDS: Record<AttentionKind, { label: string; icon: LucideIcon; tone: Tone }> = {
   overdue: { label: "Overdue", icon: CircleAlertIcon, tone: "danger" },
   approved: { label: "Approved, ready to bill", icon: ThumbsUpIcon, tone: "success" },
+  recurring: { label: "Repeating, ready to check", icon: RepeatIcon, tone: "info" },
   waiting: { label: "No answer yet", icon: ClockIcon, tone: "info" },
   draft: { label: "Unfinished draft", icon: PencilLineIcon, tone: "muted" },
 };

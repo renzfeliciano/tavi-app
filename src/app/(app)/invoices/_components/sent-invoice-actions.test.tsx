@@ -102,4 +102,13 @@ describe("a sent billing statement's actions", () => {
     renderActions({ amountPaidMinor: 10000 });
     expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
   });
+
+  it("puts an extra action the page hands it first, in the same row of buttons", () => {
+    renderActions({ leading: <button type="button">Repeat this</button> });
+    const buttons = screen.getAllByRole("button").map((b) => b.textContent);
+    expect(buttons[0]).toBe("Repeat this");
+    expect(screen.getByRole("button", { name: "Repeat this" }).parentElement).toBe(
+      screen.getByRole("link", { name: /Download PDF/ }).parentElement,
+    );
+  });
 });

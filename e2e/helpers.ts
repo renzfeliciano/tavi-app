@@ -155,3 +155,16 @@ export async function latestEmailDelivery(to: string): Promise<{ status: string;
     await client.end();
   }
 }
+
+/**
+ * Runs the daily job on the test server, the way Vercel Cron calls it: it makes a draft for every recurring
+ * schedule that is due today (a business's "today" is its own time zone's), and is safe to run twice.
+ * The server's cron secret is made fresh for each run in playwright.config.ts and never written down.
+ */
+export async function runDailyJob(page: Page): Promise<{ recurringDrafts: number; recurringPaused: number; failed: number }> {
+  const secret = process.env.E2E_CRON_SECRET;
+  if (!secret) throw new Error("E2E_CRON_SECRET is not set; run through playwright.config.ts");
+  const response = await page.request.get("/api/cron/daily", { headers: { authorization: `Bearer ${secret}` } });
+  expect(response.status()).toBe(200);
+  return response.json();
+}

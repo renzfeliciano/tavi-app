@@ -61,7 +61,7 @@ describe("sidebar groups", () => {
     const groups = navGroupsFor({ canReadReports: true, documents: PH_DOCS });
     expect(groups.map((g) => [g.label, g.items.map((i) => i.label)])).toEqual([
       [null, ["Dashboard"]],
-      ["Sales", ["Quotations", "Billing statements", "Payments"]],
+      ["Sales", ["Quotations", "Billing statements", "Recurring", "Payments"]],
       ["Manage", ["Customers", "Products & Services", "Reports"]],
     ]);
   });

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   char,
   check,
@@ -10,6 +11,7 @@ import {
   jsonb,
   numeric,
   pgTable,
+  smallint,
   text,
   timestamp,
   unique,
@@ -24,6 +26,7 @@ import { type CustomerSnapshot, quotes } from "@/modules/quotes/schema";
 import type { QualifiedDiscountSnapshot } from "./domain/qualified-discount";
 import type { InvoiceRegistrationSnapshot } from "./domain/registration";
 import { INVOICE_STATUSES } from "./domain/status";
+import { RECURRENCE_FREQUENCIES } from "./domain/recurrence";
 
 const money = (name: string) => bigint(name, { mode: "number" }).notNull().default(0);
 
@@ -40,6 +43,9 @@ export const invoices = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     customerId: uuid("customer_id"),
     sourceQuoteId: uuid("source_quote_id"),
+    /** The recurring schedule that made this draft and the due date it was made for (spec 4); null for every other bill. */
+    recurringScheduleId: uuid("recurring_schedule_id").references((): AnyPgColumn => recurringSchedules.id, { onDelete: "set null" }),
+    recurringForDate: date("recurring_for_date", { mode: "string" }),
     /** Assigned when issued; kept by edits, void and cancel. */
     number: text("number"),
     revision: integer("revision").notNull().default(1),
@@ -101,6 +107,8 @@ export const invoices = pgTable(
     index("invoices_organization_updated_idx").on(t.organizationId, t.updatedAt.desc()),
     // Reports find a period's bills by issue date (D18).
     index("invoices_organization_issue_date_idx").on(t.organizationId, t.issueDate),
+    // One draft per schedule per due date: the daily job can run twice and never make a second one.
+    unique("invoices_recurring_run_unique").on(t.recurringScheduleId, t.recurringForDate),
     foreignKey({
       name: "invoices_customer_fk",
       columns: [t.organizationId, t.customerId],
@@ -214,3 +222,154 @@ export const invoiceRegistrations = pgTable(
   ],
 );
 
+// A bill that repeats (spec 4): when it comes due, the daily job makes one draft from these lines and terms.
+// The schedule keeps its own copy, so changing or deleting the bill it was made from changes nothing here.
+export const SCHEDULE_STATUSES = ["active", "paused", "ended"] as const;
+
+export const recurringSchedules = pgTable(
+  "recurring_schedules",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    customerId: uuid("customer_id").notNull(),
+    /** The bill it was made from, for display only; cleared if that bill is ever removed. */
+    sourceInvoiceId: uuid("source_invoice_id").references(
+      (): AnyPgColumn => invoices.id,
+      { onDelete: "set null" },
+    ),
+    frequency: text("frequency", { enum: RECURRENCE_FREQUENCIES }).notNull(),
+    /** Day of the month (1-31), or the weekday (1-7, Monday = 1) for weekly. */
+    anchorDay: smallint("anchor_day").notNull(),
+    /** 1-12 for yearly, else null. */
+    anchorMonth: smallint("anchor_month"),
+    /** The next due date, a calendar day in the business's time zone. */
+    nextRunOn: date("next_run_on", { mode: "string" }).notNull(),
+    endsOn: date("ends_on", { mode: "string" }),
+    maxDrafts: integer("max_drafts"),
+    draftsCreated: integer("drafts_created").notNull().default(0),
+    status: text("status", { enum: SCHEDULE_STATUSES })
+      .notNull()
+      .default("active"),
+    /** Why Tavi paused it itself (customer gone, tax rate gone); null when a person paused it. */
+    pauseReason: text("pause_reason"),
+    /** Days from a draft's issue date to its due date, kept from the bill it was made from. */
+    termsDays: integer("terms_days").notNull().default(0),
+    currency: char("currency", { length: 3 }).notNull(),
+    taxMode: text("tax_mode", { enum: ["inclusive", "exclusive"] }).notNull(),
+    notes: text("notes"),
+    terms: text("terms"),
+    lastRunOn: date("last_run_on", { mode: "string" }),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    ...timestamps(),
+  },
+  (t) => [
+    unique("recurring_schedules_organization_id_id_unique").on(
+      t.organizationId,
+      t.id,
+    ),
+    index("recurring_schedules_due_idx").on(
+      t.organizationId,
+      t.status,
+      t.nextRunOn,
+    ),
+    foreignKey({
+      name: "recurring_schedules_customer_fk",
+      columns: [t.organizationId, t.customerId],
+      foreignColumns: [customers.organizationId, customers.id],
+    }),
+    check(
+      "recurring_schedules_frequency",
+      sql`${t.frequency} in ('weekly', 'monthly', 'quarterly', 'yearly')`,
+    ),
+    check(
+      "recurring_schedules_status",
+      sql`${t.status} in ('active', 'paused', 'ended')`,
+    ),
+    check(
+      "recurring_schedules_anchor_day",
+      sql`${t.anchorDay} between 1 and 31`,
+    ),
+    check(
+      "recurring_schedules_anchor_month",
+      sql`${t.anchorMonth} is null or ${t.anchorMonth} between 1 and 12`,
+    ),
+    check("recurring_schedules_drafts_created", sql`${t.draftsCreated} >= 0`),
+    check(
+      "recurring_schedules_max_drafts",
+      sql`${t.maxDrafts} is null or ${t.maxDrafts} between 1 and 120`,
+    ),
+    check("recurring_schedules_terms_days", sql`${t.termsDays} >= 0`),
+    check(
+      "recurring_schedules_currency_iso",
+      sql`${t.currency} ~ '^[A-Z]{3}$'`,
+    ),
+    check(
+      "recurring_schedules_tax_mode",
+      sql`${t.taxMode} in ('inclusive', 'exclusive')`,
+    ),
+  ],
+);
+
+/** A schedule's lines: what a draft will hold, before any calculation. Amounts are worked out when the draft is made. */
+export const recurringScheduleLines = pgTable(
+  "recurring_schedule_lines",
+  {
+    id: id(),
+    organizationId: uuid("organization_id").notNull(),
+    scheduleId: uuid("schedule_id").notNull(),
+    position: integer("position").notNull(),
+    sourceKind: text("source_kind", { enum: ["product", "service"] }),
+    sourceId: uuid("source_id"),
+    description: text("description").notNull(),
+    unitLabel: text("unit_label").notNull(),
+    /** Decimal string with 4 places ("1.5000"). */
+    quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull(),
+    unitPriceMinor: bigint("unit_price_minor", { mode: "number" }).notNull(),
+    discountKind: text("discount_kind", { enum: ["percent", "amount"] }),
+    discountValue: bigint("discount_value", { mode: "number" }),
+    taxRateId: uuid("tax_rate_id"),
+    /** The rate as it was when the schedule was made; later drafts use this, not the catalog's current rate. */
+    taxRateName: text("tax_rate_name"),
+    taxRateBps: integer("tax_rate_bps"),
+    ...timestamps(),
+  },
+  (t) => [
+    unique("recurring_schedule_lines_position_unique").on(
+      t.scheduleId,
+      t.position,
+    ),
+    foreignKey({
+      name: "recurring_schedule_lines_schedule_fk",
+      columns: [t.organizationId, t.scheduleId],
+      foreignColumns: [
+        recurringSchedules.organizationId,
+        recurringSchedules.id,
+      ],
+    }).onDelete("cascade"),
+    check(
+      "recurring_schedule_lines_position_not_negative",
+      sql`${t.position} >= 0`,
+    ),
+    check("recurring_schedule_lines_quantity_positive", sql`${t.quantity} > 0`),
+    check(
+      "recurring_schedule_lines_tax_snapshot",
+      sql`(${t.taxRateName} is null and ${t.taxRateBps} is null) or (${t.taxRateName} is not null and ${t.taxRateBps} between 0 and 10000)`,
+    ),
+    check(
+      "recurring_schedule_lines_unit_price_not_negative",
+      sql`${t.unitPriceMinor} >= 0`,
+    ),
+    check(
+      "recurring_schedule_lines_source_kind",
+      sql`${t.sourceKind} is null or ${t.sourceKind} in ('product', 'service')`,
+    ),
+    check(
+      "recurring_schedule_lines_discount_pair",
+      sql`(${t.discountKind} is null and ${t.discountValue} is null) or (${t.discountKind} in ('percent', 'amount') and ${t.discountValue} >= 0)`,
+    ),
+  ],
+);

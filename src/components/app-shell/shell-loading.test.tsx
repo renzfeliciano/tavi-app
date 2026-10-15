@@ -17,11 +17,11 @@ describe("ShellChromeFallback", () => {
     expect(topBar).toHaveClass("sticky", "h-14", "lg:hidden");
   });
 
-  it("has the sidebar's shape: the three nav groups (1 + 3 + 4 rows), the Today card and the person", () => {
+  it("has the sidebar's shape: the three nav groups (1 + 4 + 4 rows), the Today card and the person", () => {
     const { container } = render(<ShellChromeFallback />);
     const [sidebar] = Array.from(container.children);
-    // 8 nav rows + the collapse row + the user row = 10 rows with an icon-sized block.
-    expect(sidebar!.querySelectorAll(".h-9.items-center").length).toBe(9);
+    // 9 nav rows + the collapse row = 10 rows with an icon-sized block (the user row is a round avatar).
+    expect(sidebar!.querySelectorAll(".h-9.items-center").length).toBe(10);
     expect(sidebar!.querySelectorAll(".rounded-full")).toHaveLength(1);
   });
 });

@@ -62,6 +62,7 @@ const PROTECTED_PREFIXES = [
   "/dashboard",
   "/quotes",
   "/invoices",
+  "/recurring",
   "/payments",
   "/customers",
   "/catalog",

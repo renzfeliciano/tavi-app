@@ -120,7 +120,7 @@ describe("sidebar fit", () => {
   it("tightens the rows and drops Today's figures on a short window, so everything fits without scrolling", async () => {
     await renderSidebar("expanded");
 
-    expect(screen.getByRole("link", { name: /^Dashboard/ })).toHaveClass("short:h-8");
+    expect(screen.getByRole("link", { name: /^Dashboard/ })).toHaveClass("short:h-7");
     const figures = screen.getByText("Draft quotations").closest("dl");
     expect(figures).toHaveClass("short:hidden");
   });

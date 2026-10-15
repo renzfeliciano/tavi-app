@@ -249,3 +249,13 @@ async function setArchived(
     return { ok: true };
   });
 }
+
+/** Whether a customer exists in the business and is not archived. For jobs that run with no signed-in person (the recurring-bill job). */
+export async function customerIsActive(organizationId: string, id: string, db: Executor = getDb()): Promise<boolean> {
+  if (!z.uuid().safeParse(id).success) return false;
+  const [row] = await db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(and(eq(customers.id, id), eq(customers.organizationId, organizationId), isNull(customers.archivedAt)));
+  return row !== undefined;
+}

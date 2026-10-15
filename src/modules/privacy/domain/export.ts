@@ -20,6 +20,8 @@ export const EXPORT_NOTES = {
   taxRates: "Tax rates (fields ending in Bps) are in basis points: 1200 means 12%.",
   recycleBin:
     `recycleBin lists what you deleted in the last ${TRASH_RETENTION_DAYS} days (drafts, sent quotations, voided payments and 2307s); each payload is the record as it was, with amounts in the same units.`,
+  recurringSchedules:
+    "recurringSchedules lists your repeating billing statements, each with the items it copies onto every new draft (lines). nextRunOn is the next due date; the drafts they made are in invoices, linked by recurringScheduleId.",
   withholdingCertificates:
     "withholdingCertificates lists the certificates your customers sent for tax they withheld (BIR Form 2307), void ones too, each with its rows and the ids of the payments it covers. Their scans aren't included; open them from each certificate's page.",
   logo: "The logo and the certificates in Settings, Registration aren't included; download them from there. The registration details you entered are in business.",

@@ -10,7 +10,7 @@ import { listAuditEvents } from "@/modules/audit";
 import { can } from "@/modules/authz";
 import { listCustomers } from "@/modules/customers";
 import { requireOrgContext } from "@/modules/identity";
-import { invoiceMoneySummary, invoicePipeline, overdueInvoices } from "@/modules/invoices";
+import { invoiceMoneySummary, invoicePipeline, overdueInvoices, recurringDraftsWaiting } from "@/modules/invoices";
 import { paymentsReceivedSince } from "@/modules/payments";
 import { quotePipeline, quoteProgress, quotesNeedingAttention } from "@/modules/quotes";
 import { addDays, formatCalendarDate, todayIn } from "@/shared/dates/calendar";
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
   }
 
   const rules = DASHBOARD_RULES;
-  const [attention, overdue, owed, received, quotePipelines, invoicePipelines, events] = await Promise.all([
+  const [attention, overdue, recurringWaiting, owed, received, quotePipelines, invoicePipelines, events] = await Promise.all([
     quotesNeedingAttention(ctx, {
       today,
       followUpBefore: new Date(now.getTime() - rules.quoteFollowUpDays * DAY_MS),
@@ -180,6 +180,7 @@ export default async function DashboardPage() {
       limit: rules.attentionLimit,
     }),
     overdueInvoices(ctx, { today, limit: rules.attentionLimit }),
+    recurringDraftsWaiting(ctx),
     invoiceMoneySummary(ctx, { today }),
     can(ctx, "payments.read") ? paymentsReceivedSince(ctx, addDays(today, -rules.paidWindowDays)) : Promise.resolve([]),
     quotePipeline(ctx),
@@ -187,7 +188,16 @@ export default async function DashboardPage() {
     can(ctx, "audit.read") ? listAuditEvents(ctx.organizationId, undefined, 50) : Promise.resolve(null),
   ]);
 
-  const items = attentionItems({ overdue, quotes: attention, today, now, locale, quoteName: market.documents.quote.singular });
+  const items = attentionItems({
+    overdue,
+    quotes: attention,
+    today,
+    now,
+    locale,
+    quoteName: market.documents.quote.singular,
+    recurringWaiting,
+    invoiceName: market.documents.invoice,
+  });
   const entries = (events ?? []).flatMap((event): FeedEntry[] => {
     const described = describeActivity(event, market);
     return described ? [{ id: event.id, createdAt: event.createdAt, ...described }] : [];

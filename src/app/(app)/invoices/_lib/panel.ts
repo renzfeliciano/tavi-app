@@ -8,6 +8,7 @@ type InvoicePanelSource = Pick<
   | "customerId"
   | "customerSnapshot"
   | "sourceQuoteId"
+  | "recurringScheduleId"
   | "issueDate"
   | "dueDate"
   | "sentAt"
@@ -48,8 +49,13 @@ export function invoicePanel(
       ],
       momentFormat(locale, timezone),
     ),
-    related: invoice.sourceQuoteId
-      ? [{ key: "quote", label: `From the approved ${quoteTitle.toLowerCase()}`, href: `/quotes/${invoice.sourceQuoteId}` }]
-      : [],
+    related: [
+      ...(invoice.sourceQuoteId
+        ? [{ key: "quote", label: `From the approved ${quoteTitle.toLowerCase()}`, href: `/quotes/${invoice.sourceQuoteId}` }]
+        : []),
+      ...(invoice.recurringScheduleId
+        ? [{ key: "schedule", label: "From a recurring schedule", href: `/recurring/${invoice.recurringScheduleId}` }]
+        : []),
+    ],
   };
 }

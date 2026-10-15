@@ -10,6 +10,7 @@ import {
   type LucideIcon,
   PackageIcon,
   ReceiptTextIcon,
+  RepeatIcon,
   UserPlusIcon,
   UsersIcon,
   WalletIcon,
@@ -28,6 +29,7 @@ export const primaryNav: readonly NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: HouseIcon },
   { href: "/quotes", label: "Quotes", icon: FileTextIcon },
   { href: "/invoices", label: "Invoices", icon: ReceiptTextIcon },
+  { href: "/recurring", label: "Recurring", icon: RepeatIcon },
   { href: "/payments", label: "Payments", icon: WalletIcon },
   { href: "/customers", label: "Customers", icon: UsersIcon },
   { href: "/catalog", label: "Products & Services", icon: PackageIcon },
@@ -126,10 +128,10 @@ export type NavGroup = {
  */
 export function navGroupsFor(account: { canReadReports: boolean; documents: DocumentNames }): NavGroup[] {
   const named = (items: readonly NavItem[]) => withDocumentNames(items, account.documents);
-  const [dashboard, quotes, invoices, payments, customers, catalog] = primaryNav;
+  const [dashboard, quotes, invoices, recurring, payments, customers, catalog] = primaryNav;
   return [
     { id: "overview", label: null, items: named([dashboard!]) },
-    { id: "sales", label: "Sales", items: named([quotes!, invoices!, payments!]) },
+    { id: "sales", label: "Sales", items: named([quotes!, invoices!, recurring!, payments!]) },
     {
       id: "manage",
       label: "Manage",

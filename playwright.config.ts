@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 import { testDatabaseUrl } from "./src/db/testing/env";
@@ -10,6 +11,9 @@ const PORT = 3201;
 const baseURL = `http://localhost:${PORT}`;
 const isCI = Boolean(process.env.CI);
 const databaseUrl = testDatabaseUrl();
+// The test server's own cron secret, made fresh for each run and kept only in this process's environment (the
+// workers inherit it), so specs can run the daily job against the test database without any secret in the repo.
+process.env.E2E_CRON_SECRET ??= randomBytes(24).toString("hex");
 
 export const OWNER_STATE = "e2e/.auth/owner.json";
 
@@ -32,6 +36,8 @@ const ACCOUNT_CREATING_SPECS = [
   /settings-polish\.spec\.ts/,
   /owner-delete\.spec\.ts/,
   /withholding-loading\.spec\.ts/,
+  /recurring\.spec\.ts/,
+  /recurring-loading\.spec\.ts/,
 ];
 
 export default defineConfig({
@@ -86,6 +92,7 @@ export default defineConfig({
       DATABASE_URL: databaseUrl,
       DATABASE_URL_DIRECT: databaseUrl,
       APP_URL: baseURL,
+      CRON_SECRET: process.env.E2E_CRON_SECRET,
       // Never send real email from test runs: test accounts use @example.com,
       // and bounces would hurt the sending account's reputation.
       RESEND_API_KEY: "",

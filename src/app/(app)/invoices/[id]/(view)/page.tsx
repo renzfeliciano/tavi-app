@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/app-shell/back-link";
@@ -10,12 +10,14 @@ import { requireOrgContext } from "@/modules/identity";
 import { getInvoice, invoiceTitle, isPayable } from "@/modules/invoices";
 import { listInvoicePayments, paymentProofRows, paymentWithholdingStatus } from "@/modules/payments";
 import { formatCalendarDate, todayIn } from "@/shared/dates/calendar";
+import { createScheduleAction } from "../../../recurring/actions";
 import { customerForDocumentAction } from "../../../_documents/actions";
 import { DocumentEditor } from "../../../_documents/document-editor";
 import { documentBusiness, editorContext } from "../../../_documents/editor-props";
 import { DOCUMENT_BODY, DocumentSidePanel, panelPlace } from "../../../_documents/side-panel";
 import { deleteDraftInvoiceAction, saveInvoiceDraftAction, sendInvoiceAction } from "../../actions";
 import { InvoicePayments } from "../../_components/invoice-payments";
+import { RepeatDialog } from "../../_components/repeat-dialog";
 import { SentInvoiceActions } from "../../_components/sent-invoice-actions";
 import { toEditorState } from "../../_lib/editor-state";
 import { invoiceDocumentView } from "../../_lib/invoice-view";
@@ -34,6 +36,11 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
       From an approved quote
     </Link>
   ) : null;
+  const fromSchedule = invoice.recurringScheduleId ? (
+    <Link href={`/recurring/${invoice.recurringScheduleId}` as Route} className="underline underline-offset-4">
+      From a recurring schedule
+    </Link>
+  ) : null;
 
   if (invoice.status === "DRAFT") {
     const [editor, customer] = await Promise.all([
@@ -49,6 +56,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
             <span className="inline-flex flex-wrap items-center gap-2">
               <span>Changes save as you go.</span>
               {fromQuote}
+              {fromSchedule}
             </span>
           }
           actions={<StatusBadge kind="invoice" status={invoice.status} />}
@@ -85,6 +93,8 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
   });
   // A voided or cancelled statement takes no more payments, so its payments card is gone.
   const hasPayments = invoice.status !== "VOID" && invoice.status !== "CANCELLED";
+  // "Repeat this" is for a bill that was really issued, and for people who may write invoices.
+  const repeatable = hasPayments && can(ctx, "invoices.write");
   // The payments, and where each one's withheld tax stands on its 2307: one query for all of them.
   const invoicePayments = hasPayments ? await listInvoicePayments(ctx, invoice.id) : [];
   const withholding = ctx.market.taxWithheld
@@ -104,6 +114,11 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
         }
         actions={
           <SentInvoiceActions
+            leading={
+              repeatable ? (
+                <RepeatDialog create={createScheduleAction.bind(null, invoice.id)} defaults={{ startOn: today }} locale={ctx.locale} />
+              ) : null
+            }
             id={invoice.id}
             status={invoice.status}
             name={name}

@@ -20,3 +20,15 @@ export {
   type RawQualifiedDiscount,
   toRawQualifiedDiscount,
 } from "./domain/qualified-discount";
+export {
+  advancePast,
+  firstRunOn,
+  isFinished,
+  nextRunOn,
+  parseRecurrence,
+  RECURRENCE_FREQUENCIES,
+  RECURRENCE_LIMITS,
+  type Recurrence,
+  type RecurrenceFrequency,
+  recurrenceLabel,
+} from "./domain/recurrence";

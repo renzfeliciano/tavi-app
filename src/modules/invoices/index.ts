@@ -18,6 +18,7 @@ export {
   invoicePipeline,
   type OverdueInvoice,
   overdueInvoices,
+  recurringDraftsWaiting,
 } from "./application/attention";
 export { type ConvertQuoteResult, convertQuoteToInvoice } from "./application/conversion";
 export {
@@ -106,3 +107,36 @@ export {
 export { type EInvoiceRecord, registeredInvoicesForExport } from "./application/e-invoices";
 export { buildEInvoice, type EInvoice, type EInvoiceSource } from "./domain/e-invoice";
 export { E_INVOICE_FORMAT, eInvoiceFile, eInvoiceJson } from "./domain/e-invoice-format";
+export {
+  advancePast,
+  firstRunOn,
+  isFinished,
+  nextRunOn,
+  parseRecurrence,
+  RECURRENCE_FREQUENCIES,
+  RECURRENCE_LIMITS,
+  type Recurrence,
+  type RecurrenceFrequency,
+  recurrenceLabel,
+} from "./domain/recurrence";
+export {
+  createSchedule,
+  type CreateScheduleResult,
+  endSchedule,
+  getSchedule,
+  listSchedules,
+  pauseSchedule,
+  RECURRING_PAUSE_REASONS,
+  resumeSchedule,
+  runDueSchedules,
+  type ScheduleCommandResult,
+  type ScheduleDetail,
+  type ScheduleDraft,
+  type ScheduleHeader,
+  type ScheduleLine,
+  type ScheduleList,
+  type ScheduleStatus,
+  type ScheduleSummary,
+  updateSchedule,
+  type UpdateScheduleResult,
+} from "./application/recurring";

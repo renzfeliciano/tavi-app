@@ -239,6 +239,13 @@
       "when": 1791988454815,
       "tag": "0033_recycle_bin_records",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792001930156,
+      "tag": "0034_recurring_schedules",
+      "breakpoints": true
     }
   ]
 }
