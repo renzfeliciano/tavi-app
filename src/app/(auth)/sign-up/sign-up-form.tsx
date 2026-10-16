@@ -8,16 +8,29 @@ import { FormAlert } from "@/components/form-alert";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError } from "@/components/ui/field";
+import { FormField } from "@/components/form-field";
 import { Input } from "@/components/ui/input";
 import { LEGAL, LEGAL_PATHS } from "@/config/legal";
 import { authClient } from "@/lib/auth-client";
 import {
   authErrorMessage,
+  networkFailure,
   PASSWORD_HINT,
   PASSWORD_POLICY,
   TERMS_REQUIRED_MESSAGE,
 } from "@/modules/identity/client";
+import { type FieldErrors, type FieldRule, firstInvalid, validateFields } from "@/shared/validation/required";
+
+const RULES: FieldRule[] = [
+  { name: "name", required: "Enter your name." },
+  { name: "email", required: "Enter your email.", email: "Enter a valid email, like name@example.com." },
+  {
+    name: "password",
+    required: "Choose a password.",
+    tooShort: { min: PASSWORD_POLICY.minLength, message: `Use at least ${PASSWORD_POLICY.minLength} characters.` },
+  },
+];
 
 /** `next`: where to go after creating the account (an invitation), else onboarding. */
 export function SignUpForm({ next }: { next?: Route } = {}) {
@@ -26,15 +39,32 @@ export function SignUpForm({ next }: { next?: Route } = {}) {
   const [error, setError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const termsRef = useRef<HTMLElement>(null);
   const termsId = useId();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const element = event.currentTarget;
+    const form = new FormData(element);
     setError(null);
+    const problems = validateFields(
+      {
+        name: String(form.get("name") ?? ""),
+        email: String(form.get("email") ?? ""),
+        password: String(form.get("password") ?? ""),
+      },
+      RULES,
+    );
+    setFieldErrors(problems);
+    setTermsError(agreed ? null : TERMS_REQUIRED_MESSAGE);
+    // Everything that needs fixing shows at once; the first one, top to bottom, takes focus.
+    const first = firstInvalid(problems, RULES);
+    if (first) {
+      (element.elements.namedItem(first) as HTMLElement | null)?.focus();
+      return;
+    }
     if (!agreed) {
-      setTermsError(TERMS_REQUIRED_MESSAGE);
       termsRef.current?.focus();
       return;
     }
@@ -45,7 +75,7 @@ export function SignUpForm({ next }: { next?: Route } = {}) {
       password: String(form.get("password") ?? ""),
       // The version on this page; the server refuses anything but the current one.
       termsVersion: LEGAL.version,
-    });
+    }).catch(networkFailure);
     if (error) {
       setError(authErrorMessage(error));
       setPending(false);
@@ -56,37 +86,54 @@ export function SignUpForm({ next }: { next?: Route } = {}) {
   }
 
   return (
-    <form method="post" onSubmit={onSubmit} className="grid gap-5">
+    <form
+      method="post"
+      noValidate
+      onSubmit={onSubmit}
+      onChange={(event) => {
+        // A problem goes away as soon as the person starts fixing it.
+        const name = (event.target as unknown as { name?: string }).name ?? "";
+        setFieldErrors((current) => {
+          if (!current[name]) return current;
+          const rest = { ...current };
+          delete rest[name];
+          return rest;
+        });
+      }}
+      className="grid gap-5"
+    >
       <FormAlert message={error} />
-      <Field>
-        <FieldLabel htmlFor="name">Your name</FieldLabel>
-        <Input id="name" name="name" autoComplete="name" required maxLength={120} placeholder="e.g. Renzo Feliciano Payod" />
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="email">Work email</FieldLabel>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          inputMode="email"
-          required
-          placeholder="e.g. renzofelicianopayod.repairservices@gmail.com"
-        />
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="password">Password</FieldLabel>
-        <PasswordInput
-          id="password"
-          name="password"
-          autoComplete="new-password"
-          required
-          minLength={PASSWORD_POLICY.minLength}
-          maxLength={PASSWORD_POLICY.maxLength}
-          aria-describedby="password-hint"
-        />
-        <FieldDescription id="password-hint">{PASSWORD_HINT}</FieldDescription>
-      </Field>
+      {(Object.keys(fieldErrors).length > 0 || termsError) && (
+        <p role="alert" className="sr-only">
+          Some details need fixing. Check the highlighted fields.
+        </p>
+      )}
+      <FormField name="name" id="name" label="Your name" error={fieldErrors.name}>
+        {(p) => <Input {...p} autoComplete="name" required maxLength={120} placeholder="e.g. Renzo Feliciano Payod" />}
+      </FormField>
+      <FormField name="email" id="email" label="Work email" error={fieldErrors.email}>
+        {(p) => (
+          <Input
+            {...p}
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            required
+            placeholder="e.g. renzofelicianopayod.repairservices@gmail.com"
+          />
+        )}
+      </FormField>
+      <FormField name="password" id="password" label="Password" hint={PASSWORD_HINT} error={fieldErrors.password}>
+        {(p) => (
+          <PasswordInput
+            {...p}
+            autoComplete="new-password"
+            required
+            minLength={PASSWORD_POLICY.minLength}
+            maxLength={PASSWORD_POLICY.maxLength}
+          />
+        )}
+      </FormField>
       <Field data-invalid={termsError ? "true" : undefined}>
         <label htmlFor={termsId} className="flex items-start gap-2.5 text-sm text-pretty">
           <Checkbox

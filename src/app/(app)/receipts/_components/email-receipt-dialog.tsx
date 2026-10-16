@@ -52,6 +52,7 @@ export function EmailReceiptDialog({ receiptId, receiptNumber, customerEmail }: 
       <Dialog open={open} onOpenChange={(next) => !next && !pending && setOpen(false)}>
         <DialogContent mascot="curious">
           <form
+            noValidate
             className="grid gap-4"
             onSubmit={(event) => {
               event.preventDefault();

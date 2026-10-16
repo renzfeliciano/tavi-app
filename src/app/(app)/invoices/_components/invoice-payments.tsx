@@ -304,6 +304,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
       <Dialog open={recording} onOpenChange={(open) => !pending && setRecording(open)}>
         <DialogContent mascot="curious" className="sm:max-w-[min(42rem,calc(100%-2rem))]">
           <form
+            noValidate
             className="grid gap-4"
             onSubmit={(event) => {
               event.preventDefault();
@@ -504,6 +505,7 @@ export function InvoicePayments(props: InvoicePaymentsProps) {
       <Dialog open={voiding !== null} onOpenChange={(open) => !open && !pending && setVoiding(null)}>
         <DialogContent mascot="concerned" tone="danger">
           <form
+            noValidate
             className="grid gap-4"
             onSubmit={(event) => {
               event.preventDefault();

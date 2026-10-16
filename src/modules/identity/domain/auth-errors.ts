@@ -20,11 +20,25 @@ const MESSAGES: Record<string, string> = {
 };
 
 const GENERIC = "Something went wrong on our side. Please try again.";
+const OFFLINE = `Can't reach ${brand.name}. Check your connection and try again. What you typed is still here.`;
+
+/** The request never got an answer: no status, or the browser's own fetch failure (its wording differs per browser). */
+const NETWORK_FAILURE = /failed to fetch|load failed|networkerror|network request failed/i;
 
 export type AuthErrorLike = { code?: string; status?: number; message?: string } | null | undefined;
 
 export function authErrorMessage(error: AuthErrorLike): string {
   if (!error) return GENERIC;
+  if (error.status === 0 || (error.message && NETWORK_FAILURE.test(error.message))) return OFFLINE;
   if (error.status === 429) return "Too many attempts. Wait a minute, then try again.";
   return (error.code && MESSAGES[error.code]) || GENERIC;
+}
+
+/**
+ * For `await authClient.x(...).catch(networkFailure)`: a request that throws (offline, a dropped
+ * connection) becomes the same `{ error }` the client returns for any failure, so the form shows
+ * a message and stops waiting instead of hanging on "Signing in…".
+ */
+export function networkFailure(cause: unknown): { error: NonNullable<AuthErrorLike> } {
+  return { error: { status: 0, message: cause instanceof Error ? cause.message : "" } };
 }

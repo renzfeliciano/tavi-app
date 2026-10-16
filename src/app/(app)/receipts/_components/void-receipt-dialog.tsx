@@ -44,6 +44,7 @@ export function VoidReceiptDialog({ receiptId, receiptNumber }: VoidReceiptDialo
       <Dialog open={open} onOpenChange={(next) => !next && !pending && setOpen(false)}>
         <DialogContent mascot="concerned" tone="danger">
           <form
+            noValidate
             className="grid gap-4"
             onSubmit={(event) => {
               event.preventDefault();

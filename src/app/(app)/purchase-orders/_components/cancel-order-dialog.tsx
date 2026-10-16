@@ -47,6 +47,7 @@ export function CancelOrderDialog({ orderId, number }: CancelOrderDialogProps) {
       <Dialog open={open} onOpenChange={(next) => !next && !pending && setOpen(false)}>
         <DialogContent mascot="concerned" tone="danger">
           <form
+            noValidate
             className="grid gap-4"
             onSubmit={(event) => {
               event.preventDefault();

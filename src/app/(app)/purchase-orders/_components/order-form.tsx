@@ -316,6 +316,7 @@ export function OrderForm(props: OrderFormProps) {
   return (
     <>
       <form
+        noValidate
         className="grid gap-5"
         onSubmit={(event) => {
           event.preventDefault();

@@ -1,5 +1,5 @@
 // Browser-safe exports of the identity module.
-export { type AuthErrorLike, authErrorMessage } from "./domain/auth-errors";
+export { type AuthErrorLike, authErrorMessage, networkFailure } from "./domain/auth-errors";
 export {
   LINK_LIFETIMES,
   PASSWORD_HINT,

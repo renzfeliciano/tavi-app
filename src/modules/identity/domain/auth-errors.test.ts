@@ -20,6 +20,15 @@ describe("authErrorMessage", () => {
     expect(authErrorMessage({ status: 429 })).toMatch(/Too many attempts/);
   });
 
+  it.each([
+    ["no status at all (the request never arrived)", { status: 0 }],
+    ["Chrome's fetch failure", { message: "Failed to fetch" }],
+    ["Safari's fetch failure", { message: "Load failed" }],
+    ["Firefox's fetch failure", { message: "NetworkError when attempting to fetch resource." }],
+  ])("blames the connection, not Tavi, for %s", (_name, error) => {
+    expect(authErrorMessage(error)).toBe("Can't reach Tavi. Check your connection and try again. What you typed is still here.");
+  });
+
   it("falls back to a calm generic message and never leaks internals", () => {
     const message = authErrorMessage({ code: "SOME_INTERNAL_ERROR", message: "relation users does not exist" });
     expect(message).toBe("Something went wrong on our side. Please try again.");

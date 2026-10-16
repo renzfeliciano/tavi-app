@@ -1,7 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
-import { toast } from "sonner";
+import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,11 +34,15 @@ export function IssueOrderDialog({ open, onOpenChange, supplierEmail, canEmail, 
   const [sendEmail, setSendEmail] = useState(supplierEmail !== null);
   const [to, setTo] = useState(supplierEmail ?? "");
   const [message, setMessage] = useState("");
+  const [missing, setMissing] = useState<string | null>(null);
+  const toRef = useRef<HTMLInputElement>(null);
+  const shownError = missing ?? emailError;
 
   function confirm() {
     if (canEmail && sendEmail) {
       if (to.trim() === "") {
-        toast.error("Enter the supplier's email address, or clear the box to issue without emailing.");
+        setMissing("Enter the supplier's email, or untick the box to issue without emailing.");
+        toRef.current?.focus();
         return;
       }
       onConfirm({ to: to.trim(), message });
@@ -52,6 +55,7 @@ export function IssueOrderDialog({ open, onOpenChange, supplierEmail, canEmail, 
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       <DialogContent mascot="curious">
         <form
+          noValidate
           className="grid gap-4"
           onSubmit={(event) => {
             event.preventDefault();
@@ -76,6 +80,7 @@ export function IssueOrderDialog({ open, onOpenChange, supplierEmail, canEmail, 
                         Send to
                       </label>
                       <Input
+                        ref={toRef}
                         id={`${id}-to`}
                         type="email"
                         inputMode="email"
@@ -84,14 +89,15 @@ export function IssueOrderDialog({ open, onOpenChange, supplierEmail, canEmail, 
                         value={to}
                         onChange={(event) => {
                           setTo(event.target.value);
+                          setMissing(null);
                           onEmailEdited();
                         }}
-                        aria-invalid={emailError ? true : undefined}
-                        aria-describedby={emailError ? `${id}-to-error` : undefined}
+                        aria-invalid={shownError ? true : undefined}
+                        aria-describedby={shownError ? `${id}-to-error` : undefined}
                       />
-                      {emailError && (
-                        <p id={`${id}-to-error`} className="text-sm text-destructive">
-                          {emailError}
+                      {shownError && (
+                        <p id={`${id}-to-error`} role="alert" className="text-sm text-destructive">
+                          {shownError}
                         </p>
                       )}
                     </div>

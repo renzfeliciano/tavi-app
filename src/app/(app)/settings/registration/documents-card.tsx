@@ -153,7 +153,7 @@ export function DocumentsCard({
       )}
 
       {editable && (
-        <form action={upload} className="grid gap-3 border-t border-border px-5 py-4 sm:px-6">
+        <form noValidate action={upload} className="grid gap-3 border-t border-border px-5 py-4 sm:px-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <label htmlFor="document-kind" className="sr-only">
               Kind of document

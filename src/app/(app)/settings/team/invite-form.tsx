@@ -22,6 +22,7 @@ export function InviteForm() {
 
   return (
     <form
+      noValidate
       className="grid gap-4 sm:grid-cols-[1fr_12rem_auto] sm:items-start"
       onSubmit={(event) => {
         event.preventDefault();

@@ -62,6 +62,7 @@ export function ListSearch({
 
   return (
     <form
+      noValidate
       role="search"
       action={action}
       className="relative w-full sm:max-w-sm"

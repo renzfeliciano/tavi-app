@@ -124,7 +124,7 @@ export function LogoUploader({
           </div>
           {editable && (
             <div className="grid gap-2">
-              <form ref={formRef} action={upload} className="flex flex-wrap gap-2">
+              <form noValidate ref={formRef} action={upload} className="flex flex-wrap gap-2">
                 <input
                   ref={inputRef}
                   id="logo-file"

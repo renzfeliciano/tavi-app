@@ -192,6 +192,7 @@ export function ListForm({ action, children, ...props }: Omit<ComponentProps<"fo
 
   return (
     <form
+      noValidate
       {...props}
       action={action}
       onSubmit={(event) => {

@@ -41,6 +41,7 @@ export function AcceptTermsForm({ signOutAction }: { signOutAction: () => Promis
   return (
     <div className="grid gap-5">
       <form
+        noValidate
         className="grid gap-5"
         onSubmit={(event) => {
           event.preventDefault();
@@ -93,7 +94,7 @@ export function AcceptTermsForm({ signOutAction }: { signOutAction: () => Promis
           Agree and continue
         </Button>
       </form>
-      <form action={signOutAction} className="text-center">
+      <form noValidate action={signOutAction} className="text-center">
         <Button type="submit" variant="link">
           Sign out instead
         </Button>

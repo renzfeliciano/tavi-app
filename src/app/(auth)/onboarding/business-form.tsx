@@ -23,7 +23,7 @@ export function BusinessForm({ currencies, countries, defaultCountry }: Business
   const errors = state.fieldErrors ?? {};
 
   return (
-    <form key={state.submission} action={formAction} className="grid gap-5">
+    <form noValidate key={state.submission} action={formAction} className="grid gap-5">
       <Field data-invalid={errors.name ? "true" : undefined}>
         <FieldLabel htmlFor="name">Business name</FieldLabel>
         <Input

@@ -58,6 +58,7 @@ export function EmailOrderDialog({ orderId, number, supplierEmail, emailExample 
       <Dialog open={open} onOpenChange={(next) => !next && !pending && setOpen(false)}>
         <DialogContent mascot="curious">
           <form
+            noValidate
             className="grid gap-4"
             onSubmit={(event) => {
               event.preventDefault();

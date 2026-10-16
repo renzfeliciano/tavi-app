@@ -100,6 +100,7 @@ export function QuoteDecision({ token, contentHash, name, businessName, nameExam
         {/* No Stamp here: a customer sees the business, not TAVI. */}
         <DialogContent mascot={null}>
           <form
+            noValidate
             className="grid gap-4"
             onSubmit={(event) => {
               event.preventDefault();

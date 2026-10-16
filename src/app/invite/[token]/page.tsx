@@ -83,7 +83,7 @@ export default async function InvitationPage({ params }: PageProps<"/invite/[tok
             You&apos;re signed in as <span className="font-medium">{session.user.email}</span>, but this invitation is
             for <span className="font-medium">{invitation.email}</span>. Sign out, then open the link again.
           </p>
-          <form action={signOut}>
+          <form noValidate action={signOut}>
             <Button type="submit" variant="outline" size="lg" className="w-full">
               Sign out
             </Button>

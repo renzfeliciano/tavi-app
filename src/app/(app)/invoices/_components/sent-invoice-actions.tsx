@@ -240,6 +240,7 @@ export function SentInvoiceActions({
       <Dialog open={open !== null} onOpenChange={(next) => !next && !pending && setOpen(null)}>
         <DialogContent mascot="concerned" tone="danger">
           <form
+            noValidate
             className="grid gap-4"
             onSubmit={(event) => {
               event.preventDefault();

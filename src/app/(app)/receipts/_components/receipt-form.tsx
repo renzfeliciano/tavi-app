@@ -134,6 +134,7 @@ export function ReceiptForm(props: ReceiptFormProps) {
 
   return (
     <form
+      noValidate
       className="grid gap-5"
       onSubmit={(event) => {
         event.preventDefault();

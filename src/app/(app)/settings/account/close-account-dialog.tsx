@@ -43,6 +43,7 @@ export function CloseAccountDialog() {
       <Dialog open={open} onOpenChange={reset}>
         <DialogContent mascot="concerned" tone="danger">
           <form
+            noValidate
             className="grid gap-4"
             onSubmit={(event) => {
               event.preventDefault();
