@@ -80,7 +80,7 @@ export default function TermsPage() {
             are supplementary documents.
           </li>
           <li>
-            Purchase orders and receipts made in {name} are not tax invoices or official receipts either. A repeating
+            A repeating
             bill only prepares a draft on its due date; nothing reaches your customer until a person on your team
             reviews and sends it.
           </li>

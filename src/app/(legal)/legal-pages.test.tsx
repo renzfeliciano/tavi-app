@@ -20,12 +20,9 @@ describe("Terms of Service", () => {
 });
 
 describe("Terms of Service: documents built since the last update", () => {
-  it("names receipts, purchase orders and repeating bills, and says they are not official", () => {
+  it("names repeating bills, and says they are not official", () => {
     const terms = text(<TermsPage />);
-    expect(terms).toMatch(/receipts/i);
-    expect(terms).toMatch(/purchase orders/i);
     expect(terms).toMatch(/repeating bill/i);
-    expect(terms).toMatch(/purchase orders and receipts .*not .*(tax invoices|official)/i);
   });
 
   it("says recorded withholding certificates are records, not filings", () => {

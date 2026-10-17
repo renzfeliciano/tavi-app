@@ -21,6 +21,10 @@ Make it ridiculously easy for a small business to turn work into money. The crit
 
 Success in the MVP means a new business reaches its first sent quote quickly (the "time to first quote" metric), and real businesses complete the full path through to a recorded payment.
 
+## Core Purpose
+
+Tavi helps a small business get paid for the work it does: agree a price, bill for it, collect and prove payment, and see who still owes. Anything that does not serve one of those four is not core (see the test in CLAUDE.md). Not core: buying and suppliers, counter sales (POS), inventory, payroll, general accounting.
+
 ## Positioning
 
 Ordinary, dependable software with no AI dependency, focused narrowly on the quote-to-paid workflow for small businesses. It's built Philippines-first: VAT-inclusive pricing by default, PHP, e-wallet payment methods, and link-based sending over chat apps treated as first-class. It deliberately avoids feeling like traditional accounting software.

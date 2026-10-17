@@ -121,29 +121,3 @@ export const invitations = pgTable(
   ],
 );
 
-
-// The RDO/CPA worksheet (October 2026): what the owner said about the business
-// and wrote down for each question to ask the tax office or an accountant. One
-// row per business. It feeds nothing: no setting, document or calculation
-// reads it. Codes come from the market profile; the domain validates them.
-export const taxQuestionnaires = pgTable(
-  "tax_questionnaires",
-  {
-    organizationId: uuid("organization_id")
-      .primaryKey()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    /** Fact code → chosen option code. */
-    facts: jsonb("facts").$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
-    /** Question code → the owner's note, the answer they were given and the date. */
-    questions: jsonb("questions")
-      .$type<Record<string, { note: string | null; answer: string | null; answeredOn: string | null }>>()
-      .notNull()
-      .default(sql`'{}'::jsonb`),
-    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
-    ...timestamps(),
-  },
-  (t) => [
-    check("tax_questionnaires_facts_object", sql`jsonb_typeof(${t.facts}) = 'object'`),
-    check("tax_questionnaires_questions_object", sql`jsonb_typeof(${t.questions}) = 'object'`),
-  ],
-);

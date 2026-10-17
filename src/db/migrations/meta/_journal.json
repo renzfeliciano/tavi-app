@@ -281,6 +281,20 @@
       "when": 1792044817331,
       "tag": "0039_rdo_cpa_questionnaire",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792211377841,
+      "tag": "0040_drop_purchasing",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792219667648,
+      "tag": "0041_drop_receipts_and_worksheet",
+      "breakpoints": true
     }
   ]
 }

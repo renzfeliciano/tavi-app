@@ -13,8 +13,6 @@ export { passwordResetEmail, verifyEmailEmail } from "./domain/auth-emails";
 export { type DocumentLinkEmailInput, documentLinkEmail } from "./domain/document-emails";
 export { type QuoteDecisionEmailInput, quoteDecisionEmail } from "./domain/decision-emails";
 export { type PaymentAcknowledgementEmailInput, paymentAcknowledgementEmail } from "./domain/payment-emails";
-export { type ReceiptEmailInput, receiptEmail } from "./domain/receipt-emails";
-export { type PurchaseOrderEmailInput, purchaseOrderEmail } from "./domain/purchase-order-emails";
 export { type TeamInvitationEmailInput, teamInvitationEmail } from "./domain/team-emails";
 export type { EmailMessage, EmailSender } from "./domain/email";
 export { createMemorySender } from "./infra/senders";

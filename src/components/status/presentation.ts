@@ -8,12 +8,10 @@ import {
   FileXIcon,
   HourglassIcon,
   type LucideIcon,
-  PackageCheckIcon,
   PencilLineIcon,
   SendIcon,
 } from "lucide-react";
 import type { InvoiceStatus } from "@/modules/invoices";
-import type { PurchaseOrderStatus } from "@/modules/purchasing/client";
 import type { QuoteStatus } from "@/modules/quotes";
 
 export type StatusTone =
@@ -128,29 +126,3 @@ export const invoiceStatusPresentation: Record<
   },
 };
 
-export const purchaseOrderStatusPresentation: Record<PurchaseOrderStatus, StatusPresentation> = {
-  DRAFT: {
-    label: "Draft",
-    description: "Not issued yet. Only your team can see it.",
-    tone: "neutral",
-    icon: PencilLineIcon,
-  },
-  ISSUED: {
-    label: "Issued",
-    description: "Numbered and ready to send. The goods haven't arrived yet.",
-    tone: "info",
-    icon: SendIcon,
-  },
-  RECEIVED: {
-    label: "Received",
-    description: "The goods arrived.",
-    tone: "success",
-    icon: PackageCheckIcon,
-  },
-  CANCELLED: {
-    label: "Cancelled",
-    description: "Called off. Kept for your records.",
-    tone: "muted",
-    icon: BanIcon,
-  },
-};

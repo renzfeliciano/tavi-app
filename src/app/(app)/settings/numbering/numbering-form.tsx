@@ -14,7 +14,7 @@ import { type NumberingFormState, saveNumbering } from "./actions";
 
 const { prefixMaxLength, padding: PADDING } = NUMBERING_LIMITS;
 /** What a prefix looks like for each kind of document, while the field is empty. */
-const PREFIX_EXAMPLES: Record<string, string> = { quote: "QUO", invoice: "INV", receipt: "REC", purchase_order: "PO" };
+const PREFIX_EXAMPLES: Record<string, string> = { quote: "QUO", invoice: "INV", receipt: "REC" };
 const PADDINGS = Array.from({ length: PADDING.max - PADDING.min + 1 }, (_, i) => PADDING.min + i);
 
 type NumberingFormProps = {

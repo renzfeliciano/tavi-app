@@ -18,21 +18,6 @@ export {
   voidPayment,
 } from "./application/payments";
 export {
-  type EmailReceiptResult,
-  emailReceipt,
-  getReceipt,
-  type IssueReceiptOptions,
-  type IssueReceiptResult,
-  issueReceipt,
-  listReceipts,
-  MAX_RECEIPT_REASON,
-  type Receipt,
-  type ReceiptList,
-  type ReceiptView,
-  type VoidReceiptResult,
-  voidReceipt,
-} from "./application/receipts";
-export {
   type CertificateOptions,
   type CertificateResult,
   type DeleteCertificateResult,
@@ -64,16 +49,8 @@ export { type WithholdingCsvRow, type WithholdingReport, withholdingReport } fro
 export { MAX_ACK_RECIPIENTS, parseAckRecipients } from "./domain/ack-recipients";
 export { parseIdempotencyKey } from "./domain/idempotency";
 export { PAYMENT_LIMITS, type PaymentInput, parsePaymentInput, type RawPayment } from "./domain/payment-input";
-export {
-  parseReceiptInput,
-  RECEIPT_KINDS,
-  RECEIPT_LIMITS,
-  type RawReceipt,
-  type ReceiptInput,
-  type ReceiptKind,
-} from "./domain/receipt-input";
 export { type PaymentProof, paymentProofRows, type ProofRow } from "./domain/payment-proof";
-export { exportPayments, exportReceipts, exportWithholdingCertificates } from "./infra/export";
+export { exportPayments, exportWithholdingCertificates } from "./infra/export";
 export { paymentsReceivedBetween, type ReceivedPayment, taxWithheldByInvoice } from "./application/reports";
 export {
   type CertificateInput,

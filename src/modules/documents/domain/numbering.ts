@@ -2,7 +2,7 @@
 // the database, inside the transaction that issues the document; this file only
 // defines the kinds, their defaults and how an allocated value is displayed.
 
-export const DOCUMENT_KINDS = ["quote", "invoice", "receipt", "purchase_order"] as const;
+export const DOCUMENT_KINDS = ["quote", "invoice", "receipt"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 export type NumberingFormat = {
@@ -14,7 +14,6 @@ export const DEFAULT_NUMBERING: Record<DocumentKind, NumberingFormat> = {
   quote: { prefix: "QUO-", padding: 6 },
   invoice: { prefix: "INV-", padding: 6 },
   receipt: { prefix: "REC-", padding: 6 },
-  purchase_order: { prefix: "PO-", padding: 6 },
 };
 
 /** `formatDocumentNumber({ prefix: "QUO-", padding: 6 }, 124)` gives "QUO-000124". */

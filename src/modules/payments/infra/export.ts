@@ -1,6 +1,6 @@
-import { asc, eq, getTableColumns } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { Executor } from "@/db";
-import { payments, receipts, withholdingCertificateLines, withholdingCertificatePayments, withholdingCertificates } from "../schema";
+import { payments, withholdingCertificateLines, withholdingCertificatePayments, withholdingCertificates } from "../schema";
 
 /** Every payment of a business, voided ones too, for "Download your data". */
 export async function exportPayments(executor: Executor, organizationId: string) {
@@ -9,20 +9,6 @@ export async function exportPayments(executor: Executor, organizationId: string)
     .from(payments)
     .where(eq(payments.organizationId, organizationId))
     .orderBy(asc(payments.createdAt), asc(payments.id));
-}
-
-/**
- * Every receipt a business issued for money that is not an invoice payment, void ones too, for "Download your data".
- * The idempotency key is a technical detail and is left out.
- */
-export async function exportReceipts(executor: Executor, organizationId: string) {
-  const columns: Partial<ReturnType<typeof getTableColumns<typeof receipts>>> = getTableColumns(receipts);
-  delete columns.idempotencyKey;
-  return executor
-    .select(columns as Omit<ReturnType<typeof getTableColumns<typeof receipts>>, "idempotencyKey">)
-    .from(receipts)
-    .where(eq(receipts.organizationId, organizationId))
-    .orderBy(asc(receipts.createdAt), asc(receipts.id));
 }
 
 /**

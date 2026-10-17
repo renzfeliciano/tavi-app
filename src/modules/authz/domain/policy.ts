@@ -19,9 +19,6 @@ export const CAPABILITIES = [
   "invoices.write",
   "invoices.send",
   "invoices.void",
-  "purchasing.read",
-  "purchasing.write",
-  "purchasing.issue",
   "payments.read",
   "payments.record",
   "payments.void",
@@ -48,10 +45,6 @@ const EVERYDAY: readonly Capability[] = [
   "invoices.read",
   "invoices.write",
   "invoices.send",
-  // Suppliers and purchase orders: buying is daily work, like quoting.
-  "purchasing.read",
-  "purchasing.write",
-  "purchasing.issue",
   "payments.read",
 ];
 

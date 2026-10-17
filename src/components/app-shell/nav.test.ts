@@ -27,14 +27,12 @@ describe("market wording", () => {
   const ph = {
     quote: { singular: "Quotation", plural: "Quotations" },
     invoice: { singular: "Billing statement", plural: "Billing statements" },
-    purchaseOrder: { singular: "Purchase order", plural: "Purchase orders" },
   };
 
   it("names the sidebar links like the pages they open", () => {
     const labels = withDocumentNames(navGroupsFor({ canReadReports: false, documents: ph }).flatMap((g) => g.items), ph).map((i) => i.label);
     expect(labels).toContain("Billing statements");
     expect(labels).toContain("Quotations");
-    expect(labels).toContain("Purchase orders");
     expect(labels).toContain("Dashboard");
   });
 
@@ -50,24 +48,13 @@ describe("market wording", () => {
     const labels = newActionsFor(ph).map((a) => a.label);
     expect(labels).toContain("New billing statement");
     expect(labels).toContain("New quotation");
-    expect(labels).toContain("New purchase order");
   });
 
-  it("offers a receipt for money that isn't an invoice payment, after Record payment", () => {
-    const actions = newActionsFor(ph);
-    const labels = actions.map((a) => a.label);
-    expect(labels.indexOf("New receipt")).toBe(labels.indexOf("Record payment") + 1);
-    expect(actions.find((a) => a.label === "New receipt")).toMatchObject({
-      href: "/receipts/new",
-      description: "Money received that isn't an invoice payment",
-    });
-  });
 });
 
 const PH_DOCS = {
   quote: { singular: "Quotation", plural: "Quotations" },
   invoice: { singular: "Billing statement", plural: "Billing statements" },
-  purchaseOrder: { singular: "Purchase order", plural: "Purchase orders" },
 };
 
 describe("sidebar groups", () => {
@@ -76,7 +63,7 @@ describe("sidebar groups", () => {
     expect(groups.map((g) => [g.label, g.items.map((i) => i.label)])).toEqual([
       [null, ["Dashboard"]],
       ["Sales", ["Quotations", "Billing statements", "Recurring", "Payments"]],
-      ["Manage", ["Purchase orders", "Customers", "Products & Services", "Reports"]],
+      ["Manage", ["Customers", "Products & Services", "Reports"]],
     ]);
   });
 
@@ -131,39 +118,6 @@ describe("the New menu", () => {
     ]);
   });
 
-  it("adds a receipt after the billing statement for someone who can record payments", () => {
-    expect(newMenuFor(PH_DOCS, { canRecordPayments: true }).map((a) => a.label)).toEqual([
-      "New quotation",
-      "New billing statement",
-      "New receipt",
-      "Add customer",
-      "Product",
-      "Service",
-    ]);
-    expect(newMenuFor(PH_DOCS, { canRecordPayments: true }).find((a) => a.label === "New receipt")?.href).toBe("/receipts/new");
-  });
-
-  it("adds a purchase order after the receipt for someone who can write them, named by the market", () => {
-    const labels = newMenuFor(PH_DOCS, { canRecordPayments: true, canPurchase: true }).map((a) => a.label);
-    expect(labels).toEqual([
-      "New quotation",
-      "New billing statement",
-      "New receipt",
-      "New purchase order",
-      "Add customer",
-      "Product",
-      "Service",
-    ]);
-    expect(newMenuFor(PH_DOCS, { canPurchase: true }).find((a) => a.label === "New purchase order")?.href).toBe("/purchase-orders/new");
-  });
-
-  it("leaves the purchase order out for someone who can't write them", () => {
-    expect(newMenuFor(PH_DOCS).map((a) => a.label)).not.toContain("New purchase order");
-  });
-
-  it("leaves the receipt out for someone who can't record payments, since the page would be a 404 for them", () => {
-    expect(newMenuFor(PH_DOCS, { canRecordPayments: false }).map((a) => a.label)).not.toContain("New receipt");
-  });
 
   it("names products before services, in the order of the page they belong to (Products & Services)", () => {
     const hrefs: string[] = newMenuFor(PH_DOCS).map((a) => a.href);

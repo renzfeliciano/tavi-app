@@ -6,14 +6,11 @@ import {
   ChartColumnIcon,
   FilePlus2Icon,
   FileTextIcon,
-  HandCoinsIcon,
   HouseIcon,
   type LucideIcon,
   PackageIcon,
-  PackagePlusIcon,
   ReceiptTextIcon,
   RepeatIcon,
-  ShoppingCartIcon,
   UserPlusIcon,
   UsersIcon,
   WalletIcon,
@@ -34,7 +31,6 @@ export const primaryNav: readonly NavItem[] = [
   { href: "/invoices", label: "Invoices", icon: ReceiptTextIcon },
   { href: "/recurring", label: "Recurring", icon: RepeatIcon },
   { href: "/payments", label: "Payments", icon: WalletIcon },
-  { href: "/purchase-orders", label: "Purchase orders", icon: ShoppingCartIcon },
   { href: "/customers", label: "Customers", icon: UsersIcon },
   { href: "/catalog", label: "Products & Services", icon: PackageIcon },
 ];
@@ -76,20 +72,6 @@ export const newActions: readonly NewAction[] = [
     description: "Open the invoice it pays",
     icon: BanknoteIcon,
   },
-  {
-    // Money received that has no invoice (a reimbursement, a deposit): its own numbered receipt.
-    href: "/receipts/new",
-    label: "New receipt",
-    description: "Money received that isn't an invoice payment",
-    icon: HandCoinsIcon,
-  },
-  {
-    // An order placed with a supplier; it feeds nothing else.
-    href: "/purchase-orders/new",
-    label: "New purchase order",
-    description: "Order from a supplier",
-    icon: PackagePlusIcon,
-  },
 ];
 
 /** A nav item is active on its own page and on any page beneath it. */
@@ -100,7 +82,6 @@ export function isActive(pathname: string, href: string): boolean {
 type DocumentNames = {
   quote: { singular: string; plural: string };
   invoice: { singular: string; plural: string };
-  purchaseOrder: { singular: string; plural: string };
 };
 
 /**
@@ -118,7 +99,6 @@ export function withDocumentNames<T extends NavItem>(
   return items.map((item) => {
     if (item.href === "/quotes") return { ...item, label: capital(word(documents.quote.plural)) };
     if (item.href === "/invoices") return { ...item, label: capital(word(documents.invoice.plural)) };
-    if (item.href === "/purchase-orders") return { ...item, label: capital(word(documents.purchaseOrder.plural)) };
     return item;
   });
 }
@@ -128,7 +108,6 @@ export function newActionsFor(documents: DocumentNames): NewAction[] {
   return newActions.map((action) => {
     if (action.href === "/quotes/new") return { ...action, label: `New ${documents.quote.singular.toLowerCase()}` };
     if (action.href === "/invoices/new") return { ...action, label: `New ${documents.invoice.singular.toLowerCase()}` };
-    if (action.href === "/purchase-orders/new") return { ...action, label: `New ${documents.purchaseOrder.singular.toLowerCase()}` };
     if (action.label === "Record payment")
       return { ...action, description: `Open the ${documents.invoice.singular.toLowerCase()} it pays` };
     return action;
@@ -144,19 +123,19 @@ export type NavGroup = {
 
 /**
  * The sidebar's groups: the dashboard on its own, then what you sell (quotations,
- * billing statements, payments), then what you manage (purchase orders, customers,
+ * billing statements, payments), then what you manage (customers,
  * catalog, reports when allowed). Settings is not here: it lives in the account menu. Worded the way the market names documents.
  */
 export function navGroupsFor(account: { canReadReports: boolean; documents: DocumentNames }): NavGroup[] {
   const named = (items: readonly NavItem[]) => withDocumentNames(items, account.documents);
-  const [dashboard, quotes, invoices, recurring, payments, purchaseOrders, customers, catalog] = primaryNav;
+  const [dashboard, quotes, invoices, recurring, payments, customers, catalog] = primaryNav;
   return [
     { id: "overview", label: null, items: named([dashboard!]) },
     { id: "sales", label: "Sales", items: named([quotes!, invoices!, recurring!, payments!]) },
     {
       id: "manage",
       label: "Manage",
-      items: named([purchaseOrders!, customers!, catalog!, ...(account.canReadReports ? [reportsNav] : [])]),
+      items: named([customers!, catalog!, ...(account.canReadReports ? [reportsNav] : [])]),
     },
   ];
 }
@@ -184,21 +163,14 @@ export function badgeFor(href: string, facts: Pick<ShellFacts, "overdueCount" | 
   return null;
 }
 
-/** The "New" menu in the order people reach for it: the two documents, a receipt and a purchase order (if allowed), a customer, then something to sell. */
+/** The "New" menu in the order people reach for it: the two documents, a customer, then something to sell. */
 export function newMenuFor(
   documents: DocumentNames,
-  { canRecordPayments = false, canPurchase = false }: { canRecordPayments?: boolean; canPurchase?: boolean } = {},
-): NewAction[] {
+  ): NewAction[] {
   const [quote, invoice, customer] = newActionsFor(documents);
-  // A receipt is for money received outside an invoice; only people who can record payments may make one.
-  const receipt = newActions.find((action) => action.href === "/receipts/new");
-  // A purchase order is for buying; only people who can write them may make one.
-  const order = newActionsFor(documents).find((action) => action.href === "/purchase-orders/new");
   return [
     quote!,
     invoice!,
-    ...(canRecordPayments && receipt ? [receipt] : []),
-    ...(canPurchase && order ? [order] : []),
     customer!,
     { href: "/catalog/products/new" as Route, label: "Product", description: "Something you sell, priced once", icon: KIND_ICON.product },
     { href: "/catalog/services/new" as Route, label: "Service", description: "Something you do, priced once", icon: KIND_ICON.service },

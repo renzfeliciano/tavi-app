@@ -30,11 +30,8 @@ const account: ShellAccount = {
   userName: "Maria Santos",
   userEmail: "maria@example.com",
   canReadReports: true,
-  canRecordPayments: true,
-  canWritePurchasing: true,
   documents: {
     quote: { singular: "Quotation", plural: "Quotations" }, invoice: { singular: "Billing statement", plural: "Billing statements" },
-    purchaseOrder: { singular: "Purchase order", plural: "Purchase orders" },
   },
 };
 

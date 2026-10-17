@@ -34,11 +34,6 @@ describe("market profiles", () => {
       expect(() => new Intl.DateTimeFormat("en", { timeZone: market.timezone })).not.toThrow();
     });
 
-    it("titles purchase orders", () => {
-      expect(market.documents.purchaseOrder.singular.trim()).not.toBe("");
-      expect(market.documents.purchaseOrder.plural.trim()).not.toBe("");
-    });
-
     it("names every payment method", () => {
       for (const code of PAYMENT_METHODS) expect(market.paymentMethodLabels[code].trim()).not.toBe("");
     });

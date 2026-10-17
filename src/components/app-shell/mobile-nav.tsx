@@ -173,7 +173,7 @@ export function MobileTabBar({ account }: { account: ShellAccount }) {
               <SheetTitle>Create something new</SheetTitle>
               <SheetDescription>Start with a {account.documents.quote.singular.toLowerCase()}, or bill finished work directly.</SheetDescription>
             </SheetHeader>
-            <SheetLinkList items={newMenuFor(account.documents, { canRecordPayments: account.canRecordPayments, canPurchase: account.canWritePurchasing })} onNavigate={() => setNewOpen(false)} withDescriptions />
+            <SheetLinkList items={newMenuFor(account.documents)} onNavigate={() => setNewOpen(false)} withDescriptions />
           </SheetContent>
         </Sheet>
 

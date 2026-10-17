@@ -76,7 +76,7 @@ export function SidebarBody({ account, facts, showNote, signOutAction, switchAct
         <WorkspaceSwitcher account={account} facts={facts} switchAction={switchAction} collapsed={collapsed} onNavigate={onNavigate} />
       </div>
       <div className="px-3 pb-3">
-        <NewMenu actions={newMenuFor(account.documents, { canRecordPayments: account.canRecordPayments, canPurchase: account.canWritePurchasing })} collapsed={collapsed} onNavigate={onNavigate} />
+        <NewMenu actions={newMenuFor(account.documents)} collapsed={collapsed} onNavigate={onNavigate} />
       </div>
       {/* Links and Today scroll together, so a short window never hides the foot of the sidebar. */}
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-color:var(--border-strong)_transparent] [scrollbar-width:thin]">

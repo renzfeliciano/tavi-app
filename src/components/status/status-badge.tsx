@@ -1,10 +1,8 @@
 import type { InvoiceStatus } from "@/modules/invoices";
-import type { PurchaseOrderStatus } from "@/modules/purchasing/client";
 import type { QuoteStatus } from "@/modules/quotes";
 import { cn } from "@/lib/utils";
 import {
   invoiceStatusPresentation,
-  purchaseOrderStatusPresentation,
   quoteStatusPresentation,
   type StatusTone,
 } from "./presentation";
@@ -12,7 +10,6 @@ import {
 type StatusBadgeProps = (
   | { kind: "quote"; status: QuoteStatus }
   | { kind: "invoice"; status: InvoiceStatus }
-  | { kind: "purchase_order"; status: PurchaseOrderStatus }
 ) & { className?: string };
 
 export const TONE_CLASSES: Record<StatusTone, string> = {
@@ -29,9 +26,7 @@ export function StatusBadge(props: StatusBadgeProps) {
   const presentation =
     props.kind === "quote"
       ? quoteStatusPresentation[props.status]
-      : props.kind === "invoice"
-        ? invoiceStatusPresentation[props.status]
-        : purchaseOrderStatusPresentation[props.status];
+      : invoiceStatusPresentation[props.status];
   const Icon = presentation.icon;
 
   return (

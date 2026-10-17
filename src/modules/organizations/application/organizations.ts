@@ -5,7 +5,7 @@ import { type Database, type Executor, getDb } from "@/db";
 import { recordAuditEvent } from "@/modules/audit";
 import type { Role } from "@/modules/authz";
 import { organizationInputSchema } from "../domain/organization-input";
-import { memberships, organizations, taxQuestionnaires } from "../schema";
+import { memberships, organizations } from "../schema";
 
 type Organization = typeof organizations.$inferSelect;
 
@@ -173,9 +173,6 @@ export async function closeOrganization(executor: Executor, organizationId: stri
     .where(and(eq(organizations.id, organizationId), isNull(organizations.closedAt)))
     .returning({ id: organizations.id });
   if (rows.length === 0) return false;
-  // The RDO/CPA worksheet is the one thing kept only for the owner's own use: its notes may name people, and no tax
-  // rule asks for it, so it goes with the account while the records tax rules require stay.
-  await executor.delete(taxQuestionnaires).where(eq(taxQuestionnaires.organizationId, organizationId));
   return true;
 }
 

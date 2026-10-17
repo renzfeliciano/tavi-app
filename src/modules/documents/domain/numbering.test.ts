@@ -30,11 +30,10 @@ describe("formatDocumentNumber", () => {
 });
 
 describe("DEFAULT_NUMBERING", () => {
-  it("defines QUO-, INV-, REC- and PO- with six digits", () => {
-    expect(DOCUMENT_KINDS).toEqual(["quote", "invoice", "receipt", "purchase_order"]);
+  it("defines QUO-, INV- and REC- with six digits", () => {
+    expect(DOCUMENT_KINDS).toEqual(["quote", "invoice", "receipt"]);
     expect(formatDocumentNumber(DEFAULT_NUMBERING.quote, 1)).toBe("QUO-000001");
     expect(formatDocumentNumber(DEFAULT_NUMBERING.invoice, 1)).toBe("INV-000001");
     expect(formatDocumentNumber(DEFAULT_NUMBERING.receipt, 1)).toBe("REC-000001");
-    expect(formatDocumentNumber(DEFAULT_NUMBERING.purchase_order, 1)).toBe("PO-000001");
   });
 });

@@ -24,11 +24,8 @@ const account: ShellAccount = {
   userName: "Travis Renz's Repair Shop",
   userEmail: "travis@example.com",
   canReadReports: true,
-  canRecordPayments: true,
-  canWritePurchasing: true,
   documents: {
     quote: { singular: "Quotation", plural: "Quotations" }, invoice: { singular: "Billing statement", plural: "Billing statements" },
-    purchaseOrder: { singular: "Purchase order", plural: "Purchase orders" },
   },
 };
 

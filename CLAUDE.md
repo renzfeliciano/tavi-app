@@ -6,6 +6,12 @@ Quoting and invoicing SaaS for small service businesses: **Customer → Quote �
 
 **Source of truth:** `docs/foundation-proposal.md`. It holds the architecture, domain rules, the founder's decision log (D1–D19) and the roadmap. Read the relevant section before starting any feature, and update it when a decision changes.
 
+## Core purpose (the test every feature must pass)
+
+**Tavi helps a small business get paid for the work it does.** The path is: customer, quote, approval, invoice, payment, and knowing who still owes. Keep Tavi simple and useful.
+
+Before building or keeping any feature, answer yes to at least one: (1) does it help a business agree a price, (2) does it help it bill for it, (3) does it help it collect and prove payment, or (4) does it help it see who hasn't paid? If not, it is not core. Do not build it, and say so plainly instead of building it anyway. Not core, and out unless the founder rules otherwise: buying and suppliers (purchase orders), retail or counter sales (POS), inventory, payroll, general accounting. Removing a feature needs a decision-log entry in `docs/foundation-proposal.md`.
+
 ## Commands
 
 | Command | What it does |

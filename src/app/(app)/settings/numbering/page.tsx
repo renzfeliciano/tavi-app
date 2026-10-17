@@ -11,13 +11,12 @@ export const metadata: Metadata = { title: "Document numbers" };
 // Document names come from the business's market profile (in PH, non-BIR
 // wording until the BIR confirms otherwise, D11).
 function labelsFor(market: MarketProfile): Record<DocumentKind, { title: string; description: string }> {
-  const { quote, invoice, receipt, purchaseOrder } = market.documents;
+  const { quote, invoice, receipt } = market.documents;
   const disclaimer = receipt.disclaimer ? ` ${receipt.disclaimer}` : "";
   return {
     quote: { title: quote.plural, description: "Numbered when you first send one." },
     invoice: { title: invoice.plural, description: "Numbered when you first send one." },
     receipt: { title: receipt.plural, description: `Numbered when you record a payment.${disclaimer}` },
-    purchase_order: { title: purchaseOrder.plural, description: "Numbered when you issue one." },
   };
 }
 
